@@ -10,7 +10,7 @@ from datetime import datetime
 from ..config.project_config import ProjectConfig
 from .interactive_collectors import InteractiveCollectors
 from ..claude.claude_integration import ClaudeEnhancedSetup
-from ..claude.claude_interactive import ClaudeInteractiveSetup
+from ..claude.claude_interactive_enhanced import EnhancedClaudeInteractiveSetup
 import subprocess
 
 
@@ -39,8 +39,8 @@ class InteractiveSetup:
         claude_available = self._check_claude_available()
         
         if claude_available and use_claude:
-            # Use the new Claude-enhanced interactive setup
-            claude_setup = ClaudeInteractiveSetup()
+            # Use the new enhanced Claude interactive setup
+            claude_setup = EnhancedClaudeInteractiveSetup()
             return claude_setup.run(project_name, use_claude=True)
         
         # Fall back to standard setup
