@@ -10,6 +10,8 @@ from datetime import datetime
 from .project_config import ProjectConfig
 from .interactive_collectors import InteractiveCollectors
 from .claude_integration import ClaudeEnhancedSetup
+from .claude_interactive import ClaudeInteractiveSetup
+import subprocess
 
 
 class InteractiveSetup:
@@ -23,10 +25,30 @@ class InteractiveSetup:
         self.style_guides = self.project_config.style_guides
         self.test_frameworks = self.project_config.test_frameworks
     
+    def _check_claude_available(self) -> bool:
+        """Check if Claude CLI is available."""
+        try:
+            result = subprocess.run(['claude', '--version'], capture_output=True, text=True)
+            return result.returncode == 0
+        except FileNotFoundError:
+            return False
+    
     def run(self, project_name: str, use_claude: bool = True) -> Dict[str, Any]:
         """Run the interactive setup process."""
+        # First, check if Claude is available
+        claude_available = self._check_claude_available()
+        
+        if claude_available and use_claude:
+            # Use the new Claude-enhanced interactive setup
+            claude_setup = ClaudeInteractiveSetup()
+            return claude_setup.run(project_name, use_claude=True)
+        
+        # Fall back to standard setup
         print(f"\n🎯 Setting up project: {project_name}")
         print("=" * 50)
+        
+        if not claude_available:
+            print("⚠️  Claude CLI not detected. Proceeding with standard setup.")
         
         # Initialize project data
         project_data = {
@@ -63,11 +85,6 @@ class InteractiveSetup:
             if not self._review_and_confirm(project_data):
                 print("\n❌ Setup cancelled by user.")
                 raise KeyboardInterrupt
-            
-            # Step 7: Claude enhancement (if available)
-            if use_claude:
-                enhanced_setup = ClaudeEnhancedSetup(self)
-                project_data = enhanced_setup.enhance_with_claude(project_data)
             
             return project_data
             
