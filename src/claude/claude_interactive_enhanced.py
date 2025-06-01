@@ -106,7 +106,7 @@ User feedback: {feedback}
 Provide improved data based on the feedback. Return a JSON object."""
         
         try:
-            response = self.processor._call_claude(prompt)
+            response = self.processor._call_claude(prompt, expect_json=(value_type != "text"))
             if value_type == "text":
                 return response.strip()
             else:
@@ -312,15 +312,17 @@ Provide improved data based on the feedback. Return a JSON object."""
                     )
                     
                     # Let user select which tasks to include
+                    from questionary import Choice
                     choices = []
-                    for task in refined_tasks[:15]:
+                    for i, task in enumerate(refined_tasks[:15]):
                         priority_icon = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(task.get('priority', 'medium'), '⚪')
-                        choices.append(f"{priority_icon} [{task['module']}] {task['title']}")
+                        task_str = f"{priority_icon} [{task['module']}] {task['title']}"
+                        # Pre-select first 8 tasks
+                        choices.append(Choice(task_str, checked=(i < 8)))
                     
                     selected = questionary.checkbox(
                         "Select tasks to include:",
-                        choices=choices,
-                        default=choices[:8]  # Pre-select first 8
+                        choices=choices
                     ).ask()
                     
                     # Map selections back to tasks
@@ -395,10 +397,15 @@ Provide improved data based on the feedback. Return a JSON object."""
                     )
                     
                     # Let user select which rules to include
+                    from questionary import Choice
+                    rule_choices = []
+                    for i, rule in enumerate(refined_rules[:15]):
+                        # Pre-select first 8 rules
+                        rule_choices.append(Choice(rule, checked=(i < 8)))
+                    
                     selected = questionary.checkbox(
                         "Select rules to include:",
-                        choices=refined_rules[:15],
-                        default=refined_rules[:8]  # Pre-select first 8
+                        choices=rule_choices
                     ).ask()
                     
                     rules['suggested'] = selected
@@ -516,7 +523,7 @@ Provide a 2-3 sentence enhanced description that:
 Return only the enhanced description text, no JSON."""
         
         try:
-            return self.processor._call_claude(prompt).strip()
+            return self.processor._call_claude(prompt, expect_json=False).strip()
         except Exception as e:
             print(f"⚠️  Could not enhance description: {e}")
             return project_data['metadata']['description']
@@ -528,10 +535,9 @@ Return only the enhanced description text, no JSON."""
 
 Based on this project information, suggest the optimal module structure.
 Consider the project type, description, and language.
-For a React + Django todo app, think about frontend/backend separation, API design, and common features.
+Think about appropriate separation of concerns, API design, and common features for this type of project.
 
-Return a JSON array of module names that would be most appropriate.
-Example: ["frontend", "backend", "api", "auth", "tasks", "shared"]"""
+Return a JSON array of module names that would be most appropriate."""
         
         try:
             response = self.processor._call_claude(prompt)
@@ -546,7 +552,7 @@ Example: ["frontend", "backend", "api", "auth", "tasks", "shared"]"""
         prompt = f"""{context}
 
 For the module named "{module_name}", provide a clear, concise description of its purpose and responsibilities.
-Consider the project context (React + Django todo app) and how this module fits into the architecture.
+Consider the project context and how this module fits into the architecture.
 Return just the description text (one sentence)."""
         
         try:
@@ -565,7 +571,7 @@ Return just the description text (one sentence)."""
 
 Suggest 10-15 specific development tasks for this project.
 Consider the modules, project type, and description.
-For a React + Django todo app, include tasks for both frontend and backend, API integration, authentication, etc.
+Based on the project type and language, include appropriate tasks for all major components.
 Assign each task to the most appropriate module.
 Mix priorities to show what's most important.
 
@@ -617,9 +623,9 @@ Which module should handle this task? Return just the module name."""
         prompt = f"""{context}
 
 Suggest 12-15 specific coding rules and best practices for this project.
-Consider the project type (React + Django), language, modules, and tasks.
+Consider the project type, language, modules, and tasks.
 Make them actionable and specific to this project's needs.
-Include rules for both frontend (React) and backend (Django) development.
+Include rules for all major components based on the chosen technology stack.
 Consider security, performance, testing, and code organization.
 
 Return a JSON array of rule strings."""
@@ -638,9 +644,9 @@ Return a JSON array of rule strings."""
 
 What technical constraints should this project have?
 Consider dependencies, versions, deployment requirements, etc.
-For a React + Django project, think about Node.js, Python, database, and deployment constraints.
+Based on the project type and language, think about appropriate runtime versions, database requirements, and deployment constraints.
 
-Return a JSON array of constraint strings (e.g., ["Python 3.8+", "Node.js 16+", "PostgreSQL 12+"])."""
+Return a JSON array of constraint strings."""
         
         try:
             response = self.processor._call_claude(prompt)
@@ -655,13 +661,13 @@ Return a JSON array of constraint strings (e.g., ["Python 3.8+", "Node.js 16+", 
         prompt = f"""{context}
 
 Suggest appropriate commands for this project:
-- install: Install all dependencies (both frontend and backend)
+- install: Install all dependencies
 - test: Run all tests
 - build: Build the project for production
 - dev: Start development servers
 - lint: Run linters
 
-For a React + Django project, consider commands that handle both frontend and backend.
+Based on the project type and language, suggest commands that handle all project components.
 
 Return a JSON object with command names as keys and commands as values.
 Only include relevant commands for this project type."""

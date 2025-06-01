@@ -164,23 +164,28 @@ Return JSON with:
         response = self._call_claude(prompt)
         return json.loads(response)
     
-    def _call_claude(self, prompt: str, timeout: int = 60) -> str:
+    def _call_claude(self, prompt: str, timeout: int = 180, expect_json: bool = True) -> str:
         """Call Claude in headless mode with a prompt."""
         self.logger.debug("Preparing Claude call", {'prompt_length': len(prompt)})
         
-        # Add system prompt for better JSON generation
-        system_prompt = (
-            "You are a helpful assistant that generates structured JSON responses for software project configuration. "
-            "Always respond with valid JSON that matches the requested schema. "
-            "Do not include any markdown formatting or code blocks - just the raw JSON."
-        )
+        # Add system prompt for better JSON generation (only if expecting JSON)
+        if expect_json:
+            system_prompt = (
+                "You are a helpful assistant that generates structured JSON responses for software project configuration. "
+                "Always respond with valid JSON that matches the requested schema. "
+                "Do not include any markdown formatting or code blocks - just the raw JSON."
+            )
+            # Combine system prompt with user prompt since Claude CLI doesn't support separate system prompts
+            full_prompt = f"{system_prompt}\n\n{prompt}"
+        else:
+            full_prompt = prompt
         
         try:
-            # Call Claude with system prompt and the prompt in non-interactive mode
+            # Call Claude in non-interactive mode with combined prompt
             cmd = [
                 self.claude_executable,
-                '-s', system_prompt,  # System prompt
-                '-p', prompt  # User prompt
+                '-p',  # Print mode (non-interactive)
+                full_prompt
             ]
             
             self.logger.debug("Executing Claude command", {'command': cmd[:2] + ['...']})  # Don't log full prompts
@@ -220,13 +225,14 @@ Return JSON with:
                     response = response[json_start:json_end].strip()
                     self.logger.debug("Extracted content from code block")
             
-            # Validate it's proper JSON
-            try:
-                json.loads(response)
-                self.logger.debug("Claude response is valid JSON")
-            except json.JSONDecodeError as e:
-                self.logger.log_json_parse_error(response, e)
-                self.logger.warning("Claude response is not valid JSON, returning raw")
+            # Validate it's proper JSON (only if expecting JSON)
+            if expect_json:
+                try:
+                    json.loads(response)
+                    self.logger.debug("Claude response is valid JSON")
+                except json.JSONDecodeError as e:
+                    self.logger.log_json_parse_error(response, e)
+                    self.logger.warning("Claude response is not valid JSON, returning raw")
             
             return response
             

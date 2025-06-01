@@ -285,10 +285,15 @@ class ClaudeInteractiveSetup:
                 for i, rule in enumerate(claude_rules[:10], 1):
                     print(f"   {i}. {rule}")
                 
+                from questionary import Choice
+                rule_choices = []
+                for i, rule in enumerate(claude_rules[:10]):
+                    # Pre-select first 5 rules
+                    rule_choices.append(Choice(rule, checked=(i < 5)))
+                
                 selected = questionary.checkbox(
                     "Select rules to include:",
-                    choices=claude_rules[:10],
-                    default=claude_rules[:5]  # Pre-select first 5
+                    choices=rule_choices
                 ).ask()
                 
                 rules['suggested'] = selected
@@ -418,7 +423,7 @@ Provide a 2-3 sentence enhanced description that:
 Return only the enhanced description text, no JSON."""
         
         try:
-            return self.processor._call_claude(prompt).strip()
+            return self.processor._call_claude(prompt, expect_json=False).strip()
         except:
             return project_data['metadata']['description']
     
