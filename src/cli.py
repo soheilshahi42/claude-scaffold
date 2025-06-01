@@ -3,7 +3,7 @@ import argparse
 import sys
 from pathlib import Path
 from .scaffold import ClaudeScaffold
-from .interactive import InteractiveSetup
+from .interactive.interactive import InteractiveSetup
 
 
 def print_banner():

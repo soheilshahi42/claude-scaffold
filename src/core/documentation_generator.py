@@ -2,9 +2,9 @@ from pathlib import Path
 from typing import Dict, List, Any
 from datetime import datetime
 
-from .templates import ProjectTemplates
-from .formatters import Formatters
-from .project_helpers import ProjectHelpers
+from ..templates.templates import ProjectTemplates
+from ..utils.formatters import Formatters
+from ..utils.project_helpers import ProjectHelpers
 
 
 class DocumentationGenerator:

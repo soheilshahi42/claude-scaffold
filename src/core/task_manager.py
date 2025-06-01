@@ -2,9 +2,9 @@ import sys
 from pathlib import Path
 from typing import Dict
 
-from .interactive import InteractiveSetup
-from .templates import ProjectTemplates
-from .formatters import Formatters
+from ..interactive.interactive_setup import InteractiveSetup
+from ..templates.templates import ProjectTemplates
+from ..utils.formatters import Formatters
 
 
 class TaskManager:
@@ -45,7 +45,7 @@ class TaskManager:
         tasks_file = project_path / 'TASKS.md'
         if tasks_file.exists():
             # Regenerate TASKS.md with new task
-            from .project_helpers import ProjectHelpers
+            from ..utils.project_helpers import ProjectHelpers
             helpers = ProjectHelpers()
             context = helpers.prepare_template_context(config)
             tasks_content = self.templates.get_template('tasks_md', context)

@@ -4,10 +4,10 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Optional, Any
 
-from .interactive import InteractiveSetup
-from .templates import ProjectTemplates
+from ..interactive.interactive_setup import InteractiveSetup
+from ..templates.templates import ProjectTemplates
 from .documentation_generator import DocumentationGenerator
-from .project_helpers import ProjectHelpers
+from ..utils.project_helpers import ProjectHelpers
 
 
 class ProjectCreator:

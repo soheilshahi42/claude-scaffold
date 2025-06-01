@@ -1,7 +1,7 @@
 """Main scaffold module that delegates to specialized components."""
 
-from .project_creator import ProjectCreator
-from .task_manager import TaskManager
+from .core.project_creator import ProjectCreator
+from .core.task_manager import TaskManager
 
 
 class ClaudeScaffold:

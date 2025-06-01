@@ -7,10 +7,10 @@ from pathlib import Path
 import textwrap
 from datetime import datetime
 
-from .project_config import ProjectConfig
+from ..config.project_config import ProjectConfig
 from .interactive_collectors import InteractiveCollectors
-from .claude_integration import ClaudeEnhancedSetup
-from .claude_interactive import ClaudeInteractiveSetup
+from ..claude.claude_integration import ClaudeEnhancedSetup
+from ..claude.claude_interactive import ClaudeInteractiveSetup
 import subprocess
 
 

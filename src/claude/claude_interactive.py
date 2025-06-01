@@ -6,7 +6,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from .claude_processor import ClaudeProcessor
-from .project_config import ProjectConfig
+from ..config.project_config import ProjectConfig
 
 
 class ClaudeInteractiveSetup:

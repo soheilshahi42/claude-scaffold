@@ -1,0 +1,7 @@
+"""Claude AI integration modules."""
+
+from .claude_processor import ClaudeProcessor
+from .claude_enhancer import ClaudeEnhancedSetup
+from .claude_interactive import ClaudeInteractiveSetup
+
+__all__ = ['ClaudeProcessor', 'ClaudeEnhancedSetup', 'ClaudeInteractiveSetup']
