@@ -148,10 +148,12 @@ class InteractiveCollectors:
             for rule in suggested:
                 print(f"   • {rule}")
             
+            from questionary import Choice
+            rule_choices = [Choice(rule, checked=True) for rule in suggested]
+            
             selected = questionary.checkbox(
                 "Select rules to include:",
-                choices=suggested,
-                default=suggested
+                choices=rule_choices
             ).ask()
             
             rules['suggested'] = selected

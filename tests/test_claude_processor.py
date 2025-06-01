@@ -81,7 +81,9 @@ class TestClaudeProcessor:
         call_args = mock_run.call_args[0][0]
         assert call_args[0] == processor.claude_executable
         assert call_args[1] == '-p'
-        assert call_args[2] == 'Test prompt'
+        # The prompt now includes the system prompt prepended
+        assert "helpful assistant" in call_args[2]
+        assert "Test prompt" in call_args[2]
     
     @patch('subprocess.run')
     def test_call_claude_with_timeout(self, mock_run, processor):

@@ -556,7 +556,7 @@ Consider the project context and how this module fits into the architecture.
 Return just the description text (one sentence)."""
         
         try:
-            return self.processor._call_claude(prompt).strip()
+            return self.processor._call_claude(prompt, expect_json=False).strip()
         except:
             return f"{module_name.title()} functionality"
     
@@ -609,7 +609,7 @@ And these available modules: {', '.join(modules)}
 Which module should handle this task? Return just the module name."""
         
         try:
-            suggestion = self.processor._call_claude(prompt).strip()
+            suggestion = self.processor._call_claude(prompt, expect_json=False).strip()
             if suggestion in modules:
                 return suggestion
         except:
