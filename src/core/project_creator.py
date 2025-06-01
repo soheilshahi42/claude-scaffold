@@ -8,16 +8,18 @@ from ..interactive.interactive_setup import InteractiveSetup
 from ..templates.templates import ProjectTemplates
 from .documentation_generator import DocumentationGenerator
 from ..utils.project_helpers import ProjectHelpers
+from ..utils.logger import get_logger
 
 
 class ProjectCreator:
     """Handles the main project creation workflow."""
     
-    def __init__(self):
+    def __init__(self, debug_mode: bool = False):
         self.templates = ProjectTemplates()
-        self.interactive_setup = InteractiveSetup()
+        self.interactive_setup = InteractiveSetup(debug_mode=debug_mode)
         self.doc_generator = DocumentationGenerator()
         self.helpers = ProjectHelpers()
+        self.logger = get_logger(debug_mode)
     
     def check_claude_available(self) -> bool:
         """Check if Claude CLI is available."""

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import os
 from pathlib import Path
 from .scaffold import ClaudeScaffold
 from .interactive.interactive import InteractiveSetup
+from .utils.logger import get_logger
 
 
 def print_banner():
@@ -51,6 +53,18 @@ Project Types:
         '--version',
         action='version',
         version='%(prog)s 0.1.0'
+    )
+    
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug mode with detailed logging'
+    )
+    
+    parser.add_argument(
+        '--log-file',
+        type=Path,
+        help='Custom log file path (default: ~/.claude-scaffold/debug.log)'
     )
     
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
@@ -109,6 +123,15 @@ Project Types:
     
     args = parser.parse_args()
     
+    # Initialize logger with debug mode if requested
+    logger = get_logger(debug_mode=args.debug)
+    if args.log_file:
+        logger.log_file = args.log_file
+    
+    if args.debug:
+        print(f"🐛 Debug mode enabled. Logs: {logger.get_log_file_path()}")
+        logger.info("CLI started with arguments", {'args': vars(args)})
+    
     # Show banner for interactive commands
     if args.command == 'new' and not args.no_interactive:
         print_banner()
@@ -119,7 +142,7 @@ Project Types:
         sys.exit(1)
     
     try:
-        scaffold = ClaudeScaffold()
+        scaffold = ClaudeScaffold(debug_mode=args.debug)
         
         if args.command == 'new':
             success = scaffold.create_project(

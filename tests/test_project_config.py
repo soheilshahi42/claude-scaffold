@@ -1,7 +1,7 @@
 """Tests for project configuration."""
 
 import pytest
-from src.project_config import ProjectConfig
+from src.config.project_config import ProjectConfig
 
 
 class TestProjectConfig:

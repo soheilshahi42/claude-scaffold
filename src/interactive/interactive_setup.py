@@ -11,19 +11,22 @@ from ..config.project_config import ProjectConfig
 from .interactive_collectors import InteractiveCollectors
 from ..claude.claude_integration import ClaudeEnhancedSetup
 from ..claude.claude_interactive_enhanced import EnhancedClaudeInteractiveSetup
+from ..utils.logger import get_logger
 import subprocess
 
 
 class InteractiveSetup:
     """Enhanced interactive setup with questionary and Claude integration."""
     
-    def __init__(self):
+    def __init__(self, debug_mode: bool = False):
         self.project_config = ProjectConfig()
         self.collectors = InteractiveCollectors(self.project_config)
         # Make properties available for backward compatibility
         self.project_types = self.project_config.project_types
         self.style_guides = self.project_config.style_guides
         self.test_frameworks = self.project_config.test_frameworks
+        self.logger = get_logger(debug_mode)
+        self.debug_mode = debug_mode
     
     def _check_claude_available(self) -> bool:
         """Check if Claude CLI is available."""
@@ -40,7 +43,7 @@ class InteractiveSetup:
         
         if claude_available and use_claude:
             # Use the new enhanced Claude interactive setup
-            claude_setup = EnhancedClaudeInteractiveSetup()
+            claude_setup = EnhancedClaudeInteractiveSetup(debug_mode=self.debug_mode)
             return claude_setup.run(project_name, use_claude=True)
         
         # Fall back to standard setup

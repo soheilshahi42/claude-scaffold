@@ -1,7 +1,7 @@
 """Tests for formatting utilities."""
 
 import pytest
-from src.formatters import Formatters
+from src.utils.formatters import Formatters
 
 
 class TestFormatters:

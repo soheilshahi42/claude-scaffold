@@ -7,15 +7,17 @@ from datetime import datetime
 
 from .claude_processor import ClaudeProcessor
 from ..config.project_config import ProjectConfig
+from ..utils.logger import get_logger
 
 
 class EnhancedClaudeInteractiveSetup:
     """Interactive setup with proper Claude enhancement and refinement at each step."""
     
-    def __init__(self):
-        self.processor = ClaudeProcessor()
+    def __init__(self, debug_mode: bool = False):
+        self.processor = ClaudeProcessor(debug_mode=debug_mode)
         self.project_config = ProjectConfig()
         self.conversation_history = []
+        self.logger = get_logger(debug_mode)
         
     def run(self, project_name: str, use_claude: bool = None) -> Dict[str, Any]:
         """Run enhanced Claude interactive setup."""
@@ -554,6 +556,10 @@ Return just the description text (one sentence)."""
     
     def _get_claude_task_suggestions(self, project_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Get Claude's task suggestions."""
+        self.logger.info("Getting Claude task suggestions", 
+                        {'project_name': project_data['project_name'],
+                         'modules': [m['name'] for m in project_data.get('modules', [])]})
+        
         context = self._build_context(project_data)
         prompt = f"""{context}
 
@@ -571,9 +577,20 @@ Return a JSON array of task objects:
 ]"""
         
         try:
+            self.logger.debug("Calling Claude for task suggestions")
             response = self.processor._call_claude(prompt)
-            return json.loads(response)
+            self.logger.debug("Claude response received", {'response_length': len(response)})
+            
+            tasks = json.loads(response)
+            self.logger.info(f"Successfully parsed {len(tasks)} tasks from Claude")
+            return tasks
+        except json.JSONDecodeError as e:
+            self.logger.error("Failed to parse Claude response as JSON", e, 
+                            {'response_preview': response[:200] if 'response' in locals() else 'N/A'})
+            print(f"⚠️  Could not generate tasks: {e}")
+            return []
         except Exception as e:
+            self.logger.error("Error getting Claude task suggestions", e)
             print(f"⚠️  Could not generate tasks: {e}")
             return []
     

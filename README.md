@@ -49,6 +49,30 @@ pip install -e .
 - colorama (for colored output)
 - pyyaml (for configuration)
 
+## 🐛 Debug Mode
+
+To troubleshoot issues with Claude integration or project generation, enable debug mode:
+
+```bash
+# Via command line flag
+claude-scaffold new my_project --debug
+
+# Via environment variable
+export CLAUDE_SCAFFOLD_DEBUG=true
+claude-scaffold new my_project
+
+# Custom log file location
+claude-scaffold new my_project --debug --log-file /path/to/custom.log
+```
+
+Debug logs include:
+- Claude API calls and responses
+- JSON parsing errors with context
+- Configuration processing steps
+- Full error tracebacks
+
+Default log location: `~/.claude-scaffold/debug.log`
+
 ## 🚀 Quick Start
 
 ### Create a New Project

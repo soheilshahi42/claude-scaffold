@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
-from src.task_manager import TaskManager
+from src.core.task_manager import TaskManager
 
 
 class TestTaskManager:

@@ -7,8 +7,8 @@ from .core.task_manager import TaskManager
 class ClaudeScaffold:
     """Enhanced Claude Scaffold with comprehensive project generation."""
     
-    def __init__(self):
-        self.project_creator = ProjectCreator()
+    def __init__(self, debug_mode: bool = False):
+        self.project_creator = ProjectCreator(debug_mode=debug_mode)
         self.task_manager = TaskManager()
     
     def create_project(self, project_name, project_path=None, force=False, interactive=True):

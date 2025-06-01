@@ -5,13 +5,15 @@ import json
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from ..utils.logger import get_logger
 
 
 class ClaudeProcessor:
     """Process user inputs through Claude in headless mode."""
     
-    def __init__(self):
+    def __init__(self, debug_mode: bool = False):
         self.claude_executable = "claude"  # Assumes claude is in PATH
+        self.logger = get_logger(debug_mode)
     
     def process_project_setup(self, initial_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process project setup through Claude to generate intelligent configuration."""
@@ -164,13 +166,24 @@ Return JSON with:
     
     def _call_claude(self, prompt: str, timeout: int = 60) -> str:
         """Call Claude in headless mode with a prompt."""
+        self.logger.debug("Preparing Claude call", {'prompt_length': len(prompt)})
+        
+        # Add system prompt for better JSON generation
+        system_prompt = (
+            "You are a helpful assistant that generates structured JSON responses for software project configuration. "
+            "Always respond with valid JSON that matches the requested schema. "
+            "Do not include any markdown formatting or code blocks - just the raw JSON."
+        )
+        
         try:
-            # Call Claude with the prompt in non-interactive mode
+            # Call Claude with system prompt and the prompt in non-interactive mode
             cmd = [
                 self.claude_executable,
-                '-p',  # Print response and exit (non-interactive)
-                prompt
+                '-s', system_prompt,  # System prompt
+                '-p', prompt  # User prompt
             ]
+            
+            self.logger.debug("Executing Claude command", {'command': cmd[:2] + ['...']})  # Don't log full prompts
             
             result = subprocess.run(
                 cmd,
@@ -179,12 +192,49 @@ Return JSON with:
                 timeout=timeout
             )
             
+            self.logger.log_claude_interaction(
+                prompt=prompt,
+                response=result.stdout,
+                error=None if result.returncode == 0 else RuntimeError(result.stderr),
+                command=cmd[:2] + ['...']
+            )
+            
             if result.returncode != 0:
-                raise RuntimeError(f"Claude returned error: {result.stderr}")
+                error = RuntimeError(f"Claude returned error: {result.stderr}")
+                self.logger.error("Claude command failed", error)
+                raise error
             
-            return result.stdout.strip()
+            response = result.stdout.strip()
             
+            # Try to clean the response if it contains markdown
+            if '```json' in response:
+                json_start = response.find('```json') + 7
+                json_end = response.find('```', json_start)
+                if json_end > json_start:
+                    response = response[json_start:json_end].strip()
+                    self.logger.debug("Extracted JSON from markdown block")
+            elif '```' in response:
+                json_start = response.find('```') + 3
+                json_end = response.find('```', json_start)
+                if json_end > json_start:
+                    response = response[json_start:json_end].strip()
+                    self.logger.debug("Extracted content from code block")
+            
+            # Validate it's proper JSON
+            try:
+                json.loads(response)
+                self.logger.debug("Claude response is valid JSON")
+            except json.JSONDecodeError as e:
+                self.logger.log_json_parse_error(response, e)
+                self.logger.warning("Claude response is not valid JSON, returning raw")
+            
+            return response
+            
+        except subprocess.TimeoutExpired as e:
+            self.logger.error(f"Claude call timed out after {timeout}s", e)
+            raise RuntimeError(f"Claude call timed out after {timeout} seconds")
         except Exception as e:
+            self.logger.error("Failed to call Claude", e)
             raise RuntimeError(f"Failed to call Claude: {str(e)}")
     
     def _merge_claude_config(self, original_data: Dict, claude_config: Dict) -> Dict[str, Any]:
