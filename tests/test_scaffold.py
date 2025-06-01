@@ -1,160 +1,170 @@
+"""Comprehensive tests for the main scaffold module."""
+
 import pytest
-import tempfile
-import shutil
+from unittest.mock import Mock, patch
 from pathlib import Path
+
 from src.scaffold import ClaudeScaffold
 
 
 class TestClaudeScaffold:
+    """Test cases for the main ClaudeScaffold class."""
+    
     @pytest.fixture
     def scaffold(self):
-        return ClaudeScaffold()
+        """Create a ClaudeScaffold instance with mocked dependencies."""
+        with patch('src.scaffold.ProjectCreator') as mock_creator, \
+             patch('src.scaffold.TaskManager') as mock_manager:
+            scaffold = ClaudeScaffold()
+            scaffold.project_creator = mock_creator.return_value
+            scaffold.task_manager = mock_manager.return_value
+            yield scaffold
     
-    @pytest.fixture
-    def temp_dir(self):
-        temp_dir = tempfile.mkdtemp()
-        yield Path(temp_dir)
-        shutil.rmtree(temp_dir)
+    def test_initialization(self):
+        """Test ClaudeScaffold initialization."""
+        with patch('src.scaffold.ProjectCreator') as mock_creator, \
+             patch('src.scaffold.TaskManager') as mock_manager:
+            scaffold = ClaudeScaffold()
+            
+            # Verify components are created
+            mock_creator.assert_called_once()
+            mock_manager.assert_called_once()
+            assert hasattr(scaffold, 'project_creator')
+            assert hasattr(scaffold, 'task_manager')
     
-    def test_create_project_basic(self, scaffold, temp_dir):
+    def test_create_project_success(self, scaffold):
+        """Test successful project creation."""
+        # Setup
         project_name = "test_project"
-        project_path = temp_dir / project_name
+        project_path = Path("/tmp/test_project")
+        scaffold.project_creator.create_project.return_value = True
         
-        result = scaffold.create_project(
-            project_name=project_name,
-            project_path=project_path,
-            interactive=False
-        )
-        
-        assert result is True
-        assert project_path.exists()
-        assert (project_path / "CLAUDE.md").exists()
-        assert (project_path / "GLOBAL_RULES.md").exists()
-        assert (project_path / "TASKS.md").exists()
-        assert (project_path / "TODO.md").exists()
-        assert (project_path / "tests").exists()
-    
-    def test_create_project_with_modules(self, scaffold, temp_dir):
-        project_name = "test_project"
-        project_path = temp_dir / project_name
-        
-        project_data = {
-            'project_name': project_name,
-            'timestamp': '2024-01-01T00:00:00',
-            'modules': [
-                {'name': 'audio', 'description': 'Audio processing module'},
-                {'name': 'auth', 'description': 'Authentication module'}
-            ],
-            'tasks': [
-                {'title': 'Implement audio resampling', 'module': 'audio'},
-                {'title': 'Build authentication middleware', 'module': 'auth'}
-            ],
-            'rules': {'custom': ['Follow PEP8', 'Use type hints']},
-            'constraints': ['Python 3.8+', 'No external dependencies']
-        }
-        
-        # These methods no longer exist on ClaudeScaffold
-        # They are now in ProjectCreator and DocumentationGenerator
-        # This test needs to be rewritten or removed
-        
-        assert (project_path / "audio").exists()
-        assert (project_path / "audio" / "CLAUDE.md").exists()
-        assert (project_path / "audio" / "TODO.md").exists()
-        assert (project_path / "audio" / "docs").exists()
-        assert (project_path / "audio" / "__init__.py").exists()
-        
-        assert (project_path / "auth").exists()
-        assert (project_path / "auth" / "CLAUDE.md").exists()
-        assert (project_path / "auth" / "TODO.md").exists()
-        assert (project_path / "auth" / "docs").exists()
-        assert (project_path / "auth" / "__init__.py").exists()
-        
-        assert (project_path / "tests" / "audio").exists()
-        assert (project_path / "tests" / "auth").exists()
-    
-    def test_create_project_already_exists(self, scaffold, temp_dir):
-        project_name = "test_project"
-        project_path = temp_dir / project_name
-        project_path.mkdir()
-        
+        # Execute
         result = scaffold.create_project(
             project_name=project_name,
             project_path=project_path,
             force=False,
-            interactive=False
+            interactive=True
         )
         
+        # Verify
+        assert result is True
+        scaffold.project_creator.create_project.assert_called_once_with(
+            project_name, project_path, False, True
+        )
+    
+    def test_create_project_failure(self, scaffold):
+        """Test project creation failure."""
+        # Setup
+        scaffold.project_creator.create_project.return_value = False
+        
+        # Execute
+        result = scaffold.create_project("test_project")
+        
+        # Verify
         assert result is False
     
-    def test_create_project_force_overwrite(self, scaffold, temp_dir):
-        project_name = "test_project"
-        project_path = temp_dir / project_name
-        project_path.mkdir()
-        (project_path / "existing_file.txt").touch()
+    def test_create_project_with_defaults(self, scaffold):
+        """Test project creation with default parameters."""
+        # Setup
+        scaffold.project_creator.create_project.return_value = True
         
+        # Execute
+        result = scaffold.create_project("test_project")
+        
+        # Verify
+        scaffold.project_creator.create_project.assert_called_once_with(
+            "test_project", None, False, True
+        )
+    
+    def test_create_project_non_interactive(self, scaffold):
+        """Test non-interactive project creation."""
+        # Setup
+        scaffold.project_creator.create_project.return_value = True
+        
+        # Execute
         result = scaffold.create_project(
-            project_name=project_name,
-            project_path=project_path,
-            force=True,
+            "test_project",
             interactive=False
         )
         
+        # Verify
+        scaffold.project_creator.create_project.assert_called_once_with(
+            "test_project", None, False, False
+        )
+    
+    def test_add_task_success(self, scaffold):
+        """Test successful task addition."""
+        # Setup
+        project_path = Path("/tmp/test_project")
+        module_name = "backend"
+        task_title = "Implement authentication"
+        priority = "high"
+        scaffold.task_manager.add_task.return_value = True
+        
+        # Execute
+        result = scaffold.add_task(
+            project_path=project_path,
+            module_name=module_name,
+            task_title=task_title,
+            priority=priority
+        )
+        
+        # Verify
         assert result is True
-        assert not (project_path / "existing_file.txt").exists()
-        assert (project_path / "CLAUDE.md").exists()
+        scaffold.task_manager.add_task.assert_called_once_with(
+            project_path, module_name, task_title, priority
+        )
     
-    def test_add_task(self, scaffold, temp_dir):
-        project_name = "test_project"
-        project_path = temp_dir / project_name
+    def test_add_task_default_priority(self, scaffold):
+        """Test task addition with default priority."""
+        # Setup
+        project_path = Path("/tmp/test_project")
+        scaffold.task_manager.add_task.return_value = True
         
-        project_data = {
-            'project_name': project_name,
-            'timestamp': '2024-01-01T00:00:00',
-            'modules': [{'name': 'audio', 'description': 'Audio processing module'}],
-            'tasks': [],
-            'rules': {},
-            'constraints': []
-        }
+        # Execute
+        result = scaffold.add_task(
+            project_path=project_path,
+            module_name="api",
+            task_title="Create endpoints"
+        )
         
-        # These methods no longer exist on ClaudeScaffold
-        # They are now in ProjectCreator and DocumentationGenerator
-        # This test needs to be rewritten or removed
-        
-        result = scaffold.add_task(project_path, 'audio', 'New audio task')
-        
-        assert result is True
-        
-        with open(project_path / 'TASKS.md', 'r') as f:
-            content = f.read()
-            assert 'New audio task' in content
-        
-        with open(project_path / 'audio' / 'CLAUDE.md', 'r') as f:
-            content = f.read()
-            assert 'New audio task' in content
+        # Verify
+        scaffold.task_manager.add_task.assert_called_once_with(
+            project_path, "api", "Create endpoints", "medium"
+        )
     
-    def test_scaffold_initialization(self, scaffold):
-        # Test that scaffold has the required components
-        assert hasattr(scaffold, 'project_creator')
-        assert hasattr(scaffold, 'task_manager')
+    def test_add_task_failure(self, scaffold):
+        """Test task addition failure."""
+        # Setup
+        scaffold.task_manager.add_task.return_value = False
+        
+        # Execute
+        result = scaffold.add_task(
+            Path("/tmp/test"),
+            "module",
+            "task"
+        )
+        
+        # Verify
+        assert result is False
     
-    def test_todo_file_creation(self, scaffold, temp_dir):
-        todo_path = temp_dir / "TODO.md"
-        todo_items = [
-            "- [ ] Task 1",
-            "- [ ] Task 2",
-            "- [ ] Task 3"
-        ]
+    def test_create_project_exception_handling(self, scaffold):
+        """Test exception handling in create_project."""
+        # Setup
+        scaffold.project_creator.create_project.side_effect = Exception("Test error")
         
-        # This method no longer exists on ClaudeScaffold
-        # It's now in DocumentationGenerator
-        # This test needs to be rewritten or removed
+        # Execute & Verify
+        with pytest.raises(Exception) as exc_info:
+            scaffold.create_project("test_project")
+        assert str(exc_info.value) == "Test error"
+    
+    def test_add_task_exception_handling(self, scaffold):
+        """Test exception handling in add_task."""
+        # Setup
+        scaffold.task_manager.add_task.side_effect = Exception("Task error")
         
-        assert todo_path.exists()
-        
-        with open(todo_path, 'r') as f:
-            content = f.read()
-            assert "Test Scope TODO List" in content
-            assert "Total tasks: 3" in content
-            assert "Completed: 0" in content
-            assert "Pending: 3" in content
-            assert all(item in content for item in todo_items)
+        # Execute & Verify
+        with pytest.raises(Exception) as exc_info:
+            scaffold.add_task(Path("/tmp"), "module", "task")
+        assert str(exc_info.value) == "Task error"

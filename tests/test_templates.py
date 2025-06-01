@@ -1,136 +1,239 @@
-"""Tests for template system."""
+"""Comprehensive tests for template system."""
 
 import pytest
-from src.templates import ProjectTemplates
+from unittest.mock import Mock, patch
+from datetime import datetime
+
+from src.templates.templates import ProjectTemplates
 
 
 class TestProjectTemplates:
-    """Test cases for project templates."""
+    """Test cases for ProjectTemplates."""
     
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.templates = ProjectTemplates()
+    @pytest.fixture
+    def templates(self):
+        """Create ProjectTemplates instance."""
+        return ProjectTemplates()
     
-    def test_templates_loaded(self):
-        """Test that all template categories are loaded."""
-        assert hasattr(self.templates, 'base_templates')
-        assert hasattr(self.templates, 'workflow_templates')
-        assert hasattr(self.templates, 'command_templates')
-        assert hasattr(self.templates, 'project_templates')
+    def test_initialization(self):
+        """Test ProjectTemplates initialization."""
+        with patch('src.templates.templates.BaseTemplates') as mock_base, \
+             patch('src.templates.templates.WorkflowTemplates') as mock_workflow, \
+             patch('src.templates.templates.CommandTemplates') as mock_command, \
+             patch('src.templates.templates.ProjectSpecificTemplates') as mock_project:
+            
+            mock_base.get_templates.return_value = {'base': 'template'}
+            mock_workflow.get_templates.return_value = {'workflow': 'template'}
+            mock_command.get_templates.return_value = {'command': 'template'}
+            mock_project.get_templates.return_value = {'project': 'template'}
+            
+            templates = ProjectTemplates()
+            
+            assert templates.base_templates == {'base': 'template'}
+            assert templates.workflow_templates == {'workflow': 'template'}
+            assert templates.command_templates == {'command': 'template'}
+            assert templates.project_templates == {'project': 'template'}
     
-    def test_get_base_template(self):
-        """Test getting a base template."""
-        context = {
-            'project_name': 'test_project',
-            'description': 'Test description',
-            'project_type': 'Test Type',
-            'language': 'Python',
-            'style_guide': 'PEP 8'
+    def test_get_template_base(self, templates):
+        """Test getting base template."""
+        templates.base_templates = {
+            'test_template': 'Hello {name}'
         }
         
-        result = self.templates.get_template('root_claude', context)
+        result = templates.get_template('test_template', {'name': 'World'})
         
-        assert 'test_project' in result
-        assert 'Test description' in result
-        assert 'Test Type' in result
-        assert 'Python' in result
+        assert result == 'Hello World'
     
-    def test_get_workflow_template(self):
-        """Test getting a workflow template."""
-        context = {
-            'task_name': 'Test Task',
-            'research_objective': 'Test objective',
-            'key_questions': 'Question 1\nQuestion 2',
-            'findings': 'Test findings',
-            'recommendations': 'Test recommendations',
-            'references': 'Test references',
-            'next_steps': 'Next steps'
+    def test_get_template_workflow(self, templates):
+        """Test getting workflow template."""
+        templates.workflow_templates = {
+            'research_template': 'Research for {task_name}'
         }
         
-        result = self.templates.get_template('research_template', context)
+        result = templates.get_template('research_template', {'task_name': 'API'})
         
-        assert 'Test Task' in result
-        assert 'Test objective' in result
-        assert 'Question 1' in result
+        assert result == 'Research for API'
     
-    def test_get_command_template(self):
-        """Test getting a command template."""
-        context = {
-            'test_command': 'pytest',
-            'project_name': 'test_project'
-        }
+    def test_get_template_not_found(self, templates):
+        """Test getting non-existent template."""
+        with pytest.raises(ValueError) as exc_info:
+            templates.get_template('non_existent', {})
         
-        result = self.templates.get_template('test_command', context)
-        
-        assert '#!/usr/bin/env python3' in result
-        assert 'pytest' in result
-        assert 'test_project' in result
+        assert "Template 'non_existent' not found" in str(exc_info.value)
     
-    def test_get_project_template(self):
-        """Test getting a project-specific template."""
-        context = {
-            'project_specific_ignores': '*.log\n*.tmp'
-        }
-        
-        result = self.templates.get_template('gitignore', context)
-        
-        assert '# Python' in result
-        assert '__pycache__/' in result
-        assert '*.log' in result
-        assert '*.tmp' in result
-    
-    def test_template_not_found(self):
-        """Test error when template not found."""
-        with pytest.raises(ValueError, match="Template 'nonexistent' not found"):
-            self.templates.get_template('nonexistent', {})
-    
-    def test_prepare_context_defaults(self):
+    def test_prepare_context_defaults(self, templates):
         """Test context preparation with defaults."""
-        context = {'project_name': 'test'}
-        prepared = self.templates._prepare_context(context)
+        context = {}
+        
+        prepared = templates._prepare_context(context)
         
         assert 'timestamp' in prepared
-        assert 'project_structure' in prepared
-        assert 'module_overview' in prepared
+        assert prepared['project_structure'] == 'Project structure will be generated'
+        assert prepared['module_overview'] == 'Module overview will be generated'
+        assert prepared['tasks_by_module'] == 'Tasks will be listed here'
         assert prepared['todo_items'] == '- [ ] No tasks defined yet'
+        assert prepared['status_summary'] == '📊 0/0 tasks completed (0%)'
     
-    def test_format_list_of_dicts(self):
-        """Test formatting list of dictionaries."""
+    def test_prepare_context_merge(self, templates):
+        """Test context preparation with custom values."""
+        context = {
+            'project_name': 'test',
+            'todo_items': '- [ ] Task 1\n- [ ] Task 2'
+        }
+        
+        prepared = templates._prepare_context(context)
+        
+        assert prepared['project_name'] == 'test'
+        assert prepared['todo_items'] == '- [ ] Task 1\n- [ ] Task 2'
+        assert 'timestamp' in prepared  # Default still added
+    
+    def test_format_list_of_dicts_modules(self, templates):
+        """Test formatting list of module dicts."""
         items = [
-            {'name': 'module1', 'description': 'Module 1 description'},
-            {'title': 'Task 1', 'module': 'core'}
+            {'name': 'api', 'description': 'API module'},
+            {'name': 'auth', 'description': 'Authentication'}
         ]
         
-        result = self.templates._format_list_of_dicts(items)
+        result = templates._format_list_of_dicts(items)
         
-        assert '- **module1**: Module 1 description' in result
-        assert '- [core] Task 1' in result
+        assert '- **api**: API module' in result
+        assert '- **auth**: Authentication' in result
     
-    def test_create_custom_command_test(self):
-        """Test creating custom test command."""
+    def test_format_list_of_dicts_tasks(self, templates):
+        """Test formatting list of task dicts."""
+        items = [
+            {'title': 'Build API', 'module': 'api'},
+            {'title': 'Add auth', 'module': 'auth'}
+        ]
+        
+        result = templates._format_list_of_dicts(items)
+        
+        assert '- [api] Build API' in result
+        assert '- [auth] Add auth' in result
+    
+    def test_format_list_of_dicts_empty(self, templates):
+        """Test formatting empty list."""
+        result = templates._format_list_of_dicts([])
+        
+        assert result == "None"
+    
+    def test_format_dict(self, templates):
+        """Test dictionary formatting."""
+        d = {
+            'key1': 'value1',
+            'key2': ['item1', 'item2']
+        }
+        
+        result = templates._format_dict(d)
+        
+        assert '**key1**: value1' in result
+        assert '**key2**:' in result
+        assert '  - item1' in result
+        assert '  - item2' in result
+    
+    def test_format_dict_empty(self, templates):
+        """Test formatting empty dict."""
+        result = templates._format_dict({})
+        
+        assert result == "None"
+    
+    def test_indent(self, templates):
+        """Test text indentation."""
+        text = "Line 1\nLine 2\nLine 3"
+        
+        result = templates._indent(text, 4)
+        
+        assert result == "    Line 1\n    Line 2\n    Line 3"
+    
+    def test_create_custom_command_test(self, templates):
+        """Test creating test command."""
+        templates.command_templates = {
+            'test_command': '#!/usr/bin/env python\n# Test: {test_command}'
+        }
+        
         project_data = {
-            'project_name': 'test_project',
+            'project_name': 'test',
             'metadata': {
                 'commands': {
-                    'test': 'pytest --cov'
+                    'test': 'pytest'
                 }
             }
         }
         
-        result = self.templates.create_custom_command('test', project_data)
+        result = templates.create_custom_command('test', project_data)
         
-        assert result is not None
-        assert 'pytest --cov' in result
-        assert 'test_project' in result
+        assert result == '#!/usr/bin/env python\n# Test: pytest'
     
-    def test_create_custom_command_none(self):
-        """Test creating custom command when not defined."""
+    def test_create_custom_command_build(self, templates):
+        """Test creating build command."""
+        templates.command_templates = {
+            'build_command': '# Build: {build_command}\n# Test: {test_command}'
+        }
+        
+        project_data = {
+            'project_name': 'test',
+            'metadata': {
+                'commands': {
+                    'build': 'python setup.py build',
+                    'test': 'pytest'
+                }
+            }
+        }
+        
+        result = templates.create_custom_command('build', project_data)
+        
+        assert '# Build: python setup.py build' in result
+        assert '# Test: pytest' in result
+    
+    def test_create_custom_command_not_found(self, templates):
+        """Test creating command when not in metadata."""
         project_data = {
             'metadata': {
                 'commands': {}
             }
         }
         
-        result = self.templates.create_custom_command('test', project_data)
+        result = templates.create_custom_command('test', project_data)
         
         assert result is None
+    
+    def test_complex_template_rendering(self, templates, sample_template_context):
+        """Test rendering complex template with full context."""
+        templates.base_templates = {
+            'complex': '''Project: {project_name}
+Description: {project_description}
+Modules:
+{module_overview}
+Tasks by Module:
+{tasks_by_module}
+Rules:
+{rules_list}'''
+        }
+        
+        result = templates.get_template('complex', sample_template_context)
+        
+        assert 'Project: test_project' in result
+        assert 'Description: A test project' in result
+        assert '- **core**: Core functionality' in result
+    
+    def test_prepare_context_list_conversion(self, templates):
+        """Test context preparation converts lists properly."""
+        context = {
+            'modules': [
+                {'name': 'mod1', 'description': 'Module 1'},
+                {'name': 'mod2', 'description': 'Module 2'}
+            ],
+            'rules': {
+                'suggested': ['Rule 1', 'Rule 2']
+            }
+        }
+        
+        prepared = templates._prepare_context(context)
+        
+        # Lists of dicts should be formatted
+        assert isinstance(prepared['modules'], str)
+        assert '**mod1**' in prepared['modules']
+        
+        # Nested dicts should be formatted
+        assert isinstance(prepared['rules'], str)
+        assert '**suggested**' in prepared['rules']
