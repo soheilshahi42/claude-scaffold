@@ -10,14 +10,14 @@ class ProjectSpecificTemplates:
     def get_templates() -> Dict[str, str]:
         """Return project-specific templates."""
         return {
-            'claude_settings': """{
-  "tools": {
+            'claude_settings': """{{
+  "tools": {{
     "file_operations": true,
     "bash_commands": true,
     "web_browser": false,
     "code_execution": true
-  },
-  "context": {
+  }},
+  "context": {{
     "include_patterns": [
       "**/*.py",
       "**/*.md",
@@ -37,9 +37,9 @@ class ProjectSpecificTemplates:
       "**/dist/**",
       "**/build/**"
     ]
-  },
-  "workflows": {
-    "task_implementation": {
+  }},
+  "workflows": {{
+    "task_implementation": {{
       "steps": [
         "Read task details in module CLAUDE.md",
         "Review/update research in docs/",
@@ -48,8 +48,8 @@ class ProjectSpecificTemplates:
         "Verify tests pass",
         "Update documentation"
       ]
-    },
-    "code_review": {
+    }},
+    "code_review": {{
       "checklist": [
         "Tests pass",
         "Code follows style guide",
@@ -57,9 +57,9 @@ class ProjectSpecificTemplates:
         "No security issues",
         "Performance considered"
       ]
-    }
-  }
-}
+    }}
+  }}
+}}
 """,
 
             'gitignore': """# Python

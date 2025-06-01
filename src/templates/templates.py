@@ -51,7 +51,8 @@ class ProjectTemplates:
             'recent_completions': '- No completed items yet',
             'next_steps': '1. Start with the first task',
             'example_imports': 'example_function, ExampleClass',
-            'usage_example': '# Usage examples will be added during implementation'
+            'usage_example': '# Usage examples will be added during implementation',
+            'project_specific_ignores': '# Add project-specific patterns here'
         }
         
         # Merge with provided context
