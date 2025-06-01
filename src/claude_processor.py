@@ -164,17 +164,12 @@ Return JSON with:
     
     def _call_claude(self, prompt: str, timeout: int = 60) -> str:
         """Call Claude in headless mode with a prompt."""
-        # Create temporary file for prompt
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-            f.write(prompt)
-            prompt_file = f.name
-        
         try:
-            # Call Claude with the prompt file
+            # Call Claude with the prompt in non-interactive mode
             cmd = [
                 self.claude_executable,
-                '--max-tokens', '4000',
-                prompt_file
+                '-p',  # Print response and exit (non-interactive)
+                prompt
             ]
             
             result = subprocess.run(
@@ -189,9 +184,8 @@ Return JSON with:
             
             return result.stdout.strip()
             
-        finally:
-            # Clean up temp file
-            Path(prompt_file).unlink(missing_ok=True)
+        except Exception as e:
+            raise RuntimeError(f"Failed to call Claude: {str(e)}")
     
     def _merge_claude_config(self, original_data: Dict, claude_config: Dict) -> Dict[str, Any]:
         """Merge Claude's enhancements with original data."""
