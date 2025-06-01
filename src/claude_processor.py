@@ -173,9 +173,8 @@ Return JSON with:
             # Call Claude with the prompt file
             cmd = [
                 self.claude_executable,
-                '--no-interactive',
                 '--max-tokens', '4000',
-                '-p', prompt_file
+                prompt_file
             ]
             
             result = subprocess.run(
