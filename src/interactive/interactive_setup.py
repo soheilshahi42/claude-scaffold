@@ -9,7 +9,7 @@ from datetime import datetime
 
 from ..config.project_config import ProjectConfig
 from .interactive_collectors import InteractiveCollectors
-from ..claude.claude_integration import ClaudeEnhancedSetup
+from ..claude.claude_enhancer import ClaudeEnhancedSetup
 from ..claude.claude_interactive_enhanced import EnhancedClaudeInteractiveSetup
 from ..utils.logger import get_logger
 import subprocess

@@ -4,7 +4,7 @@ import sys
 import os
 from pathlib import Path
 from .scaffold import ClaudeScaffold
-from .interactive.interactive import InteractiveSetup
+from .interactive.interactive_setup import InteractiveSetup
 from .utils.logger import get_logger
 
 
