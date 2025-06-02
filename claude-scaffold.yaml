@@ -1,0 +1,49 @@
+# Claude Scaffold Configuration File
+# This file configures the behavior of the Claude Scaffold CLI
+
+discovery:
+  # Maximum number of questions during the discovery phase
+  max_questions: 100
+  
+  # Enable deep discovery system
+  enable_deep_discovery: true
+
+claude:
+  # Timeout for Claude API calls in seconds
+  timeout_seconds: 300
+  
+  # Maximum number of retry attempts for failed calls
+  max_retries: 3
+  
+  # Number of modules to process in each chunk
+  chunk_size: 3
+
+ui:
+  # Show progress bars during operations
+  show_progress_bars: true
+  
+  # Use fixed input box at bottom of terminal
+  fixed_input_box: true
+  
+  # Use styled message boxes for different message types
+  message_boxes: true
+
+# Project-specific defaults
+project_defaults:
+  # Default project type when not specified
+  project_type: "Web Application"
+  
+  # Default programming language
+  language: "Python"
+  
+  # Initialize git repository by default
+  init_git: true
+  
+  # Default modules to include in every project
+  default_modules:
+    - name: "core"
+      description: "Core business logic and domain models"
+    - name: "utils"
+      description: "Utility functions and helpers"
+    - name: "tests"
+      description: "Test suite and testing utilities"

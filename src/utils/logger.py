@@ -50,11 +50,15 @@ class DebugLogger:
     
     def log_session_start(self):
         """Log the start of a new session."""
+        import platform
         self.logger.info(
             "\n" + "=" * 80 + "\n" +
             f"Session started: {self.session_id}\n" +
             f"Debug mode: {self.debug_mode}\n" +
             f"Log file: {self.log_file}\n" +
+            f"Python version: {sys.version}\n" +
+            f"Platform: {platform.platform()}\n" +
+            f"Working directory: {Path.cwd()}\n" +
             "=" * 80,
             extra={'session_id': self.session_id}
         )
@@ -128,6 +132,53 @@ class DebugLogger:
     def get_log_file_path(self) -> Path:
         """Get the current log file path."""
         return self.log_file
+    
+    def log_performance(self, operation: str, duration: float, success: bool = True):
+        """Log performance metrics for operations."""
+        perf_data = {
+            'operation': operation,
+            'duration_seconds': round(duration, 3),
+            'success': success,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        level = logging.INFO if success else logging.WARNING
+        message = f"Operation '{operation}' completed in {duration:.3f}s"
+        if not success:
+            message += " (with errors)"
+        
+        self.logger.log(level, message, extra={'session_id': self.session_id, 'performance': perf_data})
+    
+    def log_user_action(self, action: str, details: Optional[Dict[str, Any]] = None):
+        """Log user actions for analytics."""
+        action_data = {
+            'action': action,
+            'timestamp': datetime.now().isoformat(),
+            'details': details or {}
+        }
+        
+        self.debug(f"User action: {action}", action_data)
+    
+    def get_session_summary(self) -> Dict[str, Any]:
+        """Get a summary of the current session."""
+        # Read the log file and extract summary information
+        summary = {
+            'session_id': self.session_id,
+            'start_time': self.session_id,
+            'debug_mode': self.debug_mode,
+            'log_file': str(self.log_file)
+        }
+        
+        # Count log entries by level
+        if self.log_file.exists():
+            with open(self.log_file, 'r') as f:
+                content = f.read()
+                summary['error_count'] = content.count(' - ERROR - ')
+                summary['warning_count'] = content.count(' - WARNING - ')
+                summary['info_count'] = content.count(' - INFO - ')
+                summary['debug_count'] = content.count(' - DEBUG - ')
+        
+        return summary
     
     def enable_debug_mode(self):
         """Enable debug mode at runtime."""

@@ -3,22 +3,27 @@
 import subprocess
 import json
 import tempfile
+import time
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from ..utils.logger import get_logger
+from ..utils.progress import progress_indicator
 
 
 class ClaudeProcessor:
     """Process user inputs through Claude in headless mode."""
     
-    def __init__(self, debug_mode: bool = False):
+    def __init__(self, debug_mode: bool = False, timeout: int = 300, max_retries: int = 3):
         self.claude_executable = "claude"  # Assumes claude is in PATH
         self.logger = get_logger(debug_mode)
+        self.default_timeout = timeout  # Default 5 minutes
+        self.max_retries = max_retries  # Maximum retry attempts
     
     def process_project_setup(self, initial_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process project setup through Claude to generate intelligent configuration."""
         
-        prompt = f"""You are helping set up a new {initial_data['metadata']['project_type_name']} project.
+        with progress_indicator.claude_thinking("Analyzing your project requirements"):
+            prompt = f"""You are helping set up a new {initial_data['metadata']['project_type_name']} project.
 
 Project Information:
 - Name: {initial_data['project_name']}
@@ -56,18 +61,19 @@ Please return a JSON object with this enhanced configuration. Format:
     "performance_guidelines": [...]
 }}"""
 
-        response = self._call_claude(prompt)
-        claude_config = json.loads(response)
-        
-        # Merge Claude's enhancements with original data
-        enhanced_data = self._merge_claude_config(initial_data, claude_config)
+            response = self._call_claude(prompt)
+            claude_config = json.loads(response)
+            
+            # Merge Claude's enhancements with original data
+            enhanced_data = self._merge_claude_config(initial_data, claude_config)
         
         return enhanced_data
     
     def generate_task_details(self, task_title: str, module_name: str, project_context: Dict) -> Dict[str, Any]:
         """Generate detailed task specifications using Claude."""
         
-        prompt = f"""Generate comprehensive task details for the following task:
+        with progress_indicator.claude_thinking(f"Generating details for task: {task_title}"):
+            prompt = f"""Generate comprehensive task details for the following task:
 
 Task: {task_title}
 Module: {module_name}
@@ -85,13 +91,14 @@ Please provide:
 
 Return as JSON with keys: goal, requirements, approach, subtasks, acceptance_criteria, challenges, research_topics"""
 
-        response = self._call_claude(prompt)
-        return json.loads(response)
+            response = self._call_claude(prompt)
+            return json.loads(response)
     
     def enhance_module_documentation(self, module: Dict, project_context: Dict) -> Dict[str, Any]:
         """Generate enhanced module documentation using Claude."""
         
-        prompt = f"""Generate comprehensive documentation for the following module:
+        with progress_indicator.claude_thinking(f"Enhancing documentation for module: {module['name']}"):
+            prompt = f"""Generate comprehensive documentation for the following module:
 
 Module: {module['name']}
 Description: {module['description']}
@@ -110,13 +117,14 @@ Please provide:
 
 Return as JSON."""
 
-        response = self._call_claude(prompt)
-        return json.loads(response)
+            response = self._call_claude(prompt)
+            return json.loads(response)
     
     def generate_global_rules(self, project_data: Dict) -> List[str]:
         """Generate project-specific global rules using Claude."""
         
-        prompt = f"""Generate 10-15 project-specific rules for a {project_data['metadata']['project_type_name']} project.
+        with progress_indicator.claude_thinking("Generating project-specific rules"):
+            prompt = f"""Generate 10-15 project-specific rules for a {project_data['metadata']['project_type_name']} project.
 
 Project: {project_data['project_name']}
 Description: {project_data['metadata']['description']}
@@ -135,13 +143,14 @@ Existing rules to complement (don't repeat these):
 
 Return as JSON array of rule strings."""
 
-        response = self._call_claude(prompt)
-        return json.loads(response)
+            response = self._call_claude(prompt)
+            return json.loads(response)
     
     def validate_project_configuration(self, project_data: Dict) -> Dict[str, Any]:
         """Validate and suggest improvements for project configuration."""
         
-        prompt = f"""Review and validate this project configuration:
+        with progress_indicator.claude_thinking("Validating project configuration"):
+            prompt = f"""Review and validate this project configuration:
 
 {json.dumps(project_data, indent=2)}
 
@@ -161,12 +170,15 @@ Return JSON with:
     "overall_assessment": "..."
 }}"""
 
-        response = self._call_claude(prompt)
-        return json.loads(response)
+            response = self._call_claude(prompt)
+            return json.loads(response)
     
-    def _call_claude(self, prompt: str, timeout: int = 180, expect_json: bool = True) -> str:
-        """Call Claude in headless mode with a prompt."""
-        self.logger.debug("Preparing Claude call", {'prompt_length': len(prompt)})
+    def _call_claude(self, prompt: str, timeout: Optional[int] = None, expect_json: bool = True) -> str:
+        """Call Claude in headless mode with a prompt, with retry logic."""
+        if timeout is None:
+            timeout = self.default_timeout
+            
+        self.logger.debug("Preparing Claude call", {'prompt_length': len(prompt), 'timeout': timeout})
         
         # Add system prompt for better JSON generation (only if expecting JSON)
         if expect_json:
@@ -180,68 +192,105 @@ Return JSON with:
         else:
             full_prompt = prompt
         
-        try:
-            # Call Claude in non-interactive mode with combined prompt
-            cmd = [
-                self.claude_executable,
-                '-p',  # Print mode (non-interactive)
-                full_prompt
-            ]
-            
-            self.logger.debug("Executing Claude command", {'command': cmd[:2] + ['...']})  # Don't log full prompts
-            
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout
+        # Retry logic with exponential backoff
+        last_error = None
+        for attempt in range(self.max_retries):
+            try:
+                # Call Claude in non-interactive mode with combined prompt
+                cmd = [
+                    self.claude_executable,
+                    '-p',  # Print mode (non-interactive)
+                    full_prompt
+                ]
+                
+                if attempt > 0:
+                    # Exponential backoff: 2^attempt seconds (2s, 4s, 8s...)
+                    wait_time = 2 ** attempt
+                    progress_indicator.show_retry(attempt + 1, self.max_retries, wait_time)
+                
+                self.logger.debug("Executing Claude command", {'command': cmd[:2] + ['...'], 'attempt': attempt + 1})
+                
+                import time as time_module
+                start_time = time_module.time()
+                
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout
+                )
+                
+                duration = time_module.time() - start_time
+                self.logger.log_performance(f"Claude API call (attempt {attempt + 1})", duration, result.returncode == 0)
+                
+                self.logger.log_claude_interaction(
+                    prompt=prompt,
+                    response=result.stdout,
+                    error=None if result.returncode == 0 else RuntimeError(result.stderr),
+                    command=cmd[:2] + ['...']
+                )
+                
+                if result.returncode != 0:
+                    error = RuntimeError(f"Claude returned error: {result.stderr}")
+                    self.logger.error("Claude command failed", error)
+                    raise error
+                
+                response = result.stdout.strip()
+                
+                # Try to clean the response if it contains markdown
+                if '```json' in response:
+                    json_start = response.find('```json') + 7
+                    json_end = response.find('```', json_start)
+                    if json_end > json_start:
+                        response = response[json_start:json_end].strip()
+                        self.logger.debug("Extracted JSON from markdown block")
+                elif '```' in response:
+                    json_start = response.find('```') + 3
+                    json_end = response.find('```', json_start)
+                    if json_end > json_start:
+                        response = response[json_start:json_end].strip()
+                        self.logger.debug("Extracted content from code block")
+                
+                # Validate it's proper JSON (only if expecting JSON)
+                if expect_json:
+                    try:
+                        json.loads(response)
+                        self.logger.debug("Claude response is valid JSON")
+                    except json.JSONDecodeError as e:
+                        self.logger.log_json_parse_error(response, e)
+                        self.logger.warning("Claude response is not valid JSON, returning raw")
+                
+                # Success! Return the response
+                return response
+                
+            except subprocess.TimeoutExpired as e:
+                last_error = e
+                self.logger.warning(f"Claude call timed out after {timeout}s (attempt {attempt + 1}/{self.max_retries})")
+                if attempt < self.max_retries - 1:
+                    self.logger.info("⏱️ Timeout occurred, retrying...")
+                continue
+                
+            except Exception as e:
+                last_error = e
+                self.logger.warning(f"Failed to call Claude (attempt {attempt + 1}/{self.max_retries}): {str(e)}")
+                if attempt < self.max_retries - 1:
+                    continue
+                break
+        
+        # All retries failed
+        self.logger.error(f"All {self.max_retries} attempts to call Claude failed", last_error)
+        if isinstance(last_error, subprocess.TimeoutExpired):
+            progress_indicator.show_error(
+                f"Claude call timed out after {timeout} seconds (tried {self.max_retries} times)",
+                "Try breaking your request into smaller parts or increasing the timeout setting."
             )
-            
-            self.logger.log_claude_interaction(
-                prompt=prompt,
-                response=result.stdout,
-                error=None if result.returncode == 0 else RuntimeError(result.stderr),
-                command=cmd[:2] + ['...']
+            raise RuntimeError(f"Claude call timed out after {timeout} seconds (tried {self.max_retries} times)")
+        else:
+            progress_indicator.show_error(
+                f"Failed to call Claude after {self.max_retries} attempts: {str(last_error)}",
+                "Check your Claude CLI installation and ensure it's properly configured."
             )
-            
-            if result.returncode != 0:
-                error = RuntimeError(f"Claude returned error: {result.stderr}")
-                self.logger.error("Claude command failed", error)
-                raise error
-            
-            response = result.stdout.strip()
-            
-            # Try to clean the response if it contains markdown
-            if '```json' in response:
-                json_start = response.find('```json') + 7
-                json_end = response.find('```', json_start)
-                if json_end > json_start:
-                    response = response[json_start:json_end].strip()
-                    self.logger.debug("Extracted JSON from markdown block")
-            elif '```' in response:
-                json_start = response.find('```') + 3
-                json_end = response.find('```', json_start)
-                if json_end > json_start:
-                    response = response[json_start:json_end].strip()
-                    self.logger.debug("Extracted content from code block")
-            
-            # Validate it's proper JSON (only if expecting JSON)
-            if expect_json:
-                try:
-                    json.loads(response)
-                    self.logger.debug("Claude response is valid JSON")
-                except json.JSONDecodeError as e:
-                    self.logger.log_json_parse_error(response, e)
-                    self.logger.warning("Claude response is not valid JSON, returning raw")
-            
-            return response
-            
-        except subprocess.TimeoutExpired as e:
-            self.logger.error(f"Claude call timed out after {timeout}s", e)
-            raise RuntimeError(f"Claude call timed out after {timeout} seconds")
-        except Exception as e:
-            self.logger.error("Failed to call Claude", e)
-            raise RuntimeError(f"Failed to call Claude: {str(e)}")
+            raise RuntimeError(f"Failed to call Claude after {self.max_retries} attempts: {str(last_error)}")
     
     def _merge_claude_config(self, original_data: Dict, claude_config: Dict) -> Dict[str, Any]:
         """Merge Claude's enhancements with original data."""

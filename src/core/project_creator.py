@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional, Any
 
 from ..interactive.interactive_setup import InteractiveSetup
+from ..interactive.enhanced_setup import EnhancedInteractiveSetup
 from ..templates.templates import ProjectTemplates
 from .documentation_generator import DocumentationGenerator
 from ..utils.project_helpers import ProjectHelpers
@@ -17,6 +18,7 @@ class ProjectCreator:
     def __init__(self, debug_mode: bool = False):
         self.templates = ProjectTemplates()
         self.interactive_setup = InteractiveSetup(debug_mode=debug_mode)
+        self.enhanced_setup = None  # Created on demand
         self.doc_generator = DocumentationGenerator()
         self.helpers = ProjectHelpers()
         self.logger = get_logger(debug_mode)
@@ -36,7 +38,8 @@ class ProjectCreator:
         return False
     
     def create_project(self, project_name: str, project_path: Optional[Path] = None, 
-                      force: bool = False, interactive: bool = True) -> bool:
+                      force: bool = False, interactive: bool = True, 
+                      enhanced: bool = False, config_file: Optional[Path] = None) -> bool:
         """Create a new Claude Scaffold project."""
         if project_path is None:
             project_path = Path.cwd() / project_name
@@ -54,9 +57,15 @@ class ProjectCreator:
         try:
             # Run interactive setup if enabled
             if interactive:
-                # Check if Claude is available
-                use_claude = self.check_claude_available()
-                project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
+                if enhanced:
+                    # Use enhanced setup with deep discovery
+                    if self.enhanced_setup is None:
+                        self.enhanced_setup = EnhancedInteractiveSetup(config_file=str(config_file) if config_file else None)
+                    project_data = self.enhanced_setup.run()
+                else:
+                    # Check if Claude is available
+                    use_claude = self.check_claude_available()
+                    project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
             else:
                 # Use minimal defaults for non-interactive mode
                 project_data = self.helpers.get_default_project_data(project_name)

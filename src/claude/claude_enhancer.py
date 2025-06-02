@@ -10,9 +10,9 @@ from .claude_processor import ClaudeProcessor
 class ClaudeEnhancedSetup:
     """Enhanced setup using Claude for intelligent configuration."""
     
-    def __init__(self, interactive_setup):
+    def __init__(self, interactive_setup, timeout: int = 300, max_retries: int = 3):
         self.interactive_setup = interactive_setup
-        self.processor = ClaudeProcessor()
+        self.processor = ClaudeProcessor(timeout=timeout, max_retries=max_retries)
     
     def enhance_with_claude(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
         """Enhance project configuration using Claude."""

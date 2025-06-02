@@ -94,6 +94,16 @@ Project Types:
         action='store_true',
         help='Skip interactive setup and use minimal defaults'
     )
+    new_parser.add_argument(
+        '--enhanced',
+        action='store_true',
+        help='Use enhanced UI with deep discovery system (experimental)'
+    )
+    new_parser.add_argument(
+        '--config',
+        type=Path,
+        help='Path to configuration file (claude-scaffold.yaml)'
+    )
     
     # Add task command
     add_task_parser = subparsers.add_parser(
@@ -149,7 +159,9 @@ Project Types:
                 project_name=args.project_name,
                 project_path=args.path,
                 force=args.force,
-                interactive=not args.no_interactive
+                interactive=not args.no_interactive,
+                enhanced=args.enhanced,
+                config_file=args.config
             )
             sys.exit(0 if success else 1)
         

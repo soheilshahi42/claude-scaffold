@@ -21,7 +21,10 @@ class TestClaudeEnhancedSetup:
             },
             'modules': [{'name': 'core', 'description': 'Core module'}],
             'tasks': [{'title': 'Task 1', 'module': 'core'}],
-            'rules': ['Rule 1']
+            'rules': {
+                'suggested': ['Rule 1'],
+                'custom': []
+            }
         }
     
     @patch('questionary.confirm')
@@ -45,8 +48,9 @@ class TestClaudeEnhancedSetup:
         assert result == {'enhanced': True}
         self.enhancer.enhance_project_data.assert_called_once_with(self.test_project_data)
     
+    @patch('questionary.select')
     @patch('questionary.confirm')
-    def test_enhance_project_data_success(self, mock_confirm):
+    def test_enhance_project_data_success(self, mock_confirm, mock_select):
         """Test successful project data enhancement."""
         # Mock processor responses
         enhanced_response = {
@@ -57,14 +61,33 @@ class TestClaudeEnhancedSetup:
             ],
             'modules': [
                 {'name': 'core', 'description': 'Enhanced core module'}
-            ]
+            ],
+            'rules': {
+                'suggested': [],
+                'custom': []
+            },
+            'metadata': {
+                'description': 'Enhanced description',
+                'project_type': 'web'
+            }
         }
         
         self.enhancer.processor.process_project_setup = Mock(return_value=enhanced_response)
         self.enhancer.processor.generate_task_details = Mock(return_value={
             'implementation': 'Task implementation details'
         })
+        self.enhancer.processor.enhance_module_documentation = Mock(return_value={
+            'detailed_description': 'Enhanced module documentation'
+        })
+        self.enhancer.processor.generate_global_rules = Mock(return_value=[
+            'Rule 1', 'Rule 2', 'Rule 3'
+        ])
+        self.enhancer.processor.validate_project_configuration = Mock(return_value={
+            'is_valid': True,
+            'suggestions': []
+        })
         mock_confirm.return_value.ask.return_value = True  # Review changes
+        mock_select.return_value.ask.return_value = 'yes'  # Exit enhancement loop
         
         result = self.enhancer.enhance_project_data(self.test_project_data)
         
