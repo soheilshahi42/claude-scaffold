@@ -5,6 +5,7 @@ import questionary
 from typing import Dict, Any
 
 from .claude_processor import ClaudeProcessor
+from ..utils.progress import progress_indicator
 
 
 class ClaudeEnhancedSetup:
@@ -38,33 +39,49 @@ class ClaudeEnhancedSetup:
             # Process the entire project setup
             enhanced_data = self.processor.process_project_setup(project_data)
             
-            # Generate task details
-            print("📝 Generating detailed task specifications...")
-            for task in enhanced_data['tasks']:
-                if 'details' not in task:
-                    task['details'] = self.processor.generate_task_details(
-                        task['title'],
-                        task['module'],
-                        enhanced_data
-                    )
+            # Generate task details in batch
+            tasks_needing_details = [task for task in enhanced_data['tasks'] if 'details' not in task]
+            if tasks_needing_details:
+                print("📝 Generating detailed task specifications...")
+                task_details = self.processor.generate_task_details_batch(
+                    tasks_needing_details,
+                    enhanced_data
+                )
+                # Update tasks with details
+                for task in enhanced_data['tasks']:
+                    if task['title'] in task_details:
+                        task['details'] = task_details[task['title']]
             
             # Enhance module documentation
-            print("📚 Enhancing module documentation...")
-            for module in enhanced_data['modules']:
-                if 'documentation' not in module:
-                    module['documentation'] = self.processor.enhance_module_documentation(
-                        module,
-                        enhanced_data
-                    )
+            modules_needing_docs = [module for module in enhanced_data['modules'] if 'documentation' not in module]
+            if modules_needing_docs:
+                print("📚 Enhancing module documentation...")
+                # For now, use individual calls for module documentation
+                # as they require more complex processing
+                for module in modules_needing_docs:
+                    try:
+                        module['documentation'] = self.processor.enhance_module_documentation(
+                            module,
+                            enhanced_data
+                        )
+                    except Exception as e:
+                        self.processor.logger.warning(f"Failed to enhance module {module['name']}: {e}")
             
             # Generate additional global rules
             print("📏 Generating comprehensive project rules...")
-            additional_rules = self.processor.generate_global_rules(enhanced_data)
-            enhanced_data['rules']['suggested'].extend(additional_rules[:5])  # Add top 5 rules
+            try:
+                additional_rules = self.processor.generate_global_rules(enhanced_data)
+                enhanced_data['rules']['suggested'].extend(additional_rules[:5])  # Add top 5 rules
+            except Exception as e:
+                self.processor.logger.warning(f"Failed to generate global rules: {e}")
             
             # Validate configuration
             print("✅ Validating project configuration...")
-            validation = self.processor.validate_project_configuration(enhanced_data)
+            try:
+                validation = self.processor.validate_project_configuration(enhanced_data)
+            except Exception as e:
+                self.processor.logger.warning(f"Failed to validate configuration: {e}")
+                validation = {"suggestions": []}
             
             if validation.get('suggestions'):
                 print("\n💡 Claude suggests:")

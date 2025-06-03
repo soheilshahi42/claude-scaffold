@@ -5,9 +5,10 @@ import json
 import tempfile
 import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
 from ..utils.logger import get_logger
 from ..utils.progress import progress_indicator
+from .claude_task_queue import ClaudeTaskQueue
 
 
 class ClaudeProcessor:
@@ -22,7 +23,7 @@ class ClaudeProcessor:
     def process_project_setup(self, initial_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process project setup through Claude to generate intelligent configuration."""
         
-        with progress_indicator.claude_thinking("Analyzing your project requirements"):
+        with progress_indicator.claude_thinking("Analyzing your project requirements") as progress:
             prompt = f"""You are helping set up a new {initial_data['metadata']['project_type_name']} project.
 
 Project Information:
@@ -61,10 +62,17 @@ Please return a JSON object with this enhanced configuration. Format:
     "performance_guidelines": [...]
 }}"""
 
-            response = self._call_claude(prompt)
+            progress.update_status("Preparing prompt", "Initialization")
+            progress.set_prompt_size(len(prompt))
+            
+            progress.update_status("Calling Claude API", "Processing")
+            response = self._call_claude(prompt, progress_callback=progress.update_status)
+            
+            progress.update_status("Parsing response", "Finalizing")
             claude_config = json.loads(response)
             
             # Merge Claude's enhancements with original data
+            progress.update_status("Merging configurations", "Finalizing")
             enhanced_data = self._merge_claude_config(initial_data, claude_config)
         
         return enhanced_data
@@ -72,7 +80,7 @@ Please return a JSON object with this enhanced configuration. Format:
     def generate_task_details(self, task_title: str, module_name: str, project_context: Dict) -> Dict[str, Any]:
         """Generate detailed task specifications using Claude."""
         
-        with progress_indicator.claude_thinking(f"Generating details for task: {task_title}"):
+        with progress_indicator.claude_thinking(f"Generating details for task: {task_title}") as progress:
             prompt = f"""Generate comprehensive task details for the following task:
 
 Task: {task_title}
@@ -91,13 +99,17 @@ Please provide:
 
 Return as JSON with keys: goal, requirements, approach, subtasks, acceptance_criteria, challenges, research_topics"""
 
-            response = self._call_claude(prompt)
+            progress.set_prompt_size(len(prompt))
+            progress.update_status("Calling Claude API", "Processing")
+            response = self._call_claude(prompt, progress_callback=progress.update_status)
+            
+            progress.update_status("Parsing task details", "Finalizing")
             return json.loads(response)
     
     def enhance_module_documentation(self, module: Dict, project_context: Dict) -> Dict[str, Any]:
         """Generate enhanced module documentation using Claude."""
         
-        with progress_indicator.claude_thinking(f"Enhancing documentation for module: {module['name']}"):
+        with progress_indicator.claude_thinking(f"Enhancing documentation for module: {module['name']}") as progress:
             prompt = f"""Generate comprehensive documentation for the following module:
 
 Module: {module['name']}
@@ -117,13 +129,17 @@ Please provide:
 
 Return as JSON."""
 
-            response = self._call_claude(prompt)
+            progress.set_prompt_size(len(prompt))
+            progress.update_status("Calling Claude API", "Processing")
+            response = self._call_claude(prompt, progress_callback=progress.update_status)
+            
+            progress.update_status("Parsing module documentation", "Finalizing")
             return json.loads(response)
     
     def generate_global_rules(self, project_data: Dict) -> List[str]:
         """Generate project-specific global rules using Claude."""
         
-        with progress_indicator.claude_thinking("Generating project-specific rules"):
+        with progress_indicator.claude_thinking("Generating project-specific rules") as progress:
             prompt = f"""Generate 10-15 project-specific rules for a {project_data['metadata']['project_type_name']} project.
 
 Project: {project_data['project_name']}
@@ -143,13 +159,17 @@ Existing rules to complement (don't repeat these):
 
 Return as JSON array of rule strings."""
 
-            response = self._call_claude(prompt)
+            progress.set_prompt_size(len(prompt))
+            progress.update_status("Calling Claude API", "Processing")
+            response = self._call_claude(prompt, progress_callback=progress.update_status)
+            
+            progress.update_status("Parsing generated rules", "Finalizing")
             return json.loads(response)
     
     def validate_project_configuration(self, project_data: Dict) -> Dict[str, Any]:
         """Validate and suggest improvements for project configuration."""
         
-        with progress_indicator.claude_thinking("Validating project configuration"):
+        with progress_indicator.claude_thinking("Validating project configuration") as progress:
             prompt = f"""Review and validate this project configuration:
 
 {json.dumps(project_data, indent=2)}
@@ -170,10 +190,14 @@ Return JSON with:
     "overall_assessment": "..."
 }}"""
 
-            response = self._call_claude(prompt)
+            progress.set_prompt_size(len(prompt))
+            progress.update_status("Calling Claude API", "Processing")
+            response = self._call_claude(prompt, progress_callback=progress.update_status)
+            
+            progress.update_status("Parsing validation results", "Finalizing")
             return json.loads(response)
     
-    def _call_claude(self, prompt: str, timeout: Optional[int] = None, expect_json: bool = True) -> str:
+    def _call_claude(self, prompt: str, timeout: Optional[int] = None, expect_json: bool = True, progress_callback: Optional[Callable] = None) -> str:
         """Call Claude in headless mode with a prompt, with retry logic."""
         if timeout is None:
             timeout = self.default_timeout
@@ -207,6 +231,9 @@ Return JSON with:
                     # Exponential backoff: 2^attempt seconds (2s, 4s, 8s...)
                     wait_time = 2 ** attempt
                     progress_indicator.show_retry(attempt + 1, self.max_retries, wait_time)
+                
+                if progress_callback:
+                    progress_callback(f"Calling Claude (attempt {attempt + 1}/{self.max_retries})", "API Call")
                 
                 self.logger.debug("Executing Claude command", {'command': cmd[:2] + ['...'], 'attempt': attempt + 1})
                 
@@ -344,3 +371,110 @@ Return JSON with:
         if not items:
             return "None"
         return '\n'.join([f"- {item}" for item in items])
+    
+    def generate_module_descriptions_batch(self, modules: List[str], project_context: Dict) -> Dict[str, str]:
+        """Generate descriptions for multiple modules concurrently.
+        
+        Args:
+            modules: List of module names
+            project_context: Project context information
+            
+        Returns:
+            Dictionary mapping module names to descriptions
+        """
+        self.logger.info(f"Generating descriptions for {len(modules)} modules concurrently")
+        
+        # Create task queue
+        task_queue = ClaudeTaskQueue(max_workers=min(3, len(modules)), debug_mode=self.logger.debug_mode)
+        
+        # Add tasks for each module
+        for module in modules:
+            prompt = f"""Generate a concise description for the '{module}' module in a {project_context['metadata']['project_type_name']} project.
+
+Project: {project_context['project_name']}
+Description: {project_context['metadata']['description']}
+Language: {project_context['metadata']['language']}
+
+Provide a 1-2 sentence description that clearly explains the module's purpose and key responsibilities.
+Return only the description text, no JSON."""
+
+            task_queue.add_task(
+                task_id=module,
+                name=f"Module: {module}",
+                prompt=prompt,
+                expect_json=False,
+                timeout=60  # Shorter timeout for simple descriptions
+            )
+        
+        # Process all tasks
+        results = task_queue.process_tasks(self)
+        
+        # Convert results to module descriptions
+        descriptions = {}
+        for module, description in results.items():
+            if description:
+                descriptions[module] = description.strip()
+            else:
+                # Fallback description if Claude fails
+                descriptions[module] = f"{module.title()} module functionality"
+                
+        return descriptions
+    
+    def generate_task_details_batch(self, tasks: List[Dict], project_context: Dict) -> Dict[str, Dict]:
+        """Generate details for multiple tasks concurrently.
+        
+        Args:
+            tasks: List of task dictionaries with title and module
+            project_context: Project context information
+            
+        Returns:
+            Dictionary mapping task titles to task details
+        """
+        self.logger.info(f"Generating details for {len(tasks)} tasks concurrently")
+        
+        # Create task queue
+        task_queue = ClaudeTaskQueue(max_workers=min(3, len(tasks)), debug_mode=self.logger.debug_mode)
+        
+        # Add tasks
+        for task in tasks:
+            prompt = f"""Generate comprehensive task details for the following task:
+
+Task: {task['title']}
+Module: {task['module']}
+Project Type: {project_context['metadata']['project_type_name']}
+Project Description: {project_context['metadata']['description']}
+
+Please provide:
+1. Clear goal statement
+2. Key requirements (3-5 items)
+3. Recommended implementation approach
+4. Specific subtasks following TDD methodology (5-8 items)
+5. Acceptance criteria
+6. Potential challenges
+7. Research topics
+
+Return as JSON with keys: goal, requirements, approach, subtasks, acceptance_criteria, challenges, research_topics"""
+
+            task_queue.add_task(
+                task_id=task['title'],
+                name=f"Task: {task['title']}",
+                prompt=prompt,
+                expect_json=True,
+                timeout=120
+            )
+        
+        # Process all tasks
+        results = task_queue.process_tasks(self)
+        
+        # Convert results
+        task_details = {}
+        for title, details in results.items():
+            if details:
+                try:
+                    task_details[title] = json.loads(details) if isinstance(details, str) else details
+                except:
+                    task_details[title] = {"error": "Failed to parse details"}
+            else:
+                task_details[title] = {"error": "No details generated"}
+                
+        return task_details

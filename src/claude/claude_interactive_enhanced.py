@@ -24,16 +24,13 @@ class EnhancedClaudeInteractiveSetup:
         print(f"\n🎯 Setting up project: {project_name}")
         print("=" * 50)
         
-        # Ask about Claude enhancement upfront
+        # Claude enhancement is now default when available
         if use_claude is None:
-            use_claude = questionary.confirm(
-                "\n🤖 Would you like to use Claude AI to enhance your project setup?",
-                default=True
-            ).ask()
+            use_claude = True
         
         if use_claude:
-            print("✨ Great! Claude will help optimize your project configuration at each step.")
-            print("💡 Tip: You can refine Claude's suggestions by providing feedback!")
+            print("✨ Claude AI is enhancing your project configuration!")
+            print("💡 Tip: You can refine Claude's suggestions by providing feedback at each step.")
         else:
             print("📋 Proceeding with standard setup (without AI enhancement).")
         
@@ -226,12 +223,18 @@ Provide improved data based on the feedback. Return a JSON object."""
                     )
                     modules = [{'name': m, 'description': f'{m.title()} module'} for m in refined_modules]
                     
-                    # Get descriptions for each module
+                    # Get descriptions for all modules concurrently
                     print("\n🤖 Generating module descriptions...")
+                    module_names = [m['name'] for m in modules]
+                    descriptions = self.processor.generate_module_descriptions_batch(
+                        module_names, 
+                        project_data
+                    )
+                    
+                    # Update modules with descriptions
                     for module in modules:
-                        desc = self._get_module_description(module['name'], project_data)
-                        if desc:
-                            module['description'] = desc
+                        if module['name'] in descriptions:
+                            module['description'] = descriptions[module['name']]
         else:
             # Use default suggestions
             suggested = self.project_config.project_types[project_data['metadata']['project_type']]['suggested_modules']
