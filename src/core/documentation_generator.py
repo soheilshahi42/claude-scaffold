@@ -5,7 +5,7 @@ from datetime import datetime
 from ..templates.templates import ProjectTemplates
 from ..utils.formatters import Formatters
 from ..utils.project_helpers import ProjectHelpers
-from ..utils.icons import icons
+from ..utils.icons import icons, Icons
 
 
 class DocumentationGenerator:
@@ -173,7 +173,7 @@ class DocumentationGenerator:
         context = {
             'scope': scope,
             'scope_description': scope_description,
-            'status_summary': ff"{icons.CHART} {completed}/{total} tasks completed ({completion_percentage:.0f}%)",
+            'status_summary': f"{Icons.CHART} {completed}/{total} tasks completed ({completion_percentage:.0f}%)",
             'todo_items': '\n'.join(todo_items) if todo_items else '- [ ] No tasks defined yet',
             'total_tasks': total,
             'completed_tasks': completed,

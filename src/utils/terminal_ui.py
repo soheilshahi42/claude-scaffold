@@ -225,7 +225,7 @@ class EnhancedTerminalUI:
         table.add_column("Key Features", style="yellow")
         
         for module in modules:
-            features = "\n".join([ff"{icons.BULLET} {f}" for f in module.get("key_features", [])])
+            features = "\n".join([f"{icons.BULLET} {f}" for f in module.get("key_features", [])])
             table.add_row(
                 module["name"],
                 module["description"],
