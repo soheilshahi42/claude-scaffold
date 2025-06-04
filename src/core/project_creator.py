@@ -107,40 +107,11 @@ class ProjectCreator:
 
                 # Create project structure
                 progress.update("Creating directory structure")
-                with ui_manager.live_status(
-                    "Creating Project Structure", show_details=True
-                ) as status:
-                    status.update(
-                        "Creating root directory",
-                        modules=len(project_data.get("modules", [])),
-                    )
-                    self._create_directory_structure(project_path, project_data)
-                    status.update(
-                        "Directory structure created",
-                        progress=100,
-                        modules=len(project_data.get("modules", [])),
-                        directories_created=sum(
-                            1 for _ in project_path.rglob("*") if _.is_dir()
-                        ),
-                    )
+                self._create_directory_structure(project_path, project_data)
 
                 # Generate all documentation
                 progress.update("Generating documentation")
-                with ui_manager.live_status(
-                    "Generating Documentation", show_details=True
-                ) as status:
-                    status.update(
-                        "Creating CLAUDE.md files",
-                        docs_total=len(project_data.get("modules", [])) + 3,
-                    )
-                    self.doc_generator.generate_documentation(
-                        project_path, project_data
-                    )
-                    status.update(
-                        "Documentation generated",
-                        progress=100,
-                        files_created=sum(1 for _ in project_path.rglob("*.md")),
-                    )
+                self.doc_generator.generate_documentation(project_path, project_data)
 
                 # Create .claude directory and files
                 progress.update("Setting up Claude Code integration")

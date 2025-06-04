@@ -128,6 +128,22 @@ class UIManager:
     @contextmanager
     def live_status(self, title: str, show_details: bool = True):
         """Live updating status display with details panel."""
+        # Check if we're already in a Live context
+        if hasattr(self.console, '_live') and self.console._live and self.console._live.is_started:
+            # Use simple progress if already in Live context
+            class SimpleStatusUpdater:
+                def update(self, message: str, **kwargs):
+                    print(f"{Icons.PROGRESS} {message}")
+                
+                def success(self, message: str):
+                    print(f"{Icons.SUCCESS} {message}")
+                    
+                def error(self, message: str):
+                    print(f"{Icons.ERROR} {message}")
+            
+            yield SimpleStatusUpdater()
+            return
+            
         layout = Layout()
 
         if show_details:

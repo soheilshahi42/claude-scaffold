@@ -252,7 +252,7 @@ class InteractiveCollectors:
             "Code reviews required for all changes",
         ]
 
-        print("\n{icons.RULE} Common project rules:")
+        print(f"\n{icons.RULE} Common project rules:")
         for rule in common_rules[:5]:
             print(f"   {icons.BULLET} {rule}")
 
@@ -293,7 +293,7 @@ class InteractiveCollectors:
         project_data["constraints"] = constraints
 
         # Build commands
-        print("\n{icons.BUILD} Build & Development Commands")
+        print(f"\n{icons.BUILD} Build & Development Commands")
         default_commands = self.project_config.project_types[
             project_data["metadata"]["project_type"]
         ]["build_commands"]
