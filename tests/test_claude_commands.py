@@ -14,104 +14,80 @@ class TestClaudeCommands:
         """Test that Claude command templates are defined."""
         templates = CommandTemplates.get_templates()
         
-        assert 'claude_init_tasks' in templates
-        assert 'claude_dev_resume' in templates
+        # Check for expected Markdown command files
+        assert 'init-tasks.md' in templates
+        assert 'dev.md' in templates
+        assert 'test.md' in templates
+        assert 'status.md' in templates
+        assert 'review.md' in templates
+        assert 'research.md' in templates
         
-        # Check content is valid Python
-        assert '#!/usr/bin/env python3' in templates['claude_init_tasks']
-        assert '#!/usr/bin/env python3' in templates['claude_dev_resume']
-        
-        # Check main functions exist
-        assert 'def main():' in templates['claude_init_tasks']
-        assert 'def main():' in templates['claude_dev_resume']
+        # Check content is Markdown with instructions
+        assert 'Initialize and review the task list' in templates['init-tasks.md']
+        assert 'Start or resume development' in templates['dev.md']
     
     def test_init_tasks_command_content(self):
-        """Test init-tasks command has expected functionality."""
+        """Test init-tasks command has expected instructions."""
         templates = CommandTemplates.get_templates()
-        init_tasks = templates['claude_init_tasks']
+        init_tasks = templates['init-tasks.md']
         
-        # Check for key functions
-        assert 'def parse_claude_md():' in init_tasks
-        assert 'def create_todo_list(' in init_tasks
-        
-        # Check for expected file operations
-        assert 'Path("CLAUDE.md")' in init_tasks
-        assert 'Path("TASKS.md")' in init_tasks
-        
-        # Check for task parsing logic
-        assert 'modules[module_name]' in init_tasks
-        assert 'priority_map' in init_tasks
+        # Check for key instructions
+        assert 'read through CLAUDE.md' in init_tasks
+        assert 'read TASKS.md' in init_tasks
+        assert 'use the TodoWrite tool' in init_tasks
+        assert 'provide a summary showing' in init_tasks
     
-    def test_dev_resume_command_content(self):
-        """Test dev resume command has expected functionality."""
+    def test_dev_command_content(self):
+        """Test dev command has expected instructions."""
         templates = CommandTemplates.get_templates()
-        dev_resume = templates['claude_dev_resume']
+        dev_cmd = templates['dev.md']
         
-        # Check for key functions
-        assert 'def check_claude_installed():' in dev_resume
-        assert 'def get_project_context():' in dev_resume
-        assert 'def create_startup_prompt():' in dev_resume
-        
-        # Check for Claude CLI integration
-        assert '["claude", "--version"]' in dev_resume
-        assert 'subprocess.run(["claude", prompt]' in dev_resume
+        # Check for key instructions
+        assert 'use TodoRead' in dev_cmd
+        assert 'Read CLAUDE.md' in dev_cmd
+        assert 'Read GLOBAL_RULES.md' in dev_cmd
+        assert 'TDD workflow' in dev_cmd
+        assert '$ARGUMENTS' in dev_cmd
     
-    def test_commands_created_in_project(self):
-        """Test that commands are created when generating a project."""
+    def test_commands_have_arguments_placeholder(self):
+        """Test that commands support arguments where needed."""
+        templates = CommandTemplates.get_templates()
+        
+        # Commands that should have $ARGUMENTS
+        assert '$ARGUMENTS' in templates['dev.md']
+        assert '$ARGUMENTS' in templates['status.md']
+        assert '$ARGUMENTS' in templates['review.md']
+        assert '$ARGUMENTS' in templates['research.md']
+    
+    def test_project_creator_generates_commands(self):
+        """Test that project creator generates command files correctly."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            creator = ProjectCreator(debug_mode=True)
-            
-            # Create minimal project data
+            project_path = Path(tmpdir) / "test_project"
             project_data = {
-                'project_name': 'test_project',
-                'description': 'Test project',
-                'metadata': {
-                    'project_type': 'python',
-                    'language': 'python',
-                    'style_guide': 'PEP8',
-                    'commands': {
-                        'install': 'pip install -r requirements.txt',
-                        'test': 'pytest',
-                        'dev': 'python -m app'
-                    },
-                    'git': {'init': False}
-                },
-                'modules': [
-                    {
-                        'name': 'core',
-                        'description': 'Core functionality',
-                        'responsibilities': ['Main logic']
+                "project_name": "test_project",
+                "metadata": {
+                    "commands": {
+                        "test": "pytest"
                     }
-                ],
-                'tasks': []
+                }
             }
             
-            # Create project
-            project_path = Path(tmpdir) / 'test_project'
+            creator = ProjectCreator()
             creator._create_directory_structure(project_path, project_data)
             creator._create_claude_integration(project_path, project_data)
             
-            # Check commands were created
-            commands_path = project_path / '.claude' / 'commands'
-            assert commands_path.exists()
+            # Check command files exist
+            commands_dir = project_path / ".claude" / "commands"
+            assert commands_dir.exists()
             
-            # Check our new commands exist
-            init_tasks_file = commands_path / 'init-tasks.py'
-            dev_file = commands_path / 'dev.py'
+            # Check all command files are created
+            assert (commands_dir / "init-tasks.md").exists()
+            assert (commands_dir / "dev.md").exists()
+            assert (commands_dir / "test.md").exists()
+            assert (commands_dir / "status.md").exists()
+            assert (commands_dir / "review.md").exists()
+            assert (commands_dir / "research.md").exists()
             
-            assert init_tasks_file.exists()
-            assert dev_file.exists()
-            
-            # Check files are executable
-            import os
-            assert os.access(init_tasks_file, os.X_OK)
-            assert os.access(dev_file, os.X_OK)
-            
-            # Check content
-            init_content = init_tasks_file.read_text()
-            assert '#!/usr/bin/env python3' in init_content
-            assert 'parse_claude_md' in init_content
-            
-            dev_content = dev_file.read_text()
-            assert '#!/usr/bin/env python3' in dev_content
-            assert 'check_claude_installed' in dev_content
+            # Check test command has the test command replaced
+            test_content = (commands_dir / "test.md").read_text()
+            assert "pytest" in test_content

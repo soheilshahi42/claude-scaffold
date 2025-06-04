@@ -251,41 +251,21 @@ class Test{module['name'].title()}:
         settings = self.templates.get_template("claude_settings", {})
         (claude_path / "settings.json").write_text(settings)
 
-        # Create custom commands
+        # Create custom Claude Code commands (Markdown files)
         commands_path = claude_path / "commands"
-
-        # Test command
-        if "test" in project_data["metadata"].get("commands", {}):
-            test_cmd = self.templates.create_custom_command("test", project_data)
-            if test_cmd:
-                test_file = commands_path / "test.py"
-                test_file.write_text(test_cmd)
-                test_file.chmod(0o755)
-
-        # Build command
-        if "build" in project_data["metadata"].get("commands", {}):
-            build_cmd = self.templates.create_custom_command("build", project_data)
-            if build_cmd:
-                build_file = commands_path / "build.py"
-                build_file.write_text(build_cmd)
-                build_file.chmod(0o755)
-
-        # Claude-specific commands for task management
-        # Initialize tasks command
-        init_tasks_cmd = self.templates.get_template("claude_init_tasks", {
-            "icons": icons
-        })
-        init_tasks_file = commands_path / "init-tasks.py"
-        init_tasks_file.write_text(init_tasks_cmd)
-        init_tasks_file.chmod(0o755)
-
-        # Development resume command
-        dev_resume_cmd = self.templates.get_template("claude_dev_resume", {
-            "icons": icons
-        })
-        dev_resume_file = commands_path / "dev.py"
-        dev_resume_file.write_text(dev_resume_cmd)
-        dev_resume_file.chmod(0o755)
+        
+        # Get command templates
+        from ..templates.template_commands import CommandTemplates
+        command_templates = CommandTemplates.get_templates()
+        
+        # Create all command files
+        for cmd_name, cmd_content in command_templates.items():
+            # Replace any template variables
+            if cmd_name == "test.md" and "test" in project_data["metadata"].get("commands", {}):
+                cmd_content = cmd_content.replace("{test_command}", project_data["metadata"]["commands"]["test"])
+            
+            cmd_file = commands_path / cmd_name
+            cmd_file.write_text(cmd_content)
 
         # Create .gitignore
         gitignore_context = {

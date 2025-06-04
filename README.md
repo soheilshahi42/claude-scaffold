@@ -75,23 +75,41 @@ my-project/
 
 ## Claude Code Integration
 
-Every generated project is optimized for use with Claude Code and includes custom commands in the `.claude/commands/` directory:
+Every generated project is optimized for use with Claude Code and includes custom slash commands in the `.claude/commands/` directory.
 
-### Custom Commands in Generated Projects
+### Custom Slash Commands
 
-Generated projects include Python scripts in `.claude/commands/` that enhance your Claude Code workflow:
+Generated projects include the following slash commands that you can use within Claude Code:
 
-1. **`init-tasks.py`** - Initializes task tracking from your project configuration
-   - Reads CLAUDE.md and TASKS.md files
-   - Creates a structured task list
-   - Shows task statistics and priority breakdown
-   - Prepares tasks for Claude's TodoRead/TodoWrite tools
-
-2. **`dev.py`** - Starts a Claude Code session with full project context
-   - Checks if Claude CLI is installed
-   - Loads project documentation (CLAUDE.md, TASKS.md, TODO.md)
-   - Launches Claude with a context-aware prompt
-   - Ensures development follows defined constraints
+- **`/project:init-tasks`** - Initialize task tracking from your project configuration
+  - Reads CLAUDE.md and TASKS.md to understand project structure
+  - Creates a comprehensive task list using TodoWrite
+  - Shows task statistics and priority breakdown
+  
+- **`/project:dev`** - Start or resume development on the project
+  - Checks current tasks with TodoRead
+  - Loads project context and constraints
+  - Guides development following TDD workflow
+  
+- **`/project:test`** - Run project tests and analyze results
+  - Executes the test suite
+  - Analyzes coverage and failures
+  - Suggests improvements
+  
+- **`/project:status`** - Get comprehensive project status
+  - Shows task completion progress
+  - Reviews recent changes
+  - Identifies blockers and next actions
+  
+- **`/project:review`** - Review code changes
+  - Checks compliance with project rules
+  - Validates test coverage
+  - Provides improvement suggestions
+  
+- **`/project:research`** - Research implementation approaches
+  - Documents findings in docs/ directory
+  - Creates implementation plans
+  - Follows TDD methodology
 
 ### Working with Claude Code
 
@@ -104,19 +122,16 @@ claude-scaffold new my-awesome-project
 # 2. Navigate to the project
 cd my-awesome-project
 
-# 3. Initialize the task list (optional but recommended)
-python .claude/commands/init-tasks.py
+# 3. Start Claude Code
+claude
 
-# 4. Start development with full context
-python .claude/commands/dev.py
-
-# Or manually start Claude and ask it to:
-# - Read CLAUDE.md for project overview
-# - Use TodoRead to check current tasks
-# - Follow the constraints in GLOBAL_RULES.md
+# 4. Use the custom commands:
+claude> /project:init-tasks
+claude> /project:dev
+claude> /project:status
 ```
 
-The generated project structure ensures Claude Code has complete understanding of your project's modules, tasks, and constraints, making AI-assisted development more focused and efficient.
+The generated project structure and custom commands ensure Claude has complete understanding of your project's modules, tasks, and constraints, making AI-assisted development more focused and efficient.
 
 ## Key Benefits
 
@@ -130,6 +145,9 @@ The generated project structure ensures Claude Code has complete understanding o
 
 - Python 3.8 or higher
 - Git (optional, for repository initialization)
+- Claude Code CLI (required for using custom commands)
+  - Install with: `npm install -g @anthropic-ai/claude-cli`
+  - Documentation: https://github.com/anthropics/claude-code
 
 ## Contributing
 

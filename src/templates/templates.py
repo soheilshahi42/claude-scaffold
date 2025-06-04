@@ -108,29 +108,3 @@ class ProjectTemplates:
         indent = ' ' * spaces
         return '\n'.join(indent + line for line in text.split('\n'))
     
-    def create_custom_command(self, command_type: str, project_data: Dict[str, Any]) -> str:
-        """Create a custom command script."""
-        commands = project_data.get('metadata', {}).get('commands', {})
-        
-        if command_type == 'test' and 'test' in commands:
-            context = {
-                'test_command': commands['test'],
-                'project_name': project_data['project_name']
-            }
-            return self.get_template('test_command', context)
-        
-        elif command_type == 'build' and 'build' in commands:
-            context = {
-                'build_command': commands['build'],
-                'test_command': commands.get('test', 'pytest'),
-                'project_name': project_data['project_name']
-            }
-            return self.get_template('build_command', context)
-        
-        elif command_type == 'dev' and 'dev' in commands:
-            context = {
-                'dev_command': commands['dev']
-            }
-            return self.get_template('dev_command', context)
-        
-        return None
