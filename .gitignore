@@ -150,6 +150,9 @@ IMPLEMENTATION_*.md
 TESTING_*.md
 NESTED_*.md
 TERMINAL_*.md
+DIRECTORY_STRUCTURE.md
+GIT_SETUP.md
+TESTING.md
 
 # Internal project files
 TODO.md
