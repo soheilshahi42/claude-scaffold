@@ -53,7 +53,9 @@ class ProjectTemplates:
             'next_steps': '1. Start with the first task',
             'example_imports': 'example_function, ExampleClass',
             'usage_example': '# Usage examples will be added during implementation',
-            'project_specific_ignores': '# Add project-specific patterns here'
+            'project_specific_ignores': '# Add project-specific patterns here',
+            'commit_standards': '- Use conventional commits format\n- Clear, descriptive messages\n- Reference issue numbers when applicable',
+            'icons': icons  # Add icons object to context
         }
         
         # Merge with provided context
@@ -64,7 +66,7 @@ class ProjectTemplates:
         for key, value in prepared.items():
             if isinstance(value, list) and value and isinstance(value[0], dict):
                 prepared[key] = self._format_list_of_dicts(value)
-            elif isinstance(value, dict):
+            elif isinstance(value, dict) and key != 'icons':  # Don't format the icons object
                 prepared[key] = self._format_dict(value)
         
         return prepared

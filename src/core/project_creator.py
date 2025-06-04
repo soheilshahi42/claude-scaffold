@@ -75,35 +75,38 @@ class ProjectCreator:
             shutil.rmtree(project_path)
 
         try:
-            # Initial total steps (will be updated after we have project_data)
-            total_steps = 5 if interactive else 4
-
+            # Handle interactive setup separately to avoid terminal conflicts
+            if interactive:
+                print(f"\n{icons.PROGRESS} Starting interactive setup...")
+                if enhanced:
+                    # Use enhanced setup with deep discovery
+                    if self.enhanced_setup is None:
+                        self.enhanced_setup = EnhancedInteractiveSetup(
+                            config_file=str(config_file) if config_file else None
+                        )
+                    project_data = self.enhanced_setup.run()
+                else:
+                    # Check if Claude is available
+                    use_claude = self.check_claude_available()
+                    project_data = self.interactive_setup.run(
+                        project_name, use_claude=use_claude
+                    )
+                print(f"{icons.SUCCESS} Interactive setup completed\n")
+            else:
+                # Use minimal defaults for non-interactive mode
+                project_data = self.helpers.get_default_project_data(project_name)
+            
+            # Determine total steps based on configuration
+            total_steps = 4  # Base steps: structure, docs, claude, config
+            if project_data.get("metadata", {}).get("git", {}).get("init", False):
+                total_steps += 1
+            
+            # Now run the rest with progress tracking
             with ui_manager.step_progress(
                 f"Creating project '{project_name}'", total_steps=total_steps
             ) as progress:
-                # Run interactive setup if enabled
-                if interactive:
-                    progress.update("Running interactive setup")
-                    if enhanced:
-                        # Use enhanced setup with deep discovery
-                        if self.enhanced_setup is None:
-                            self.enhanced_setup = EnhancedInteractiveSetup(
-                                config_file=str(config_file) if config_file else None
-                            )
-                        project_data = self.enhanced_setup.run()
-                    else:
-                        # Check if Claude is available
-                        use_claude = self.check_claude_available()
-                        project_data = self.interactive_setup.run(
-                            project_name, use_claude=use_claude
-                        )
-                else:
-                    # Use minimal defaults for non-interactive mode
-                    project_data = self.helpers.get_default_project_data(project_name)
 
-                # Update total steps if git is requested
-                if project_data.get("metadata", {}).get("git", {}).get("init", False):
-                    progress.set_total(total_steps + 1)
+                # Project structure and setup steps follow
 
                 # Create project structure
                 progress.update("Creating directory structure")
@@ -300,47 +303,38 @@ Generated on: {datetime.now().isoformat()}
     def _init_git(self, project_path: Path, project_data: Dict[str, Any]):
         """Initialize git repository."""
         try:
-            with ui_manager.step_progress(
-                "Initializing Git Repository", total_steps=4
-            ) as git_progress:
-                # Initialize repository
-                git_progress.update("Initializing repository")
-                subprocess.run(
-                    ["git", "init"], cwd=project_path, check=True, capture_output=True
-                )
+            # Initialize repository
+            subprocess.run(
+                ["git", "init"], cwd=project_path, check=True, capture_output=True
+            )
 
-                # Set initial branch
-                git_progress.update("Setting initial branch")
-                branch = project_data["metadata"]["git"].get("initial_branch", "main")
-                subprocess.run(
-                    ["git", "checkout", "-b", branch],
-                    cwd=project_path,
-                    check=True,
-                    capture_output=True,
-                )
+            # Set initial branch
+            branch = project_data["metadata"]["git"].get("initial_branch", "main")
+            subprocess.run(
+                ["git", "checkout", "-b", branch],
+                cwd=project_path,
+                check=True,
+                capture_output=True,
+            )
 
-                # Add all files
-                git_progress.update("Adding files to staging")
-                subprocess.run(
-                    ["git", "add", "."],
-                    cwd=project_path,
-                    check=True,
-                    capture_output=True,
-                )
+            # Add all files
+            subprocess.run(
+                ["git", "add", "."],
+                cwd=project_path,
+                check=True,
+                capture_output=True,
+            )
 
-                # Create initial commit
-                git_progress.update("Creating initial commit")
-                commit_msg = f"Initial commit: {project_data['project_name']} scaffolded with Claude Scaffold"
-                subprocess.run(
-                    ["git", "commit", "-m", commit_msg],
-                    cwd=project_path,
-                    check=True,
-                    capture_output=True,
-                )
+            # Create initial commit
+            commit_msg = f"Initial commit: {project_data['project_name']} scaffolded with Claude Scaffold"
+            subprocess.run(
+                ["git", "commit", "-m", commit_msg],
+                cwd=project_path,
+                check=True,
+                capture_output=True,
+            )
 
-                git_progress.complete(
-                    f"Git repository initialized on branch '{branch}'"
-                )
+            print(f"   {icons.SUCCESS} Git repository initialized on branch '{branch}'")
 
         except subprocess.CalledProcessError as e:
             print(f"   {icons.WARNING} Git initialization failed: {e}")

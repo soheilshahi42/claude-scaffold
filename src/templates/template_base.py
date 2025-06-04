@@ -12,6 +12,32 @@ class BaseTemplates:
         return {
             'root_claude': """# {project_name} Claude Documentation
 
+## 🚨 IMPORTANT: System Instructions for Claude
+
+**CRITICAL**: When working on this project, you MUST:
+
+1. **ONLY implement the modules listed in the "Modules" section below**
+   - Do NOT create additional modules beyond what is specified
+   - Do NOT add features or functionality outside the defined scope
+   
+2. **ONLY work on tasks listed in TASKS.md**
+   - Each task has been carefully planned and scoped
+   - Task details are in the respective module's CLAUDE.md file
+   - Do NOT add tasks or features not explicitly listed
+   
+3. **Follow the exact project structure as defined**
+   - Respect the module boundaries and responsibilities
+   - Maintain the architectural decisions made during setup
+   - Do NOT reorganize or restructure without explicit instruction
+
+4. **Adhere to all rules in GLOBAL_RULES.md**
+   - These rules are immutable and override any other conventions
+   - When in doubt, refer to GLOBAL_RULES.md
+
+This project has been scaffolded according to specific requirements. Your role is to implement ONLY what has been defined, not to extend or modify the scope.
+
+---
+
 ## Overview
 {description}
 
@@ -76,6 +102,17 @@ Generated on: {timestamp}
             'global_rules': """# Global Rules for {project_name}
 
 These rules are **immutable** and must be followed throughout the project lifecycle.
+
+## 0. FUNDAMENTAL PROJECT SCOPE RULE
+
+{icons.ERROR} **ABSOLUTE REQUIREMENT**: This project's scope is FIXED at creation time:
+
+- **Modules**: ONLY the modules defined in CLAUDE.md are allowed
+- **Tasks**: ONLY the tasks listed in TASKS.md should be implemented
+- **Features**: NO additional features beyond what's explicitly specified
+- **Structure**: NO restructuring or reorganization without explicit instruction
+
+The project was scaffolded based on specific requirements. Your role is to implement what has been defined, not to extend the scope.
 
 ## 1. Code Quality Rules
 {code_quality_rules}
@@ -162,6 +199,14 @@ Generated on: {timestamp}
 """,
 
             'module_claude': """# {module_name} Module Documentation
+
+## {icons.ERROR} MODULE SCOPE REMINDER
+
+This module's scope is FIXED. You must:
+- ONLY implement the tasks listed in the "Tasks" section below
+- NOT add new features or functionality beyond what's specified
+- MAINTAIN the defined responsibilities and boundaries
+- FOLLOW the architecture patterns established for this module
 
 ## Overview
 {module_description}

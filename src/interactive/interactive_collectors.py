@@ -141,31 +141,29 @@ class InteractiveCollectors:
                         f"Assigning {len(selected)} tasks to modules", progress=30
                     )
 
-                    with ui_manager.step_progress(
-                        f"Processing {len(selected)} selected tasks", len(selected)
-                    ) as task_progress:
-                        for i, task_title in enumerate(selected):
-                            task_progress.update(
-                                f"Configuring task: {task_title[:40]}..."
-                            )
+                    for i, task_title in enumerate(selected):
+                        status.update(
+                            f"Configuring task {i+1}/{len(selected)}: {task_title[:40]}...",
+                            progress=30 + int((i+1) / len(selected) * 50)
+                        )
 
-                            module = self._assign_task_to_module(task_title, modules)
-                            priority = questionary.select(
-                                f"Priority for '{task_title}':",
-                                choices=["high", "medium", "low"],
-                                default="medium",
-                            ).ask()
+                        module = self._assign_task_to_module(task_title, modules)
+                        priority = questionary.select(
+                            f"Priority for '{task_title}':",
+                            choices=["high", "medium", "low"],
+                            default="medium",
+                        ).ask()
 
-                            tasks.append(
-                                {
-                                    "title": task_title,
-                                    "module": module,
-                                    "priority": priority,
-                                    "type": "suggested",
-                                }
-                            )
+                        tasks.append(
+                            {
+                                "title": task_title,
+                                "module": module,
+                                "priority": priority,
+                                "type": "suggested",
+                            }
+                        )
 
-                        task_progress.complete(f"Configured {len(selected)} tasks")
+                    status.update(f"Configured {len(selected)} tasks", progress=80)
 
             # Allow adding custom tasks
             custom_count = 0

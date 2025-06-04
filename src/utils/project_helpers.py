@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 from .formatters import Formatters
-from .icons import Icons
+from .icons import icons
 
 
 class ProjectHelpers:
@@ -105,7 +105,7 @@ class ProjectHelpers:
             'tasks_by_module': self.formatters.format_tasks_by_module(project_data),
             'modules': project_data['modules'],
             'tasks': project_data['tasks'],
-            'icons': Icons  # Add Icons class to context
+            'icons': icons  # Add icons instance to context
         }
         
         return context
