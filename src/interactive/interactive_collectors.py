@@ -4,6 +4,7 @@ import questionary
 from typing import Dict, List, Any
 import textwrap
 from ..utils.icons import icons
+from ..utils.ui_manager import ui_manager
 
 
 class InteractiveCollectors:
@@ -15,125 +16,165 @@ class InteractiveCollectors:
     def collect_modules(self, project_data: Dict[str, Any]) -> List[Dict]:
         """Collect module information."""
         modules = []
-        suggested = self.project_config.project_types[project_data['metadata']['project_type']]['suggested_modules']
         
-        # Ask about suggested modules
-        if suggested:
-            print(f"\n{icons.MODULE} Suggested modules for {project_data['metadata']['project_type_name']}:")
-            for module in suggested:
-                print(f"   {icons.BULLET} {module}")
+        with ui_manager.live_status("Collecting Module Information") as status:
+            suggested = self.project_config.project_types[project_data['metadata']['project_type']]['suggested_modules']
             
-            use_suggested = questionary.confirm(
-                "Would you like to use these suggested modules?",
-                default=True
-            ).ask()
+            # Ask about suggested modules
+            if suggested:
+                status.update("Processing suggested modules", 
+                             project_type=project_data['metadata']['project_type_name'],
+                             suggested_count=len(suggested))
+                
+                print(f"\n{icons.MODULE} Suggested modules for {project_data['metadata']['project_type_name']}:")
+                for module in suggested:
+                    print(f"   {icons.BULLET} {module}")
+                
+                use_suggested = questionary.confirm(
+                    "Would you like to use these suggested modules?",
+                    default=True
+                ).ask()
+                
+                if use_suggested:
+                    modules = [{'name': m, 'description': f'{m.title()} module', 'type': 'suggested'} for m in suggested]
+                    status.update(f"Added {len(suggested)} suggested modules", progress=50)
             
-            if use_suggested:
-                modules = [{'name': m, 'description': f'{m.title()} module', 'type': 'suggested'} for m in suggested]
-        
-        # Allow adding custom modules
-        while True:
-            add_more = questionary.confirm(
-                f"\n{'Add another module?' if modules else 'Add a module?'}",
-                default=len(modules) == 0
-            ).ask()
+            # Allow adding custom modules
+            custom_count = 0
+            while True:
+                add_more = questionary.confirm(
+                    f"\n{'Add another module?' if modules else 'Add a module?'}",
+                    default=len(modules) == 0
+                ).ask()
+                
+                if not add_more:
+                    break
+                
+                status.update(f"Adding custom module {custom_count + 1}")
+                
+                module_name = questionary.text(
+                    "Module name:",
+                    validate=lambda x: len(x) > 0 and x.replace('_', '').isalnum()
+                ).ask()
+                
+                module_desc = questionary.text(
+                    f"Description for {module_name} module:",
+                    default=f"{module_name.title()} functionality"
+                ).ask()
+                
+                modules.append({
+                    'name': module_name,
+                    'description': module_desc,
+                    'type': 'custom'
+                })
+                custom_count += 1
+                
+                status.update(f"Added custom module: {module_name}", 
+                             custom_modules=custom_count,
+                             total_modules=len(modules))
             
-            if not add_more:
-                break
+            if not modules:
+                modules = [{'name': 'core', 'description': 'Core functionality', 'type': 'default'}]
+                print(f"{icons.INFO} Added default 'core' module")
             
-            module_name = questionary.text(
-                "Module name:",
-                validate=lambda x: len(x) > 0 and x.replace('_', '').isalnum()
-            ).ask()
-            
-            module_desc = questionary.text(
-                f"Description for {module_name} module:",
-                default=f"{module_name.title()} functionality"
-            ).ask()
-            
-            modules.append({
-                'name': module_name,
-                'description': module_desc,
-                'type': 'custom'
-            })
-        
-        if not modules:
-            modules = [{'name': 'core', 'description': 'Core functionality', 'type': 'default'}]
-            print(f"{icons.INFO} Added default 'core' module")
+            status.success(f"Collected {len(modules)} modules")
         
         return modules
     
     def collect_tasks(self, project_data: Dict[str, Any], modules: List[Dict]) -> List[Dict]:
         """Collect task information."""
         tasks = []
-        suggested_tasks = self.project_config.get_suggested_tasks(project_data['metadata']['project_type'])
         
-        # Show suggested tasks
-        if suggested_tasks:
-            print(f"\n{icons.TASK} Suggested tasks for {project_data['metadata']['project_type_name']}:")
-            for i, task in enumerate(suggested_tasks[:5], 1):
-                print(f"   {i}. {task}")
-            if len(suggested_tasks) > 5:
-                print(f"   ... and {len(suggested_tasks) - 5} more")
+        with ui_manager.live_status("Collecting Task Information") as status:
+            suggested_tasks = self.project_config.get_suggested_tasks(project_data['metadata']['project_type'])
             
-            use_suggested = questionary.confirm(
-                "Would you like to select from these suggested tasks?",
-                default=True
-            ).ask()
-            
-            if use_suggested:
-                selected = questionary.checkbox(
-                    "Select tasks to include:",
-                    choices=suggested_tasks
+            # Show suggested tasks
+            if suggested_tasks:
+                status.update("Processing suggested tasks",
+                             project_type=project_data['metadata']['project_type_name'],
+                             suggested_count=len(suggested_tasks))
+                
+                print(f"\n{icons.TASK} Suggested tasks for {project_data['metadata']['project_type_name']}:")
+                for i, task in enumerate(suggested_tasks[:5], 1):
+                    print(f"   {i}. {task}")
+                if len(suggested_tasks) > 5:
+                    print(f"   ... and {len(suggested_tasks) - 5} more")
+                
+                use_suggested = questionary.confirm(
+                    "Would you like to select from these suggested tasks?",
+                    default=True
                 ).ask()
                 
-                for task_title in selected:
-                    module = self._assign_task_to_module(task_title, modules)
-                    priority = questionary.select(
-                        f"Priority for '{task_title}':",
-                        choices=['high', 'medium', 'low'],
-                        default='medium'
+                if use_suggested:
+                    selected = questionary.checkbox(
+                        "Select tasks to include:",
+                        choices=suggested_tasks
                     ).ask()
                     
-                    tasks.append({
-                        'title': task_title,
-                        'module': module,
-                        'priority': priority,
-                        'type': 'suggested'
-                    })
-        
-        # Allow adding custom tasks
-        while True:
-            add_more = questionary.confirm(
-                f"\n{'Add another task?' if tasks else 'Add a task?'}",
-                default=len(tasks) < 3
-            ).ask()
+                    status.update(f"Assigning {len(selected)} tasks to modules", progress=30)
+                    
+                    with ui_manager.step_progress(f"Processing {len(selected)} selected tasks", len(selected)) as task_progress:
+                        for i, task_title in enumerate(selected):
+                            task_progress.update(f"Configuring task: {task_title[:40]}...")
+                            
+                            module = self._assign_task_to_module(task_title, modules)
+                            priority = questionary.select(
+                                f"Priority for '{task_title}':",
+                                choices=['high', 'medium', 'low'],
+                                default='medium'
+                            ).ask()
+                            
+                            tasks.append({
+                                'title': task_title,
+                                'module': module,
+                                'priority': priority,
+                                'type': 'suggested'
+                            })
+                        
+                        task_progress.complete(f"Configured {len(selected)} tasks")
             
-            if not add_more:
-                break
+            # Allow adding custom tasks
+            custom_count = 0
+            while True:
+                add_more = questionary.confirm(
+                    f"\n{'Add another task?' if tasks else 'Add a task?'}",
+                    default=len(tasks) < 3
+                ).ask()
+                
+                if not add_more:
+                    break
+                
+                status.update(f"Adding custom task {custom_count + 1}")
+                
+                task_title = questionary.text(
+                    "Task title:",
+                    validate=lambda x: len(x) > 0
+                ).ask()
+                
+                module = questionary.select(
+                    f"Which module should handle '{task_title}'?",
+                    choices=[m['name'] for m in modules]
+                ).ask()
+                
+                priority = questionary.select(
+                    "Task priority:",
+                    choices=['high', 'medium', 'low'],
+                    default='medium'
+                ).ask()
+                
+                tasks.append({
+                    'title': task_title,
+                    'module': module,
+                    'priority': priority,
+                    'type': 'custom'
+                })
+                custom_count += 1
+                
+                status.update(f"Added custom task: {task_title[:40]}",
+                             custom_tasks=custom_count,
+                             total_tasks=len(tasks))
             
-            task_title = questionary.text(
-                "Task title:",
-                validate=lambda x: len(x) > 0
-            ).ask()
-            
-            module = questionary.select(
-                f"Which module should handle '{task_title}'?",
-                choices=[m['name'] for m in modules]
-            ).ask()
-            
-            priority = questionary.select(
-                "Task priority:",
-                choices=['high', 'medium', 'low'],
-                default='medium'
-            ).ask()
-            
-            tasks.append({
-                'title': task_title,
-                'module': module,
-                'priority': priority,
-                'type': 'custom'
-            })
+            status.success(f"Collected {len(tasks)} tasks")
         
         return tasks
     

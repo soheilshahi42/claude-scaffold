@@ -11,6 +11,7 @@ from .documentation_generator import DocumentationGenerator
 from ..utils.project_helpers import ProjectHelpers
 from ..utils.logger import get_logger
 from ..utils.icons import icons
+from ..utils.ui_manager import ui_manager
 
 
 class ProjectCreator:
@@ -56,40 +57,71 @@ class ProjectCreator:
             shutil.rmtree(project_path)
         
         try:
-            # Run interactive setup if enabled
-            if interactive:
-                if enhanced:
-                    # Use enhanced setup with deep discovery
-                    if self.enhanced_setup is None:
-                        self.enhanced_setup = EnhancedInteractiveSetup(config_file=str(config_file) if config_file else None)
-                    project_data = self.enhanced_setup.run()
+            # Initial total steps (will be updated after we have project_data)
+            total_steps = 5 if interactive else 4
+            
+            with ui_manager.step_progress(f"Creating project '{project_name}'", total_steps=total_steps) as progress:
+                # Run interactive setup if enabled
+                if interactive:
+                    progress.update("Running interactive setup")
+                    if enhanced:
+                        # Use enhanced setup with deep discovery
+                        if self.enhanced_setup is None:
+                            self.enhanced_setup = EnhancedInteractiveSetup(config_file=str(config_file) if config_file else None)
+                        project_data = self.enhanced_setup.run()
+                    else:
+                        # Check if Claude is available
+                        use_claude = self.check_claude_available()
+                        project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
                 else:
-                    # Check if Claude is available
-                    use_claude = self.check_claude_available()
-                    project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
-            else:
-                # Use minimal defaults for non-interactive mode
-                project_data = self.helpers.get_default_project_data(project_name)
+                    # Use minimal defaults for non-interactive mode
+                    project_data = self.helpers.get_default_project_data(project_name)
+                
+                # Update total steps if git is requested
+                if project_data.get('metadata', {}).get('git', {}).get('init', False):
+                    progress.set_total(total_steps + 1)
+                
+                # Create project structure
+                progress.update("Creating directory structure")
+                with ui_manager.live_status("Creating Project Structure", show_details=True) as status:
+                    status.update("Creating root directory", modules=len(project_data.get('modules', [])))
+                    self._create_directory_structure(project_path, project_data)
+                    status.update("Directory structure created", progress=100, 
+                                 modules=len(project_data.get('modules', [])),
+                                 directories_created=sum(1 for _ in project_path.rglob('*') if _.is_dir()))
+                
+                # Generate all documentation
+                progress.update("Generating documentation")
+                with ui_manager.live_status("Generating Documentation", show_details=True) as status:
+                    status.update("Creating CLAUDE.md files", docs_total=len(project_data.get('modules', [])) + 3)
+                    self.doc_generator.generate_documentation(project_path, project_data)
+                    status.update("Documentation generated", progress=100,
+                                 files_created=sum(1 for _ in project_path.rglob('*.md')))
+                
+                # Create .claude directory and files
+                progress.update("Setting up Claude Code integration")
+                self._create_claude_integration(project_path, project_data)
+                
+                # Initialize git if requested
+                if project_data.get('metadata', {}).get('git', {}).get('init', False):
+                    progress.update("Initializing git repository")
+                    self._init_git(project_path, project_data)
+                
+                # Save project configuration
+                progress.update("Saving project configuration")
+                self.interactive_setup.save_config(project_data, project_path)
+                
+                progress.complete(f"Project '{project_name}' created successfully!")
             
-            # Create project structure
-            print(f"\n{icons.BUILD} Creating project structure...")
-            self._create_directory_structure(project_path, project_data)
+            # Show summary
+            summary_items = [
+                {"Component": "Modules", "Count": len(project_data.get('modules', [])), "Status": "completed"},
+                {"Component": "Tasks", "Count": len(project_data.get('tasks', [])), "Status": "completed"},
+                {"Component": "Documentation Files", "Count": sum(1 for _ in project_path.rglob('*.md')), "Status": "completed"},
+                {"Component": "Test Files", "Count": sum(1 for _ in project_path.rglob('test_*.py')), "Status": "completed"},
+            ]
             
-            # Generate all documentation
-            print(f"{icons.DOCUMENT} Generating documentation...")
-            self.doc_generator.generate_documentation(project_path, project_data)
-            
-            # Create .claude directory and files
-            print(f"{icons.CONFIG} Setting up Claude Code integration...")
-            self._create_claude_integration(project_path, project_data)
-            
-            # Initialize git if requested
-            if project_data.get('metadata', {}).get('git', {}).get('init', False):
-                print(f"{icons.GIT} Initializing git repository...")
-                self._init_git(project_path, project_data)
-            
-            # Save project configuration
-            self.interactive_setup.save_config(project_data, project_path)
+            ui_manager.show_summary("Project Creation Summary", summary_items)
             
             # Final success message
             print(f"\n{icons.SUCCESS} Project '{project_name}' created successfully!")
@@ -99,6 +131,9 @@ class ProjectCreator:
             print(f"   2. Review GLOBAL_RULES.md for project standards")
             print(f"   3. Check TASKS.md for your task list")
             print(f"   4. Start with: claude-code")
+            
+            # Show operation summary with timings
+            ui_manager.show_operation_summary()
             
             return True
             
@@ -227,21 +262,27 @@ Generated on: {datetime.now().isoformat()}
     def _init_git(self, project_path: Path, project_data: Dict[str, Any]):
         """Initialize git repository."""
         try:
-            # Initialize repository
-            subprocess.run(['git', 'init'], cwd=project_path, check=True, capture_output=True)
-            
-            # Set initial branch
-            branch = project_data['metadata']['git'].get('initial_branch', 'main')
-            subprocess.run(['git', 'checkout', '-b', branch], cwd=project_path, check=True, capture_output=True)
-            
-            # Add all files
-            subprocess.run(['git', 'add', '.'], cwd=project_path, check=True, capture_output=True)
-            
-            # Create initial commit
-            commit_msg = f"Initial commit: {project_data['project_name']} scaffolded with Claude Scaffold"
-            subprocess.run(['git', 'commit', '-m', commit_msg], cwd=project_path, check=True, capture_output=True)
-            
-            print(f"   {icons.SUCCESS} Git repository initialized on branch '{branch}'")
+            with ui_manager.step_progress("Initializing Git Repository", total_steps=4) as git_progress:
+                # Initialize repository
+                git_progress.update("Initializing repository")
+                subprocess.run(['git', 'init'], cwd=project_path, check=True, capture_output=True)
+                
+                # Set initial branch
+                git_progress.update("Setting initial branch")
+                branch = project_data['metadata']['git'].get('initial_branch', 'main')
+                subprocess.run(['git', 'checkout', '-b', branch], cwd=project_path, check=True, capture_output=True)
+                
+                # Add all files
+                git_progress.update("Adding files to staging")
+                subprocess.run(['git', 'add', '.'], cwd=project_path, check=True, capture_output=True)
+                
+                # Create initial commit
+                git_progress.update("Creating initial commit")
+                commit_msg = f"Initial commit: {project_data['project_name']} scaffolded with Claude Scaffold"
+                subprocess.run(['git', 'commit', '-m', commit_msg], cwd=project_path, check=True, capture_output=True)
+                
+                git_progress.complete(f"Git repository initialized on branch '{branch}'")
+                
         except subprocess.CalledProcessError as e:
             print(f"   {icons.WARNING} Git initialization failed: {e}")
         except FileNotFoundError:
