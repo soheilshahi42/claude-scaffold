@@ -75,31 +75,27 @@ my-project/
 
 ## Claude Code Integration
 
-Every generated project includes custom Claude Code commands that work with the `claude` CLI:
+Every generated project is optimized for use with Claude Code and includes custom commands in the `.claude/commands/` directory:
 
-```bash
-# Initialize task list from project configuration
-claude init-tasks
+### Custom Commands in Generated Projects
 
-# Start development session with full project context
-claude dev
-```
+Generated projects include Python scripts in `.claude/commands/` that enhance your Claude Code workflow:
 
-### Available Commands in Generated Projects
+1. **`init-tasks.py`** - Initializes task tracking from your project configuration
+   - Reads CLAUDE.md and TASKS.md files
+   - Creates a structured task list
+   - Shows task statistics and priority breakdown
+   - Prepares tasks for Claude's TodoRead/TodoWrite tools
 
-1. **`claude init-tasks`** - Reads your project's CLAUDE.md and TASKS.md files to create a structured TODO list
-   - Parses all defined tasks with their priorities
-   - Creates a task list compatible with Claude's TodoRead/TodoWrite tools
-   - Shows task statistics and breakdown by priority
+2. **`dev.py`** - Starts a Claude Code session with full project context
+   - Checks if Claude CLI is installed
+   - Loads project documentation (CLAUDE.md, TASKS.md, TODO.md)
+   - Launches Claude with a context-aware prompt
+   - Ensures development follows defined constraints
 
-2. **`claude dev`** - Starts an AI-assisted development session
-   - Loads complete project context (CLAUDE.md, TASKS.md, TODO.md)
-   - Prompts Claude to check current tasks and continue development
-   - Ensures Claude follows the defined project scope and constraints
+### Working with Claude Code
 
-These commands ensure Claude has complete understanding of your project structure, tasks, and constraints, making AI-assisted development more efficient and aligned with your project goals.
-
-### Typical Workflow
+After creating a project with claude-scaffold:
 
 ```bash
 # 1. Create a new project
@@ -108,12 +104,19 @@ claude-scaffold new my-awesome-project
 # 2. Navigate to the project
 cd my-awesome-project
 
-# 3. Initialize the task list for Claude
-claude init-tasks
+# 3. Initialize the task list (optional but recommended)
+python .claude/commands/init-tasks.py
 
-# 4. Start development with Claude
-claude dev
+# 4. Start development with full context
+python .claude/commands/dev.py
+
+# Or manually start Claude and ask it to:
+# - Read CLAUDE.md for project overview
+# - Use TodoRead to check current tasks
+# - Follow the constraints in GLOBAL_RULES.md
 ```
+
+The generated project structure ensures Claude Code has complete understanding of your project's modules, tasks, and constraints, making AI-assisted development more focused and efficient.
 
 ## Key Benefits
 
