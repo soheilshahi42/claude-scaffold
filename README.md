@@ -75,17 +75,45 @@ my-project/
 
 ## Claude Code Integration
 
-Every generated project includes custom Claude Code commands:
+Every generated project includes custom Claude Code commands that work with the `claude` CLI:
 
 ```bash
 # Initialize task list from project configuration
-claude-code init-tasks
+claude init-tasks
 
 # Start development session with full project context
-claude-code dev
+claude dev
 ```
 
-These commands ensure Claude Code has complete understanding of your project structure, tasks, and constraints.
+### Available Commands in Generated Projects
+
+1. **`claude init-tasks`** - Reads your project's CLAUDE.md and TASKS.md files to create a structured TODO list
+   - Parses all defined tasks with their priorities
+   - Creates a task list compatible with Claude's TodoRead/TodoWrite tools
+   - Shows task statistics and breakdown by priority
+
+2. **`claude dev`** - Starts an AI-assisted development session
+   - Loads complete project context (CLAUDE.md, TASKS.md, TODO.md)
+   - Prompts Claude to check current tasks and continue development
+   - Ensures Claude follows the defined project scope and constraints
+
+These commands ensure Claude has complete understanding of your project structure, tasks, and constraints, making AI-assisted development more efficient and aligned with your project goals.
+
+### Typical Workflow
+
+```bash
+# 1. Create a new project
+claude-scaffold new my-awesome-project
+
+# 2. Navigate to the project
+cd my-awesome-project
+
+# 3. Initialize the task list for Claude
+claude init-tasks
+
+# 4. Start development with Claude
+claude dev
+```
 
 ## Key Benefits
 
