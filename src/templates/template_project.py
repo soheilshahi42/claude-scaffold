@@ -112,9 +112,16 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Claude
+# Claude development files (keep private)
+.claude/
+CLAUDE.md
 CLAUDE.local.md
-.claude/cache/
+**/CLAUDE.md
+**/.claude/
+TODO.md
+**/TODO.md
+TASKS.md
+GLOBAL_RULES.md
 
 # Project specific
 {project_specific_ignores}

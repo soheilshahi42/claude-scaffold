@@ -131,4 +131,29 @@ dmypy.json
 
 # OS
 .DS_Store
-Thumbs.dbtest_env/
+Thumbs.db
+
+# Claude-related files (keep private)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+**/CLAUDE.md
+**/.claude/
+claude-scaffold.yaml
+.claude*
+
+# Development notes and internal documentation
+*SUMMARY.md
+*UPDATE.md
+*FIX.md
+IMPLEMENTATION_*.md
+TESTING_*.md
+NESTED_*.md
+TERMINAL_*.md
+
+# Internal project files
+TODO.md
+**/TODO.md
+
+# Test environments
+test_env/
