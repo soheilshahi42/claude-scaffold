@@ -270,6 +270,23 @@ class Test{module['name'].title()}:
                 build_file.write_text(build_cmd)
                 build_file.chmod(0o755)
 
+        # Claude-specific commands for task management
+        # Initialize tasks command
+        init_tasks_cmd = self.templates.get_template("claude_init_tasks", {
+            "icons": icons
+        })
+        init_tasks_file = commands_path / "init-tasks.py"
+        init_tasks_file.write_text(init_tasks_cmd)
+        init_tasks_file.chmod(0o755)
+
+        # Development resume command
+        dev_resume_cmd = self.templates.get_template("claude_dev_resume", {
+            "icons": icons
+        })
+        dev_resume_file = commands_path / "dev.py"
+        dev_resume_file.write_text(dev_resume_cmd)
+        dev_resume_file.chmod(0o755)
+
         # Create .gitignore
         gitignore_context = {
             "project_specific_ignores": self.helpers.get_project_specific_ignores(
