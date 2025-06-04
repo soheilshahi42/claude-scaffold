@@ -1,6 +1,5 @@
-![claude-scaffold](https://github.com/user-attachments/assets/906c098d-6955-4d33-a512-eeac5fa9f966)
-
 # Claude Scaffold
+![claude-scaffold](https://github.com/user-attachments/assets/01168397-4dff-40fc-92d9-274f1d1934c7)
 
 A powerful Python project scaffolding tool that generates well-structured, self-documenting project skeletons with built-in best practices.
 
