@@ -8,6 +8,7 @@ from datetime import datetime
 from .claude_processor import ClaudeProcessor
 from ..config.project_config import ProjectConfig
 from ..utils.logger import get_logger
+from ..utils.icons import icons
 
 
 class EnhancedClaudeInteractiveSetup:
@@ -21,7 +22,7 @@ class EnhancedClaudeInteractiveSetup:
         
     def run(self, project_name: str, use_claude: bool = None) -> Dict[str, Any]:
         """Run enhanced Claude interactive setup."""
-        print(f"\n🎯 Setting up project: {project_name}")
+        print(f"\n{icons.CHEVRON} Setting up project: {project_name}")
         print("=" * 50)
         
         # Claude enhancement is now default when available
@@ -29,10 +30,10 @@ class EnhancedClaudeInteractiveSetup:
             use_claude = True
         
         if use_claude:
-            print("✨ Claude AI is enhancing your project configuration!")
-            print("💡 Tip: You can refine Claude's suggestions by providing feedback at each step.")
+            print(f"{icons.STAR} Claude AI is enhancing your project configuration!")
+            print(f"{icons.INFO} Tip: You can refine Claude's suggestions by providing feedback at each step.")
         else:
-            print("📋 Proceeding with standard setup (without AI enhancement).")
+            print(f"{icons.DOCUMENT} Proceeding with standard setup (without AI enhancement).")
         
         # Initialize project data
         project_data = {
@@ -54,7 +55,7 @@ class EnhancedClaudeInteractiveSetup:
         
         # Final review
         if not self._review_and_confirm(project_data):
-            print("\n❌ Setup cancelled by user.")
+            print(f"\n{icons.ERROR} Setup cancelled by user.")
             raise KeyboardInterrupt
         
         return project_data
@@ -62,7 +63,7 @@ class EnhancedClaudeInteractiveSetup:
     def _refine_with_claude(self, current_value: Any, refinement_prompt: str, 
                            value_type: str = "text") -> Any:
         """Allow user to refine Claude's suggestion with feedback."""
-        print("\n💡 Would you like to refine this suggestion?")
+        print(f"\n{icons.INFO} Would you like to refine this suggestion?")
         refine = questionary.confirm("Provide feedback to Claude?", default=False).ask()
         
         if not refine:
@@ -109,12 +110,12 @@ Provide improved data based on the feedback. Return a JSON object."""
             else:
                 return json.loads(response)
         except:
-            print("⚠️  Could not process refinement, keeping original.")
+            print(f"{icons.WARNING} Could not process refinement, keeping original.")
             return current_value
     
     def _collect_project_type(self, project_data: Dict[str, Any], use_claude: bool) -> Dict[str, Any]:
         """Collect project type with optional Claude enhancement."""
-        print("\n📋 Project Type")
+        print(f"\n{icons.DOCUMENT} Project Type")
         
         # Show available types
         project_types = []
@@ -137,7 +138,7 @@ Provide improved data based on the feedback. Return a JSON object."""
     
     def _collect_description(self, project_data: Dict[str, Any], use_claude: bool) -> Dict[str, Any]:
         """Collect project description with Claude enhancement and refinement."""
-        print("\n📝 Project Description")
+        print(f"\n{icons.DOCUMENT} Project Description")
         
         # Get user's basic description
         description = questionary.text(
@@ -149,7 +150,7 @@ Provide improved data based on the feedback. Return a JSON object."""
         
         # Claude enhancement
         if use_claude:
-            print("\n🤖 Enhancing description with Claude...")
+            print(f"\n{icons.ROBOT} Enhancing description with Claude...")
             enhanced_desc = self._enhance_description(project_data)
             if enhanced_desc and enhanced_desc != description:
                 print(f"\nClaude suggests this enhanced description:")
@@ -174,7 +175,7 @@ Provide improved data based on the feedback. Return a JSON object."""
     
     def _collect_language(self, project_data: Dict[str, Any], use_claude: bool) -> Dict[str, Any]:
         """Collect programming language."""
-        print("\n💻 Programming Language")
+        print(f"\n{icons.CODE} Programming Language")
         
         # For React + Django, we should offer "Both" as default
         if "react" in project_data['metadata']['description'].lower() and \
@@ -196,13 +197,13 @@ Provide improved data based on the feedback. Return a JSON object."""
     
     def _collect_modules(self, project_data: Dict[str, Any], use_claude: bool) -> Dict[str, Any]:
         """Collect modules with Claude suggestions and refinement."""
-        print("\n📦 Project Modules")
+        print(f"\n{icons.MODULE} Project Modules")
         
         modules = []
         
         if use_claude:
             # Get Claude's module suggestions based on all info so far
-            print("\n🤖 Getting Claude's module suggestions...")
+            print(f"\n{icons.ROBOT} Getting Claude's module suggestions...")
             claude_modules = self._get_claude_module_suggestions(project_data)
             if claude_modules:
                 print("\nClaude suggests these modules:")
@@ -224,7 +225,7 @@ Provide improved data based on the feedback. Return a JSON object."""
                     modules = [{'name': m, 'description': f'{m.title()} module'} for m in refined_modules]
                     
                     # Get descriptions for all modules concurrently
-                    print("\n🤖 Generating module descriptions...")
+                    print(f"\n{icons.ROBOT} Generating module descriptions...")
                     module_names = [m['name'] for m in modules]
                     descriptions = self.processor.generate_module_descriptions_batch(
                         module_names, 
@@ -241,7 +242,7 @@ Provide improved data based on the feedback. Return a JSON object."""
             if suggested:
                 print(f"\nSuggested modules for {project_data['metadata']['project_type_name']}:")
                 for module in suggested:
-                    print(f"   • {module}")
+                    print(f"   {icons.BULLET} {module}")
                 
                 use_suggested = questionary.confirm(
                     "Use these suggested modules?",
@@ -286,19 +287,19 @@ Provide improved data based on the feedback. Return a JSON object."""
     
     def _collect_tasks(self, project_data: Dict[str, Any], use_claude: bool) -> Dict[str, Any]:
         """Collect tasks with Claude assistance and refinement."""
-        print("\n📋 Project Tasks")
+        print(f"\n{icons.TASK} Project Tasks")
         
         tasks = []
         
         if use_claude:
             # Get Claude's task suggestions
-            print("\n🤖 Generating task suggestions based on your project...")
+            print(f"\n{icons.ROBOT} Generating task suggestions based on your project...")
             suggested_tasks = self._get_claude_task_suggestions(project_data)
             
             if suggested_tasks:
                 print("\nClaude suggests these tasks:")
                 for i, task in enumerate(suggested_tasks[:10], 1):
-                    priority_icon = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(task.get('priority', 'medium'), '⚪')
+                    priority_icon = icons.get_priority_icon(task.get('priority', 'medium'))
                     print(f"   {i}. {priority_icon} [{task['module']}] {task['title']}")
                 
                 use_suggested = questionary.confirm(
@@ -318,7 +319,7 @@ Provide improved data based on the feedback. Return a JSON object."""
                     from questionary import Choice
                     choices = []
                     for i, task in enumerate(refined_tasks[:15]):
-                        priority_icon = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(task.get('priority', 'medium'), '⚪')
+                        priority_icon = icons.get_priority_icon(task.get('priority', 'medium'))
                         task_str = f"{priority_icon} [{task['module']}] {task['title']}"
                         # Pre-select first 8 tasks
                         choices.append(Choice(task_str, checked=(i < 8)))
@@ -331,7 +332,7 @@ Provide improved data based on the feedback. Return a JSON object."""
                     # Map selections back to tasks
                     for selection in selected:
                         for task in refined_tasks:
-                            priority_icon = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(task.get('priority', 'medium'), '⚪')
+                            priority_icon = icons.get_priority_icon(task.get('priority', 'medium'))
                             if f"{priority_icon} [{task['module']}] {task['title']}" == selection:
                                 tasks.append(task)
                                 break
@@ -372,13 +373,13 @@ Provide improved data based on the feedback. Return a JSON object."""
     
     def _collect_rules(self, project_data: Dict[str, Any], use_claude: bool) -> Dict[str, Any]:
         """Collect project rules with Claude suggestions and refinement."""
-        print("\n📏 Project Rules & Standards")
+        print(f"\n{icons.RULE} Project Rules & Standards")
         
         rules = {'suggested': [], 'custom': []}
         
         if use_claude:
             # Get Claude's rule suggestions
-            print("\n🤖 Generating project-specific rules...")
+            print(f"\n{icons.ROBOT} Generating project-specific rules...")
             claude_rules = self._get_claude_rule_suggestions(project_data)
             
             if claude_rules:
@@ -437,16 +438,16 @@ Provide improved data based on the feedback. Return a JSON object."""
     
     def _collect_additional_config(self, project_data: Dict[str, Any], use_claude: bool) -> Dict[str, Any]:
         """Collect additional configuration with Claude assistance."""
-        print("\n⚙️  Additional Configuration")
+        print(f"\n{icons.CONFIG} Additional Configuration")
         
         # Get constraints
         if use_claude:
-            print("\n🤖 Determining technical constraints...")
+            print(f"\n{icons.ROBOT} Determining technical constraints...")
             constraints = self._get_claude_constraints(project_data)
             if constraints:
                 print("\nClaude suggests these constraints:")
                 for constraint in constraints:
-                    print(f"   • {constraint}")
+                    print(f"   {icons.BULLET} {constraint}")
                 
                 use_constraints = questionary.confirm(
                     "Use these constraints?",
@@ -472,7 +473,7 @@ Provide improved data based on the feedback. Return a JSON object."""
         
         # Get build commands
         if use_claude:
-            print("\n🤖 Generating build commands...")
+            print(f"\n{icons.ROBOT} Generating build commands...")
             commands = self._get_claude_commands(project_data)
             if commands:
                 print("\nClaude suggests these commands:")
@@ -528,7 +529,7 @@ Return only the enhanced description text, no JSON."""
         try:
             return self.processor._call_claude(prompt, expect_json=False).strip()
         except Exception as e:
-            print(f"⚠️  Could not enhance description: {e}")
+            print(f"{icons.WARNING} Could not enhance description: {e}")
             return project_data['metadata']['description']
     
     def _get_claude_module_suggestions(self, project_data: Dict[str, Any]) -> List[str]:
@@ -546,7 +547,7 @@ Return a JSON array of module names that would be most appropriate."""
             response = self.processor._call_claude(prompt)
             return json.loads(response)
         except Exception as e:
-            print(f"⚠️  Using default modules: {e}")
+            print(f"{icons.WARNING} Using default modules: {e}")
             return self.project_config.project_types[project_data['metadata']['project_type']]['suggested_modules']
     
     def _get_module_description(self, module_name: str, project_data: Dict[str, Any]) -> str:
@@ -596,11 +597,11 @@ Return a JSON array of task objects:
         except json.JSONDecodeError as e:
             self.logger.error("Failed to parse Claude response as JSON", e, 
                             {'response_preview': response[:200] if 'response' in locals() else 'N/A'})
-            print(f"⚠️  Could not generate tasks: {e}")
+            print(f"{icons.WARNING} Could not generate tasks: {e}")
             return []
         except Exception as e:
             self.logger.error("Error getting Claude task suggestions", e)
-            print(f"⚠️  Could not generate tasks: {e}")
+            print(f"{icons.WARNING} Could not generate tasks: {e}")
             return []
     
     def _suggest_module_for_task(self, task_title: str, project_data: Dict[str, Any]) -> str:
@@ -637,7 +638,7 @@ Return a JSON array of rule strings."""
             response = self.processor._call_claude(prompt)
             return json.loads(response)
         except Exception as e:
-            print(f"⚠️  Could not generate rules: {e}")
+            print(f"{icons.WARNING} Could not generate rules: {e}")
             return []
     
     def _get_claude_constraints(self, project_data: Dict[str, Any]) -> List[str]:
@@ -655,7 +656,7 @@ Return a JSON array of constraint strings."""
             response = self.processor._call_claude(prompt)
             return json.loads(response)
         except Exception as e:
-            print(f"⚠️  Could not generate constraints: {e}")
+            print(f"{icons.WARNING} Could not generate constraints: {e}")
             return []
     
     def _get_claude_commands(self, project_data: Dict[str, Any]) -> Dict[str, str]:
@@ -679,7 +680,7 @@ Only include relevant commands for this project type."""
             response = self.processor._call_claude(prompt)
             return json.loads(response)
         except Exception as e:
-            print(f"⚠️  Could not generate commands: {e}")
+            print(f"{icons.WARNING} Could not generate commands: {e}")
             return {}
     
     def _build_context(self, project_data: Dict[str, Any]) -> str:
@@ -709,23 +710,23 @@ Only include relevant commands for this project type."""
     def _review_and_confirm(self, project_data: Dict[str, Any]) -> bool:
         """Review configuration and confirm."""
         print("\n" + "=" * 60)
-        print("📋 PROJECT CONFIGURATION SUMMARY")
+        print(f"{icons.DOCUMENT} PROJECT CONFIGURATION SUMMARY")
         print("=" * 60)
         
-        print(f"\n🎯 Project: {project_data['project_name']}")
-        print(f"🤖 Claude Enhanced: {'Yes' if project_data.get('enhanced_with_claude') else 'No'}")
-        print(f"📝 Type: {project_data['metadata']['project_type_name']}")
-        print(f"💬 Description: {project_data['metadata']['description']}")
-        print(f"💻 Language: {project_data['metadata']['language']}")
+        print(f"\n{icons.CHEVRON} Project: {project_data['project_name']}")
+        print(f"{icons.ROBOT} Claude Enhanced: {'Yes' if project_data.get('enhanced_with_claude') else 'No'}")
+        print(f"{icons.DOCUMENT} Type: {project_data['metadata']['project_type_name']}")
+        print(f"{icons.INFO} Description: {project_data['metadata']['description']}")
+        print(f"{icons.CODE} Language: {project_data['metadata']['language']}")
         
-        print(f"\n📦 Modules ({len(project_data['modules'])})")
+        print(f"\n{icons.MODULE} Modules ({len(project_data['modules'])})")
         for module in project_data['modules']:
-            print(f"  • {module['name']} - {module['description']}")
+            print(f"  {icons.BULLET} {module['name']} - {module['description']}")
         
         if project_data.get('tasks'):
-            print(f"\n📋 Tasks ({len(project_data['tasks'])})")
+            print(f"\n{icons.TASK} Tasks ({len(project_data['tasks'])})")
             for task in project_data['tasks'][:5]:
-                priority_icon = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(task['priority'], '⚪')
+                priority_icon = icons.get_priority_icon(task['priority'])
                 print(f"  {priority_icon} [{task['module']}] {task['title']}")
             if len(project_data['tasks']) > 5:
                 print(f"  ... and {len(project_data['tasks']) - 5} more tasks")
@@ -733,21 +734,21 @@ Only include relevant commands for this project type."""
         # Rules
         total_rules = len(project_data['rules']['suggested']) + len(project_data['rules']['custom'])
         if total_rules:
-            print(f"\n📏 Rules ({total_rules})")
+            print(f"\n{icons.RULE} Rules ({total_rules})")
             for rule in (project_data['rules']['suggested'] + project_data['rules']['custom'])[:3]:
-                print(f"  • {rule}")
+                print(f"  {icons.BULLET} {rule}")
             if total_rules > 3:
                 print(f"  ... and {total_rules - 3} more rules")
         
         # Constraints
         if project_data.get('constraints'):
-            print(f"\n⚙️  Constraints")
+            print(f"\n{icons.CONFIG} Constraints")
             for constraint in project_data['constraints']:
-                print(f"  • {constraint}")
+                print(f"  {icons.BULLET} {constraint}")
         
         # Commands
         if project_data['metadata'].get('commands'):
-            print(f"\n🔨 Commands")
+            print(f"\n{icons.BUILD} Commands")
             for cmd_type, cmd in project_data['metadata']['commands'].items():
                 if cmd:
                     print(f"  {cmd_type}: {cmd}")

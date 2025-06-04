@@ -1,4 +1,5 @@
 from typing import Dict, List, Any
+from .icons import icons
 
 
 class Formatters:
@@ -59,10 +60,10 @@ class Formatters:
             if tasks:
                 for task in tasks:
                     priority_emoji = {
-                        'high': '🔴',
-                        'medium': '🟡', 
-                        'low': '🟢'
-                    }.get(task.get('priority', 'medium'), '⚪')
+                        'high': f'{icons.ERROR}',
+                        'medium': f'{icons.WARNING}', 
+                        'low': f'{icons.SUCCESS}'
+                    }.get(task.get('priority', 'medium'), f'{icons.INFO}')
                     formatted.append(f"- {priority_emoji} {task['title']} ← details in /{module['name']}/CLAUDE.md")
             else:
                 formatted.append("- No tasks assigned")

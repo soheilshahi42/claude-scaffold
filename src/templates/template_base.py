@@ -102,7 +102,7 @@ These rules are **immutable** and must be followed throughout the project lifecy
 {commit_standards}
 
 ---
-⚠️ **IMPORTANT**: These rules override any conflicting conventions. When in doubt, refer to this document.
+{icons.WARNING} **IMPORTANT**: These rules override any conflicting conventions. When in doubt, refer to this document.
 
 Generated on: {timestamp}
 """,
@@ -126,9 +126,9 @@ This file contains a complete list of all tasks. Detailed specifications for eac
 5. **Update progress** by checking off items in TODO.md
 
 ## Priority Legend
-- 🔴 High Priority - Critical path or blocking other work
-- 🟡 Medium Priority - Important but not blocking
-- 🟢 Low Priority - Nice to have or can be deferred
+- {icons.ERROR} High Priority - Critical path or blocking other work
+- {icons.WARNING} Medium Priority - Important but not blocking
+- {icons.SUCCESS} Low Priority - Nice to have or can be deferred
 
 Generated on: {timestamp}
 """,
@@ -146,7 +146,7 @@ Generated on: {timestamp}
 ## Progress Summary
 
 - **Total Tasks**: {total_tasks}
-- **Completed**: {completed_tasks} ✅
+- **Completed**: {completed_tasks} {icons.SUCCESS}
 - **In Progress**: {in_progress_tasks} 🚧
 - **Pending**: {pending_tasks} ⏳
 - **Completion**: {completion_percentage:.0f}%
@@ -158,7 +158,7 @@ Generated on: {timestamp}
 {next_steps}
 
 ---
-💡 **Tip**: Update this file as you complete tasks. Use `[x]` to mark completed items.
+{icons.INFO} **Tip**: Update this file as you complete tasks. Use `[x]` to mark completed items.
 """,
 
             'module_claude': """# {module_name} Module Documentation
@@ -207,6 +207,7 @@ Generated on: {timestamp}
 ### Imports from this module
 ```python
 from {module_name} import {example_imports}
+from ..utils.icons import icons
 ```
 
 ### Example Usage
@@ -218,6 +219,6 @@ from {module_name} import {example_imports}
 - {timestamp}: Module created
 
 ---
-📝 **Note**: Keep this documentation updated as the module evolves.
+{icons.DOCUMENT} **Note**: Keep this documentation updated as the module evolves.
 """
         }

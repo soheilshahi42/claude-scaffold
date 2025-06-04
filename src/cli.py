@@ -6,6 +6,7 @@ from pathlib import Path
 from .scaffold import ClaudeScaffold
 from .interactive.interactive_setup import InteractiveSetup
 from .utils.logger import get_logger
+from .utils.icons import icons
 
 
 def print_banner():
@@ -40,12 +41,12 @@ Examples:
   claude-scaffold add-task . api "Create user endpoints" --priority high
   
 Project Types:
-  • Web Application     - Full-stack or frontend web projects
-  • CLI Tool           - Command-line applications
-  • Python Library     - Reusable packages
-  • API Service        - REST/GraphQL APIs
-  • ML Project         - Machine learning projects
-  • Custom             - Define your own structure
+  {icons.BULLET} Web Application     - Full-stack or frontend web projects
+  {icons.BULLET} CLI Tool           - Command-line applications
+  {icons.BULLET} Python Library     - Reusable packages
+  {icons.BULLET} API Service        - REST/GraphQL APIs
+  {icons.BULLET} ML Project         - Machine learning projects
+  {icons.BULLET} Custom             - Define your own structure
         """
     )
     
@@ -139,7 +140,7 @@ Project Types:
         logger.log_file = args.log_file
     
     if args.debug:
-        print(f"🐛 Debug mode enabled. Logs: {logger.get_log_file_path()}")
+        print(f"{icons.INFO} Debug mode enabled. Logs: {logger.get_log_file_path()}")
         logger.info("CLI started with arguments", {'args': vars(args)})
     
     # Show banner for interactive commands
@@ -178,10 +179,10 @@ Project Types:
             sys.exit(0 if success else 1)
     
     except KeyboardInterrupt:
-        print("\n\n❌ Operation cancelled by user.")
+        print(f"\n\n{icons.ERROR} Operation cancelled by user.")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}", file=sys.stderr)
+        print(f"\n{icons.ERROR} Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
 

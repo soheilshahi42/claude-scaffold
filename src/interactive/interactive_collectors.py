@@ -3,6 +3,7 @@
 import questionary
 from typing import Dict, List, Any
 import textwrap
+from ..utils.icons import icons
 
 
 class InteractiveCollectors:
@@ -18,9 +19,9 @@ class InteractiveCollectors:
         
         # Ask about suggested modules
         if suggested:
-            print(f"\n📦 Suggested modules for {project_data['metadata']['project_type_name']}:")
+            print(f"\n{icons.MODULE} Suggested modules for {project_data['metadata']['project_type_name']}:")
             for module in suggested:
-                print(f"   • {module}")
+                print(f"   {icons.BULLET} {module}")
             
             use_suggested = questionary.confirm(
                 "Would you like to use these suggested modules?",
@@ -58,7 +59,7 @@ class InteractiveCollectors:
         
         if not modules:
             modules = [{'name': 'core', 'description': 'Core functionality', 'type': 'default'}]
-            print("ℹ️  Added default 'core' module")
+            print(f"{icons.INFO} Added default 'core' module")
         
         return modules
     
@@ -69,7 +70,7 @@ class InteractiveCollectors:
         
         # Show suggested tasks
         if suggested_tasks:
-            print(f"\n📋 Suggested tasks for {project_data['metadata']['project_type_name']}:")
+            print(f"\n{icons.TASK} Suggested tasks for {project_data['metadata']['project_type_name']}:")
             for i, task in enumerate(suggested_tasks[:5], 1):
                 print(f"   {i}. {task}")
             if len(suggested_tasks) > 5:
@@ -144,9 +145,9 @@ class InteractiveCollectors:
         suggested = self.project_config.project_types[project_data['metadata']['project_type']]['suggested_rules']
         
         if suggested:
-            print(f"\n📏 Suggested rules for {project_data['metadata']['project_type_name']}:")
+            print(f"\n{icons.RULE} Suggested rules for {project_data['metadata']['project_type_name']}:")
             for rule in suggested:
-                print(f"   • {rule}")
+                print(f"   {icons.BULLET} {rule}")
             
             from questionary import Choice
             rule_choices = [Choice(rule, checked=True) for rule in suggested]
@@ -169,9 +170,9 @@ class InteractiveCollectors:
             'Code reviews required for all changes'
         ]
         
-        print("\n📏 Common project rules:")
+        print("\n{icons.RULE} Common project rules:")
         for rule in common_rules[:5]:
-            print(f"   • {rule}")
+            print(f"   {icons.BULLET} {rule}")
         
         selected_common = questionary.checkbox(
             "Select additional rules:",
@@ -193,7 +194,7 @@ class InteractiveCollectors:
     def collect_additional_config(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
         """Collect additional configuration."""
         # Technical constraints
-        print("\n⚙️  Technical Constraints")
+        print(f"\n{icons.CONFIG} Technical Constraints")
         constraints = []
         
         # Language version
@@ -213,7 +214,7 @@ class InteractiveCollectors:
         project_data['constraints'] = constraints
         
         # Build commands
-        print("\n🔨 Build & Development Commands")
+        print("\n{icons.BUILD} Build & Development Commands")
         default_commands = self.project_config.project_types[project_data['metadata']['project_type']]['build_commands']
         
         commands = {}
@@ -231,7 +232,7 @@ class InteractiveCollectors:
         project_data['metadata']['commands'] = commands
         
         # Git configuration
-        print("\n🔀 Version Control")
+        print(f"\n{icons.REFRESH} Version Control")
         git_init = questionary.confirm(
             "Initialize git repository?",
             default=True

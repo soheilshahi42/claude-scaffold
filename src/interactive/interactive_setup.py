@@ -12,6 +12,7 @@ from .interactive_collectors import InteractiveCollectors
 from ..claude.claude_enhancer import ClaudeEnhancedSetup
 from ..claude.claude_interactive_enhanced import EnhancedClaudeInteractiveSetup
 from ..utils.logger import get_logger
+from ..utils.icons import icons
 import subprocess
 
 
@@ -47,11 +48,11 @@ class InteractiveSetup:
             return claude_setup.run(project_name, use_claude=True)
         
         # Fall back to standard setup
-        print(f"\n🎯 Setting up project: {project_name}")
+        print(f"\n{icons.SUCCESS} Setting up project: {project_name}")
         print("=" * 50)
         
         if not claude_available:
-            print("⚠️  Claude CLI not detected. Proceeding with standard setup.")
+            print(f"{icons.WARNING} Claude CLI not detected. Proceeding with standard setup.")
         
         # Initialize project data
         project_data = {
@@ -86,7 +87,7 @@ class InteractiveSetup:
             
             # Step 6: Review and confirm
             if not self._review_and_confirm(project_data):
-                print("\n❌ Setup cancelled by user.")
+                print(f"\n{icons.ERROR} Setup cancelled by user.")
                 raise KeyboardInterrupt
             
             return project_data
@@ -94,13 +95,13 @@ class InteractiveSetup:
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            print(f"\n❌ Error during interactive setup: {e}")
+            print(f"\n{icons.ERROR} Error during interactive setup: {e}")
             raise
     
     def _collect_project_info(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
         """Collect basic project information."""
         # Project type
-        print("\n📋 Project Type")
+        print(f"\n{icons.DOCUMENT} Project Type")
         project_type_choices = []
         for key, value in self.project_types.items():
             project_type_choices.append({
@@ -117,7 +118,7 @@ class InteractiveSetup:
         project_data['metadata']['project_type_name'] = self.project_types[project_type]['name']
         
         # Project description
-        print(f"\n📝 Project Description")
+        print(f"\n{icons.DOCUMENT} Project Description")
         description = questionary.text(
             "Brief project description:",
             default=f"A {self.project_types[project_type]['name'].lower()} built with Claude Scaffold"
@@ -126,7 +127,7 @@ class InteractiveSetup:
         project_data['metadata']['description'] = description
         
         # Programming language
-        print("\n💻 Programming Language")
+        print(f"\n{icons.CODE} Programming Language")
         language = questionary.select(
             "Primary programming language:",
             choices=['Python', 'JavaScript', 'TypeScript', 'Both', 'Other']
@@ -135,7 +136,7 @@ class InteractiveSetup:
         project_data['metadata']['language'] = language
         
         # Style guide
-        print("\n🎨 Code Style")
+        print(f"\n{icons.STAR} Code Style")
         if language in ['Python', 'Both']:
             style_choices = []
             for key, value in self.style_guides.items():
@@ -154,7 +155,7 @@ class InteractiveSetup:
             project_data['metadata']['style_guide'] = 'custom'
         
         # Test framework
-        print("\n🧪 Testing Framework")
+        print(f"\n{icons.BUILD} Testing Framework")
         test_framework = self.project_types[project_type]['test_framework']
         
         use_default = questionary.confirm(
@@ -182,28 +183,28 @@ class InteractiveSetup:
     def _review_and_confirm(self, project_data: Dict[str, Any]) -> bool:
         """Review configuration and confirm."""
         print("\n" + "=" * 60)
-        print("📋 PROJECT CONFIGURATION SUMMARY")
+        print(f"{icons.DOCUMENT} PROJECT CONFIGURATION SUMMARY")
         print("=" * 60)
         
         # Basic info
-        print(f"\n🎯 Project: {project_data['project_name']}")
-        print(f"📝 Type: {project_data['metadata']['project_type_name']}")
-        print(f"💬 Description: {project_data['metadata']['description']}")
-        print(f"💻 Language: {project_data['metadata']['language']}")
-        print(f"🎨 Style: {self.style_guides.get(project_data['metadata'].get('style_guide', 'custom'), 'Custom')}")
-        print(f"🧪 Testing: {project_data['metadata'].get('test_framework', 'pytest')}")
+        print(f"\n{icons.CHEVRON} Project: {project_data['project_name']}")
+        print(f"{icons.DOCUMENT} Type: {project_data['metadata']['project_type_name']}")
+        print(f"{icons.INFO} Description: {project_data['metadata']['description']}")
+        print(f"{icons.CODE} Language: {project_data['metadata']['language']}")
+        print(f"{icons.STAR} Style: {self.style_guides.get(project_data['metadata'].get('style_guide', 'custom'), 'Custom')}")
+        print(f"{icons.BUILD} Testing: {project_data['metadata'].get('test_framework', 'pytest')}")
         
         # Modules
-        print(f"\n📦 Modules ({len(project_data['modules'])})")
+        print(f"\n{icons.MODULE} Modules ({len(project_data['modules'])})")
         for module in project_data['modules']:
-            icon = "  ✨" if module['type'] == 'suggested' else "  ➕"
+            icon = f"  {icons.STAR}" if module['type'] == 'suggested' else f"  {icons.SUCCESS}"
             print(f"{icon} {module['name']} - {module['description']}")
         
         # Tasks
         if project_data['tasks']:
-            print(f"\n📋 Tasks ({len(project_data['tasks'])})")
+            print(f"\n{icons.TASK} Tasks ({len(project_data['tasks'])})")
             for task in project_data['tasks'][:5]:
-                priority_icon = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(task['priority'], '⚪')
+                priority_icon = icons.get_priority_icon(task['priority'])
                 print(f"  {priority_icon} [{task['module']}] {task['title']}")
             if len(project_data['tasks']) > 5:
                 print(f"  ... and {len(project_data['tasks']) - 5} more tasks")
@@ -211,15 +212,15 @@ class InteractiveSetup:
         # Rules
         total_rules = len(project_data['rules']['suggested']) + len(project_data['rules']['custom'])
         if total_rules:
-            print(f"\n📏 Rules ({total_rules})")
+            print(f"\n{icons.RULE} Rules ({total_rules})")
             for rule in (project_data['rules']['suggested'] + project_data['rules']['custom'])[:3]:
-                print(f"  • {rule}")
+                print(f"  {icons.BULLET} {rule}")
             if total_rules > 3:
                 print(f"  ... and {total_rules - 3} more rules")
         
         # Commands
         if project_data['metadata'].get('commands'):
-            print(f"\n🔨 Commands")
+            print(f"\n{icons.BUILD} Commands")
             for cmd_type, cmd in project_data['metadata']['commands'].items():
                 if cmd:
                     print(f"  {cmd_type}: {cmd}")

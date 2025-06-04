@@ -294,7 +294,7 @@ Return JSON with:
                 last_error = e
                 self.logger.warning(f"Claude call timed out after {timeout}s (attempt {attempt + 1}/{self.max_retries})")
                 if attempt < self.max_retries - 1:
-                    self.logger.info("⏱️ Timeout occurred, retrying...")
+                    self.logger.info("Timeout occurred, retrying...")
                 continue
                 
             except Exception as e:

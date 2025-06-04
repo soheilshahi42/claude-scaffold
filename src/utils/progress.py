@@ -12,6 +12,7 @@ from rich.text import Text
 from rich.table import Table
 import threading
 from datetime import datetime
+from .icons import icons
 
 
 class ProgressIndicator:
@@ -24,12 +25,12 @@ class ProgressIndicator:
     def claude_thinking(self, description: str = "Claude is thinking", show_details: bool = True) -> Generator['ClaudeProgress', None, None]:
         """Show an enhanced progress indicator while Claude is processing."""
         messages = [
-            f"🤖 {description}...",
-            "⚡ Processing your request...",
-            "🧠 Analyzing the information...",
-            "💡 Generating response...",
-            "📝 Formulating answer...",
-            "🔄 Almost there...",
+            f"{icons.ROBOT} {description}...",
+            f"{icons.LIGHTNING} Processing your request...",
+            f"{icons.ANALYZE} Analyzing the information...",
+            f"{icons.THINKING} Generating response...",
+            f"{icons.DOCUMENT} Formulating answer...",
+            f"{icons.PROGRESS} Almost there...",
         ]
         
         # Create a layout for detailed progress
@@ -88,7 +89,7 @@ class ProgressIndicator:
                         # Main panel
                         main_panel = Panel(
                             progress,
-                            title="🤖 Claude Processing",
+                            title=f"{icons.ROBOT} Claude Processing",
                             border_style="blue"
                         )
                         layout["main"].update(main_panel)
@@ -98,10 +99,10 @@ class ProgressIndicator:
                         details_table.add_column("Key", style="cyan", width=15)
                         details_table.add_column("Value", style="white")
                         
-                        details_table.add_row("📊 Status:", status_details["status"])
-                        details_table.add_row("📝 Prompt Size:", status_details["prompt_size"])
-                        details_table.add_row("⏱️ Elapsed:", status_details["elapsed"])
-                        details_table.add_row("🔄 Phase:", status_details["phase"])
+                        details_table.add_row(f"{icons.INFO} Status:", status_details["status"])
+                        details_table.add_row(f"{icons.DOCUMENT} Prompt Size:", status_details["prompt_size"])
+                        details_table.add_row(f"{icons.CLOCK} Elapsed:", status_details["elapsed"])
+                        details_table.add_row(f"{icons.PROGRESS} Phase:", status_details["phase"])
                         
                         details_panel = Panel(
                             details_table,
@@ -117,7 +118,7 @@ class ProgressIndicator:
                     time.sleep(0.25)
                 
                 # Final update
-                progress.update(task, completed=100, description="✅ Complete!")
+                progress.update(task, completed=100, description=f"{icons.SUCCESS} Complete!")
                 time.sleep(0.5)
         
         update_thread = threading.Thread(target=update_display, daemon=True)
@@ -177,10 +178,10 @@ class ProgressIndicator:
         """Show retry information."""
         self.console.print(
             Panel(
-                f"⏱️ Timeout occurred. Retrying...\n"
+                f"{icons.CLOCK} Timeout occurred. Retrying...\n"
                 f"Attempt {attempt}/{max_attempts}\n"
                 f"Waiting {wait_time} seconds before retry...",
-                title="🔄 Retry in Progress",
+                title=f"{icons.PROGRESS} Retry in Progress",
                 border_style="yellow"
             )
         )
@@ -195,13 +196,13 @@ class ProgressIndicator:
         """Show an error message with optional suggestion."""
         error_text = Text(message, style="bold red")
         if suggestion:
-            error_text.append("\n\n💡 Suggestion: ", style="yellow")
+            error_text.append(f"\n\n{icons.INFO} Suggestion: ", style="yellow")
             error_text.append(suggestion, style="white")
         
         self.console.print(
             Panel(
                 error_text,
-                title="❌ Error",
+                title=f"{icons.ERROR} Error",
                 border_style="red"
             )
         )
@@ -211,14 +212,14 @@ class ProgressIndicator:
         self.console.print(
             Panel(
                 Text(message, style="bold green"),
-                title="✅ Success",
+                title=f"{icons.SUCCESS} Success",
                 border_style="green"
             )
         )
     
     def show_claude_status(self, status: str, detail: Optional[str] = None):
         """Show a quick Claude status update."""
-        status_text = f"🤖 {status}"
+        status_text = f"{icons.ROBOT} {status}"
         if detail:
             status_text += f" - {detail}"
         self.console.print(status_text, style="blue")
@@ -293,7 +294,7 @@ class ProgressIndicator:
             )
             def start_op(desc):
                 state["current_operation"] = desc
-                self.console.print(f"🔄 {desc}")
+                self.console.print(f"{icons.PROGRESS} {desc}")
             
             def complete_op(success=True):
                 state["completed"] += 1
@@ -306,7 +307,7 @@ class ProgressIndicator:
             try:
                 yield batch_progress
             finally:
-                self.console.print(f"✅ Completed {state['completed']}/{total_operations} operations")
+                self.console.print(f"{icons.SUCCESS} Completed {state['completed']}/{total_operations} operations")
             return
         
         # Create a separate console for batch operations to avoid conflicts
@@ -314,7 +315,7 @@ class ProgressIndicator:
         
         with Live(layout, console=batch_console, refresh_per_second=4) as live:
             # Header
-            header_text = Text(f"🤖 {title}", style="bold blue", justify="center")
+            header_text = Text(f"{icons.ROBOT} {title}", style="bold blue", justify="center")
             header_panel = Panel(header_text, border_style="blue")
             layout["header"].update(header_panel)
             
@@ -344,7 +345,7 @@ class ProgressIndicator:
                 self.console.print(
                     Panel(
                         Text(summary, style="bold green" if state["errors"] == 0 else "yellow"),
-                        title="✅ Batch Complete" if state["errors"] == 0 else "⚠️ Batch Complete with Errors",
+                        title=f"{icons.SUCCESS} Batch Complete" if state["errors"] == 0 else f"{icons.WARNING} Batch Complete with Errors",
                         border_style="green" if state["errors"] == 0 else "yellow"
                     )
                 )

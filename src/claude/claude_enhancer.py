@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from .claude_processor import ClaudeProcessor
 from ..utils.progress import progress_indicator
+from ..utils.icons import icons
 
 
 class ClaudeEnhancedSetup:
@@ -18,11 +19,11 @@ class ClaudeEnhancedSetup:
     def enhance_with_claude(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
         """Enhance project configuration using Claude."""
         print("\n" + "=" * 60)
-        print("🤖 CLAUDE ENHANCEMENT")
+        print(f"{icons.ROBOT} CLAUDE ENHANCEMENT")
         print("=" * 60)
         
         use_claude = questionary.confirm(
-            "\n🤖 Would you like Claude to enhance your configuration with intelligent suggestions?",
+            f"\n{icons.ROBOT} Would you like Claude to enhance your configuration with intelligent suggestions?",
             default=True
         ).ask()
         
@@ -34,7 +35,7 @@ class ClaudeEnhancedSetup:
     def enhance_project_data(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process project data through Claude for enhancements."""
         try:
-            print("\n🤖 Consulting Claude for intelligent project configuration...")
+            print(f"\n{icons.ROBOT} Consulting Claude for intelligent project configuration...")
             
             # Process the entire project setup
             enhanced_data = self.processor.process_project_setup(project_data)
@@ -42,7 +43,7 @@ class ClaudeEnhancedSetup:
             # Generate task details in batch
             tasks_needing_details = [task for task in enhanced_data['tasks'] if 'details' not in task]
             if tasks_needing_details:
-                print("📝 Generating detailed task specifications...")
+                print(f"{icons.DOCUMENT} Generating detailed task specifications...")
                 task_details = self.processor.generate_task_details_batch(
                     tasks_needing_details,
                     enhanced_data
@@ -55,7 +56,7 @@ class ClaudeEnhancedSetup:
             # Enhance module documentation
             modules_needing_docs = [module for module in enhanced_data['modules'] if 'documentation' not in module]
             if modules_needing_docs:
-                print("📚 Enhancing module documentation...")
+                print(f"{icons.FOLDER} Enhancing module documentation...")
                 # For now, use individual calls for module documentation
                 # as they require more complex processing
                 for module in modules_needing_docs:
@@ -68,7 +69,7 @@ class ClaudeEnhancedSetup:
                         self.processor.logger.warning(f"Failed to enhance module {module['name']}: {e}")
             
             # Generate additional global rules
-            print("📏 Generating comprehensive project rules...")
+            print(f"{icons.RULE} Generating comprehensive project rules...")
             try:
                 additional_rules = self.processor.generate_global_rules(enhanced_data)
                 enhanced_data['rules']['suggested'].extend(additional_rules[:5])  # Add top 5 rules
@@ -76,7 +77,7 @@ class ClaudeEnhancedSetup:
                 self.processor.logger.warning(f"Failed to generate global rules: {e}")
             
             # Validate configuration
-            print("✅ Validating project configuration...")
+            print(f"{icons.SUCCESS} Validating project configuration...")
             try:
                 validation = self.processor.validate_project_configuration(enhanced_data)
             except Exception as e:
@@ -84,9 +85,9 @@ class ClaudeEnhancedSetup:
                 validation = {"suggestions": []}
             
             if validation.get('suggestions'):
-                print("\n💡 Claude suggests:")
+                print(f"\n{icons.INFO} Claude suggests:")
                 for suggestion in validation['suggestions'][:3]:
-                    print(f"   • {suggestion}")
+                    print(f"   {icons.BULLET} {suggestion}")
             
             # Interactive enhancement loop
             enhanced_data = self.interactive_enhancement_loop(enhanced_data)
@@ -94,7 +95,7 @@ class ClaudeEnhancedSetup:
             return enhanced_data
             
         except Exception as e:
-            print(f"\n⚠️  Claude enhancement failed: {e}")
+            print(f"\n{icons.WARNING} Claude enhancement failed: {e}")
             print("   Continuing with standard configuration...")
             return project_data
     
@@ -106,7 +107,7 @@ class ClaudeEnhancedSetup:
             
             # Ask if configuration is perfect
             response = questionary.select(
-                "\n🎯 Is this configuration perfect?",
+                f"\n{icons.SUCCESS} Is this configuration perfect?",
                 choices=['yes', 'no', 'modify']
             ).ask()
             
@@ -130,21 +131,21 @@ class ClaudeEnhancedSetup:
     def _show_enhanced_summary(self, data: Dict[str, Any]):
         """Show enhanced configuration summary."""
         print("\n" + "=" * 50)
-        print("✨ CLAUDE-ENHANCED CONFIGURATION")
+        print(f"{icons.STAR} CLAUDE-ENHANCED CONFIGURATION")
         print("=" * 50)
         
-        print(f"\n📝 Enhanced Description:")
+        print(f"\n{icons.DOCUMENT} Enhanced Description:")
         print(f"   {data['metadata']['description']}")
         
-        print(f"\n📦 Enhanced Modules:")
+        print(f"\n{icons.MODULE} Enhanced Modules:")
         for module in data['modules']:
             if 'documentation' in module:
-                print(f"   • {module['name']}: {module['documentation'].get('responsibilities', module['description'])[:100]}...")
+                print(f"   {icons.BULLET} {module['name']}: {module['documentation'].get('responsibilities', module['description'])[:100]}...")
         
-        print(f"\n📋 Enhanced Tasks:")
+        print(f"\n{icons.TASK} Enhanced Tasks:")
         for task in data['tasks'][:3]:
             if 'details' in task:
-                print(f"   • {task['title']}")
+                print(f"   {icons.BULLET} {task['title']}")
                 print(f"     Goal: {task['details'].get('goal', 'Not defined')[:80]}...")
         
         if len(data['tasks']) > 3:
@@ -170,13 +171,13 @@ class ClaudeEnhancedSetup:
                     'priority': 'medium',
                     'type': 'added'
                 })
-                print(f"✅ Added task '{task_title}' to module '{module}'")
+                print(f"{icons.SUCCESS} Added task '{task_title}' to module '{module}'")
         
         return data
     
     def _refine_with_claude(self, data: Dict, refinement_request: str) -> Dict[str, Any]:
         """Refine configuration based on user feedback."""
-        print("\n🤖 Claude is refining the configuration based on your feedback...")
+        print(f"\n{icons.ROBOT} Claude is refining the configuration based on your feedback...")
         
         # Create refinement prompt
         prompt = f"""The user has requested the following improvements to the project configuration:
@@ -202,8 +203,8 @@ Return as JSON with any updates to modules, tasks, rules, or other configuration
             if 'tasks' in refinements:
                 data['tasks'].extend(refinements.get('new_tasks', []))
             
-            print("✅ Configuration refined based on your feedback")
+            print(f"{icons.SUCCESS} Configuration refined based on your feedback")
         except Exception as e:
-            print(f"⚠️  Refinement failed: {e}")
+            print(f"{icons.WARNING} Refinement failed: {e}")
         
         return data

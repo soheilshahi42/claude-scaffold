@@ -10,6 +10,7 @@ from ..templates.templates import ProjectTemplates
 from .documentation_generator import DocumentationGenerator
 from ..utils.project_helpers import ProjectHelpers
 from ..utils.logger import get_logger
+from ..utils.icons import icons
 
 
 class ProjectCreator:
@@ -28,12 +29,12 @@ class ProjectCreator:
         try:
             result = subprocess.run(['claude', '--version'], capture_output=True, text=True)
             if result.returncode == 0:
-                print("✅ Claude CLI detected - intelligent configuration available!")
+                print(f"{icons.SUCCESS} Claude CLI detected - intelligent configuration available!")
                 return True
         except FileNotFoundError:
             pass
         
-        print("⚠️  Claude CLI not found - using standard configuration")
+        print(f"{icons.WARNING} Claude CLI not found - using standard configuration")
         print("   Install Claude CLI for intelligent project setup: https://github.com/anthropics/claude-code")
         return False
     
@@ -46,12 +47,12 @@ class ProjectCreator:
         
         # Check if project exists
         if project_path.exists() and not force:
-            print(f"❌ Error: Project '{project_name}' already exists.", file=sys.stderr)
+            print(f"{icons.ERROR} Error: Project '{project_name}' already exists.", file=sys.stderr)
             print(f"   Use --force to overwrite or choose a different name.", file=sys.stderr)
             return False
         
         if project_path.exists() and force:
-            print(f"⚠️  Removing existing project at {project_path}")
+            print(f"{icons.WARNING} Removing existing project at {project_path}")
             shutil.rmtree(project_path)
         
         try:
@@ -71,29 +72,29 @@ class ProjectCreator:
                 project_data = self.helpers.get_default_project_data(project_name)
             
             # Create project structure
-            print(f"\n🚀 Creating project structure...")
+            print(f"\n{icons.BUILD} Creating project structure...")
             self._create_directory_structure(project_path, project_data)
             
             # Generate all documentation
-            print(f"📝 Generating documentation...")
+            print(f"{icons.DOCUMENT} Generating documentation...")
             self.doc_generator.generate_documentation(project_path, project_data)
             
             # Create .claude directory and files
-            print(f"🔧 Setting up Claude Code integration...")
+            print(f"{icons.CONFIG} Setting up Claude Code integration...")
             self._create_claude_integration(project_path, project_data)
             
             # Initialize git if requested
             if project_data.get('metadata', {}).get('git', {}).get('init', False):
-                print(f"📦 Initializing git repository...")
+                print(f"{icons.GIT} Initializing git repository...")
                 self._init_git(project_path, project_data)
             
             # Save project configuration
             self.interactive_setup.save_config(project_data, project_path)
             
             # Final success message
-            print(f"\n✅ Project '{project_name}' created successfully!")
-            print(f"📍 Location: {project_path}")
-            print(f"\n🎯 Next steps:")
+            print(f"\n{icons.SUCCESS} Project '{project_name}' created successfully!")
+            print(f"{icons.ARROW_RIGHT} Location: {project_path}")
+            print(f"\n{icons.CHEVRON} Next steps:")
             print(f"   1. cd {project_path}")
             print(f"   2. Review GLOBAL_RULES.md for project standards")
             print(f"   3. Check TASKS.md for your task list")
@@ -102,12 +103,12 @@ class ProjectCreator:
             return True
             
         except KeyboardInterrupt:
-            print(f"\n❌ Project creation cancelled by user.")
+            print(f"\n{icons.ERROR} Project creation cancelled by user.")
             if project_path.exists():
                 shutil.rmtree(project_path)
             return False
         except Exception as e:
-            print(f"\n❌ Error creating project: {e}", file=sys.stderr)
+            print(f"\n{icons.ERROR} Error creating project: {e}", file=sys.stderr)
             if project_path.exists():
                 shutil.rmtree(project_path)
             return False
@@ -240,8 +241,8 @@ Generated on: {datetime.now().isoformat()}
             commit_msg = f"Initial commit: {project_data['project_name']} scaffolded with Claude Scaffold"
             subprocess.run(['git', 'commit', '-m', commit_msg], cwd=project_path, check=True, capture_output=True)
             
-            print(f"   ✓ Git repository initialized on branch '{branch}'")
+            print(f"   {icons.SUCCESS} Git repository initialized on branch '{branch}'")
         except subprocess.CalledProcessError as e:
-            print(f"   ⚠️  Git initialization failed: {e}")
+            print(f"   {icons.WARNING} Git initialization failed: {e}")
         except FileNotFoundError:
-            print(f"   ⚠️  Git not found. Please install git to use version control.")
+            print(f"   {icons.WARNING} Git not found. Please install git to use version control.")

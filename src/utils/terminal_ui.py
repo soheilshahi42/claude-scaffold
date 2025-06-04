@@ -13,17 +13,18 @@ from rich.style import Style
 from rich.box import ROUNDED
 import questionary
 from questionary import Style as QStyle
+from .icons import icons
 
 
 class MessageType:
     """Message types with their corresponding styles and icons."""
-    CLAUDE_QUESTION = {"icon": "❓", "border_style": "yellow", "title": "Claude Question"}
-    CLAUDE_SUGGESTION = {"icon": "💡", "border_style": "green", "title": "Claude Suggestion"}
-    CLAUDE_RESPONSE = {"icon": "🤖", "border_style": "blue", "title": "Claude Response"}
-    USER_MESSAGE = {"icon": "👤", "border_style": "cyan", "title": "User"}
-    ERROR_MESSAGE = {"icon": "❌", "border_style": "red", "title": "Error"}
-    INFO_MESSAGE = {"icon": "ℹ️", "border_style": "white", "title": "Information"}
-    SUCCESS_MESSAGE = {"icon": "✅", "border_style": "green", "title": "Success"}
+    CLAUDE_QUESTION = {"icon": icons.QUESTION, "border_style": "yellow", "title": "Claude Question"}
+    CLAUDE_SUGGESTION = {"icon": icons.INFO, "border_style": "green", "title": "Claude Suggestion"}
+    CLAUDE_RESPONSE = {"icon": icons.ROBOT, "border_style": "blue", "title": "Claude Response"}
+    USER_MESSAGE = {"icon": icons.CHEVRON, "border_style": "cyan", "title": "User"}
+    ERROR_MESSAGE = {"icon": icons.ERROR, "border_style": "red", "title": "Error"}
+    INFO_MESSAGE = {"icon": icons.INFO, "border_style": "white", "title": "Information"}
+    SUCCESS_MESSAGE = {"icon": icons.SUCCESS, "border_style": "green", "title": "Success"}
 
 
 class EnhancedTerminalUI:
@@ -58,7 +59,7 @@ class EnhancedTerminalUI:
         )
         
         # Set header
-        header_text = Text("🚀 Claude Scaffold - Enhanced Interactive Setup", style="bold white", justify="center")
+        header_text = Text(f"{icons.BUILD} Claude Scaffold - Enhanced Interactive Setup", style="bold white", justify="center")
         self.layout["header"].update(Panel(header_text, style="blue"))
         
         # Initialize conversation area
@@ -70,7 +71,7 @@ class EnhancedTerminalUI:
     def _update_input_area(self, prompt_text: str = ""):
         """Update the input area with prompt text."""
         input_content = Text()
-        input_content.append("💬 ", style="bold")
+        input_content.append(f"{icons.CHEVRON} ", style="bold")
         input_content.append(prompt_text, style="white")
         self.layout["input"].update(
             Panel(
@@ -213,7 +214,7 @@ class EnhancedTerminalUI:
         """Display module suggestions in a nice format."""
         # Create a table for modules
         table = Table(
-            title="📦 Suggested Modules",
+            title=f"{icons.MODULE} Suggested Modules",
             show_header=True,
             header_style="bold magenta",
             border_style="blue"
@@ -224,7 +225,7 @@ class EnhancedTerminalUI:
         table.add_column("Key Features", style="yellow")
         
         for module in modules:
-            features = "\n".join([f"• {f}" for f in module.get("key_features", [])])
+            features = "\n".join([ff"{icons.BULLET} {f}" for f in module.get("key_features", [])])
             table.add_row(
                 module["name"],
                 module["description"],
@@ -254,7 +255,7 @@ class EnhancedTerminalUI:
         # Create panels for each module
         for module, module_tasks in tasks_by_module.items():
             table = Table(
-                title=f"📋 {module} Tasks",
+                title=f"{icons.TASK} {module} Tasks",
                 show_header=True,
                 header_style="bold cyan",
                 border_style="green"

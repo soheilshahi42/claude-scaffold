@@ -9,6 +9,7 @@ from ..config.project_config import ProjectConfig
 import questionary
 import yaml
 from pathlib import Path
+from ..utils.icons import icons
 
 
 class EnhancedInteractiveSetup:
@@ -56,7 +57,7 @@ class EnhancedInteractiveSetup:
         self.ui.display()
         
         # Step 1: Get initial project information
-        self.ui.show_info("Welcome to Claude Scaffold Enhanced Setup! 🚀")
+        self.ui.show_info("Welcome to Claude Scaffold Enhanced Setup! {icons.ROCKET}")
         time.sleep(1)
         
         project_info = self._collect_initial_info()
@@ -76,7 +77,7 @@ class EnhancedInteractiveSetup:
         # Step 5: Create the project
         if self.ui.confirm("Ready to create your project?", default=True):
             self._create_project(final_project)
-            self.ui.show_success("Project created successfully! 🎉")
+            self.ui.show_success("Project created successfully! {icons.SUCCESS}")
         else:
             self.ui.show_info("Project creation cancelled.")
         

@@ -5,6 +5,7 @@ from typing import Dict
 from ..interactive.interactive_setup import InteractiveSetup
 from ..templates.templates import ProjectTemplates
 from ..utils.formatters import Formatters
+from ..utils.icons import icons
 
 
 class TaskManager:
@@ -21,14 +22,14 @@ class TaskManager:
         config = self.interactive_setup.load_config(project_path)
         
         if not config:
-            print(f"❌ Error: No Claude Scaffold configuration found at {project_path}", file=sys.stderr)
+            print(f"{icons.ERROR} Error: No Claude Scaffold configuration found at {project_path}", file=sys.stderr)
             return False
         
         # Check if module exists
         module_exists = any(m['name'] == module_name for m in config['modules'])
         
         if not module_exists:
-            print(f"❌ Error: Module '{module_name}' not found in project", file=sys.stderr)
+            print(f"{icons.ERROR} Error: Module '{module_name}' not found in project", file=sys.stderr)
             print(f"   Available modules: {', '.join(m['name'] for m in config['modules'])}")
             return False
         
@@ -130,7 +131,7 @@ class TaskManager:
         # Save updated configuration
         self.interactive_setup.save_config(config, project_path)
         
-        print(f"✅ Task '{task_title}' added to module '{module_name}'")
-        print(f"📝 Research template created at: {research_file.relative_to(project_path)}")
+        print(f"{icons.SUCCESS} Task '{task_title}' added to module '{module_name}'")
+        print(f"{icons.DOCUMENT} Research template created at: {research_file.relative_to(project_path)}")
         
         return True

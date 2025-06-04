@@ -8,6 +8,7 @@ from .template_base import BaseTemplates
 from .template_workflows import WorkflowTemplates
 from .template_commands import CommandTemplates
 from .template_project import ProjectSpecificTemplates
+from ..utils.icons import icons
 
 
 class ProjectTemplates:
@@ -47,7 +48,7 @@ class ProjectTemplates:
             'module_overview': 'Module overview will be generated',
             'tasks_by_module': 'Tasks will be listed here',
             'todo_items': '- [ ] No tasks defined yet',
-            'status_summary': '📊 0/0 tasks completed (0%)',
+            'status_summary': f'{icons.CHART} 0/0 tasks completed (0%)',
             'recent_completions': '- No completed items yet',
             'next_steps': '1. Start with the first task',
             'example_imports': 'example_function, ExampleClass',
