@@ -23,8 +23,18 @@ Claude Scaffold enhances Claude Code's capabilities by providing:
 
 ## Installation
 
+Install directly from GitHub:
+
 ```bash
-pip install claude-scaffold
+pip install git+https://github.com/soheilshahi42/claude-scaffold.git
+```
+
+Or clone and install locally:
+
+```bash
+git clone https://github.com/soheilshahi42/claude-scaffold.git
+cd claude-scaffold
+pip install -e .
 ```
 
 ## Quick Start
