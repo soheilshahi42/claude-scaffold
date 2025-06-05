@@ -116,8 +116,9 @@ class InteractiveSetup:
         # Project description
         print(f"\n{icons.DOCUMENT} Project Description")
         description = questionary.text(
-            "Brief project description:", default=f"A {
-                self.project_types[project_type]['name'].lower()} built with Claude Scaffold", ).ask()
+            "Brief project description:", 
+            default=f"A {self.project_types[project_type]['name'].lower()} built with Claude Scaffold"
+        ).ask()
 
         project_data["metadata"]["description"] = description
 

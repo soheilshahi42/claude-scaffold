@@ -357,9 +357,7 @@ class ProgressIndicator:
             finally:
                 # Show final summary
                 elapsed = (datetime.now() - state["start_time"]).total_seconds()
-                summary = f"Completed {
-                    state['completed']}/{total_operations} operations in {
-                    elapsed:.1f}s"
+                summary = f"Completed {state['completed']}/{total_operations} operations in {elapsed:.1f}s"
                 if state["errors"] > 0:
                     summary += f" ({state['errors']} errors)"
 

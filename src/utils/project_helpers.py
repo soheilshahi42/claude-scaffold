@@ -112,8 +112,7 @@ class ProjectHelpers:
     def get_module_responsibilities(self, module: Dict, project_data: Dict) -> str:
         """Get module responsibilities based on type and name."""
         # Add intelligent responsibility assignment based on module name
-        return f"- Primary responsibility for {
-            module['description']}\n- Maintain clean interfaces with other modules\n- Ensure comprehensive test coverage"
+        return f"- Primary responsibility for {module['description']}\n- Maintain clean interfaces with other modules\n- Ensure comprehensive test coverage"
 
     def get_module_dependencies(self, module: Dict, project_data: Dict) -> str:
         """Get module dependencies."""

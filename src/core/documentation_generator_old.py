@@ -195,8 +195,7 @@ class DocumentationGenerator:
                             "task_name": task["title"],
                             "research_objective": details.get(
                                 "goal",
-                                f"Research and document approach for: {
-                                    task['title']}",
+                                f"Research and document approach for: {task['title']}",
                             ),
                             "key_questions": research_questions,
                             "findings": "To be completed during research phase",
