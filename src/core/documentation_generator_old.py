@@ -206,8 +206,7 @@ class DocumentationGenerator:
                     else:
                         research_context = {
                             "task_name": task["title"],
-                            "research_objective": f"Research and document approach for: {
-                                task['title']}",
+                            "research_objective": f"Research and document approach for: {task['title']}",
                             "key_questions": "- What are the requirements?\n- What are the constraints?\n- What are the edge cases?\n- What patterns should we follow?",
                             "findings": "To be completed during research phase",
                             "recommendations": "To be completed during research phase",

@@ -116,7 +116,7 @@ class InteractiveSetup:
         # Project description
         print(f"\n{icons.DOCUMENT} Project Description")
         description = questionary.text(
-            "Brief project description:", 
+            "Brief project description:",
             default=f"A {self.project_types[project_type]['name'].lower()} built with Claude Scaffold"
         ).ask()
 
@@ -174,14 +174,9 @@ class InteractiveSetup:
         print(f"{icons.DOCUMENT} Type: {project_data['metadata']['project_type_name']}")
         print(f"{icons.INFO} Description: {project_data['metadata']['description']}")
         print(f"{icons.CODE} Language: {project_data['metadata']['language']}")
-        print(
-            f"{
-                icons.STAR} Style: {
-                self.style_guides.get(
-                    project_data['metadata'].get(
-                        'style_guide',
-                        'custom'),
-                    'Custom')}")
+        style_guide = project_data['metadata'].get('style_guide', 'custom')
+        style_name = self.style_guides.get(style_guide, 'Custom')
+        print(f"{icons.STAR} Style: {style_name}")
         print(f"{icons.BUILD} Testing: {project_data['metadata'].get('test_framework', 'pytest')}")
 
         # Modules
