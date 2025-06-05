@@ -1,10 +1,10 @@
 """Progress indicator utilities for CLI operations."""
 
-from typing import Generator, Any, Optional
 import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime
+from typing import Any, Generator, Optional
 
 from rich.console import Console
 from rich.layout import Layout
