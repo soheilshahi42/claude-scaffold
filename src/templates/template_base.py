@@ -5,12 +5,12 @@ from typing import Dict
 
 class BaseTemplates:
     """Base templates used across all project types."""
-    
+
     @staticmethod
     def get_templates() -> Dict[str, str]:
         """Return all base templates."""
         return {
-            'root_claude': """# {project_name} Claude Documentation
+            "root_claude": """# {project_name} Claude Documentation
 
 ## 🚨 IMPORTANT: System Instructions for Claude
 
@@ -19,12 +19,12 @@ class BaseTemplates:
 1. **ONLY implement the modules listed in the "Modules" section below**
    - Do NOT create additional modules beyond what is specified
    - Do NOT add features or functionality outside the defined scope
-   
+
 2. **ONLY work on tasks listed in TASKS.md**
    - Each task has been carefully planned and scoped
    - Task details are in the respective module's CLAUDE.md file
    - Do NOT add tasks or features not explicitly listed
-   
+
 3. **Follow the exact project structure as defined**
    - Respect the module boundaries and responsibilities
    - Maintain the architectural decisions made during setup
@@ -34,15 +34,16 @@ class BaseTemplates:
    - These rules are immutable and override any other conventions
    - When in doubt, refer to GLOBAL_RULES.md
 
-This project has been scaffolded according to specific requirements. Your role is to implement ONLY what has been defined, not to extend or modify the scope.
+This project has been scaffolded according to specific requirements. Your role is to implement ONLY what has been defined, not to extend or modify the scope."""
+            + """
 
 ---
 
 ## Overview
 {description}
 
-**Project Type**: {project_type}  
-**Primary Language**: {language}  
+**Project Type**: {project_type}
+**Primary Language**: {language}
 **Style Guide**: {style_guide}
 
 ## Quick Start
@@ -69,7 +70,8 @@ This project has been scaffolded according to specific requirements. Your role i
 
 ## Development Workflow
 
-1. **Research First**: Before implementing any feature, research and document your approach in the relevant `docs/` folder
+1. **Research First**: Before implementing any feature, research and document your approach """
+            + """in the relevant `docs/` folder
 2. **Test-Driven Development**: Write failing tests before implementation
 3. **Implement**: Write the minimum code to make tests pass
 4. **Refactor**: Clean up while keeping tests green
@@ -98,8 +100,7 @@ This project has been scaffolded according to specific requirements. Your role i
 
 Generated on: {timestamp}
 """,
-
-            'global_rules': """# Global Rules for {project_name}
+            "global_rules": """# Global Rules for {project_name}
 
 These rules are **immutable** and must be followed throughout the project lifecycle.
 
@@ -143,8 +144,7 @@ The project was scaffolded based on specific requirements. Your role is to imple
 
 Generated on: {timestamp}
 """,
-
-            'tasks_md': """# Task List for {project_name}
+            "tasks_md": """# Task List for {project_name}
 
 **Total Tasks**: {total_tasks} ({high_priority} high, {medium_priority} medium, {low_priority} low)
 
@@ -169,11 +169,10 @@ This file contains a complete list of all tasks. Detailed specifications for eac
 
 Generated on: {timestamp}
 """,
+            "todo_md": """# TODO List for {scope}
 
-            'todo_md': """# TODO List for {scope}
-
-**Scope**: Tasks and progress for {scope_description}  
-**Status**: {status_summary}  
+**Scope**: Tasks and progress for {scope_description}
+**Status**: {status_summary}
 **Last Updated**: {timestamp}
 
 ## Checklist
@@ -197,8 +196,7 @@ Generated on: {timestamp}
 ---
 {icons.INFO} **Tip**: Update this file as you complete tasks. Use `[x]` to mark completed items.
 """,
-
-            'module_claude': """# {module_name} Module Documentation
+            "module_claude": """# {module_name} Module Documentation
 
 ## {icons.ERROR} MODULE SCOPE REMINDER
 
@@ -265,5 +263,5 @@ from ..utils.icons import icons
 
 ---
 {icons.DOCUMENT} **Note**: Keep this documentation updated as the module evolves.
-"""
+""",
         }

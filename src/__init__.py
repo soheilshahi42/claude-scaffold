@@ -3,4 +3,4 @@
 from .scaffold import ClaudeScaffold
 
 __version__ = "0.1.0"
-__all__ = ['ClaudeScaffold']
+__all__ = ["ClaudeScaffold"]

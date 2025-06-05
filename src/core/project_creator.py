@@ -1,17 +1,17 @@
-import sys
 import shutil
 import subprocess
+import sys
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
-from ..interactive.interactive_setup import InteractiveSetup
 from ..interactive.enhanced_setup import EnhancedInteractiveSetup
+from ..interactive.interactive_setup import InteractiveSetup
 from ..templates.templates import ProjectTemplates
-from .documentation_generator import DocumentationGenerator
-from ..utils.project_helpers import ProjectHelpers
-from ..utils.logger import get_logger
 from ..utils.icons import icons
+from ..utils.logger import get_logger
+from ..utils.project_helpers import ProjectHelpers
 from ..utils.ui_manager import ui_manager
+from .documentation_generator import DocumentationGenerator
 
 
 class ProjectCreator:
@@ -28,13 +28,9 @@ class ProjectCreator:
     def check_claude_available(self) -> bool:
         """Check if Claude CLI is available."""
         try:
-            result = subprocess.run(
-                ["claude", "--version"], capture_output=True, text=True
-            )
+            result = subprocess.run(["claude", "--version"], capture_output=True, text=True)
             if result.returncode == 0:
-                print(
-                    f"{icons.SUCCESS} Claude CLI detected - intelligent configuration available!"
-                )
+                print(f"{icons.SUCCESS} Claude CLI detected - intelligent configuration available!")
                 return True
         except FileNotFoundError:
             pass
@@ -65,7 +61,7 @@ class ProjectCreator:
                 file=sys.stderr,
             )
             print(
-                f"   Use --force to overwrite or choose a different name.",
+                "   Use --force to overwrite or choose a different name.",
                 file=sys.stderr,
             )
             return False
@@ -88,19 +84,17 @@ class ProjectCreator:
                 else:
                     # Check if Claude is available
                     use_claude = self.check_claude_available()
-                    project_data = self.interactive_setup.run(
-                        project_name, use_claude=use_claude
-                    )
+                    project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
                 print(f"{icons.SUCCESS} Interactive setup completed\n")
             else:
                 # Use minimal defaults for non-interactive mode
                 project_data = self.helpers.get_default_project_data(project_name)
-            
+
             # Determine total steps based on configuration
             total_steps = 4  # Base steps: structure, docs, claude, config
             if project_data.get("metadata", {}).get("git", {}).get("init", False):
                 total_steps += 1
-            
+
             # Now run the rest with progress tracking
             with ui_manager.step_progress(
                 f"Creating project '{project_name}'", total_steps=total_steps
@@ -162,9 +156,9 @@ class ProjectCreator:
             print(f"{icons.ARROW_RIGHT} Location: {project_path}")
             print(f"\n{icons.CHEVRON} Next steps:")
             print(f"   1. cd {project_path}")
-            print(f"   2. Review GLOBAL_RULES.md for project standards")
-            print(f"   3. Check TASKS.md for your task list")
-            print(f"   4. Start with: claude-code")
+            print("   2. Review GLOBAL_RULES.md for project standards")
+            print("   3. Check TASKS.md for your task list")
+            print("   4. Start with: claude-code")
 
             # Show operation summary with timings
             ui_manager.show_operation_summary()
@@ -182,9 +176,7 @@ class ProjectCreator:
                 shutil.rmtree(project_path)
             return False
 
-    def _create_directory_structure(
-        self, project_path: Path, project_data: Dict[str, Any]
-    ):
+    def _create_directory_structure(self, project_path: Path, project_data: Dict[str, Any]):
         """Create the complete directory structure."""
         # Create root directory
         project_path.mkdir(parents=True, exist_ok=True)
@@ -217,7 +209,7 @@ import pytest
 
 class Test{module['name'].title()}:
     """Test cases for {module['name']} functionality."""
-    
+
     def test_placeholder(self):
         """Placeholder test - replace with actual tests."""
         # TODO: Implement actual tests following TDD
@@ -241,9 +233,7 @@ class Test{module['name'].title()}:
             (project_path / "models").mkdir(exist_ok=True)
             (project_path / "notebooks").mkdir(exist_ok=True)
 
-    def _create_claude_integration(
-        self, project_path: Path, project_data: Dict[str, Any]
-    ):
+    def _create_claude_integration(self, project_path: Path, project_data: Dict[str, Any]):
         """Create .claude directory with settings and custom commands."""
         claude_path = project_path / ".claude"
 
@@ -253,25 +243,26 @@ class Test{module['name'].title()}:
 
         # Create custom Claude Code commands (Markdown files)
         commands_path = claude_path / "commands"
-        
+
         # Get command templates
         from ..templates.template_commands import CommandTemplates
+
         command_templates = CommandTemplates.get_templates()
-        
+
         # Create all command files
         for cmd_name, cmd_content in command_templates.items():
             # Replace any template variables
             if cmd_name == "test.md" and "test" in project_data["metadata"].get("commands", {}):
-                cmd_content = cmd_content.replace("{test_command}", project_data["metadata"]["commands"]["test"])
-            
+                cmd_content = cmd_content.replace(
+                    "{test_command}", project_data["metadata"]["commands"]["test"]
+                )
+
             cmd_file = commands_path / cmd_name
             cmd_file.write_text(cmd_content)
 
         # Create .gitignore
         gitignore_context = {
-            "project_specific_ignores": self.helpers.get_project_specific_ignores(
-                project_data
-            )
+            "project_specific_ignores": self.helpers.get_project_specific_ignores(project_data)
         }
         gitignore = self.templates.get_template("gitignore", gitignore_context)
         (project_path / ".gitignore").write_text(gitignore)
@@ -301,9 +292,7 @@ Generated on: {datetime.now().isoformat()}
         """Initialize git repository."""
         try:
             # Initialize repository
-            subprocess.run(
-                ["git", "init"], cwd=project_path, check=True, capture_output=True
-            )
+            subprocess.run(["git", "init"], cwd=project_path, check=True, capture_output=True)
 
             # Set initial branch
             branch = project_data["metadata"]["git"].get("initial_branch", "main")
@@ -323,7 +312,9 @@ Generated on: {datetime.now().isoformat()}
             )
 
             # Create initial commit
-            commit_msg = f"Initial commit: {project_data['project_name']} scaffolded with Claude Scaffold"
+            commit_msg = (
+                f"Initial commit: {project_data['project_name']} scaffolded with Claude Scaffold"
+            )
             subprocess.run(
                 ["git", "commit", "-m", commit_msg],
                 cwd=project_path,
@@ -336,6 +327,4 @@ Generated on: {datetime.now().isoformat()}
         except subprocess.CalledProcessError as e:
             print(f"   {icons.WARNING} Git initialization failed: {e}")
         except FileNotFoundError:
-            print(
-                f"   {icons.WARNING} Git not found. Please install git to use version control."
-            )
+            print(f"   {icons.WARNING} Git not found. Please install git to use version control.")

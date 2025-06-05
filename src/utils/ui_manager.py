@@ -1,25 +1,25 @@
 """Unified UI/UX manager for consistent progress tracking and user feedback."""
 
 import time
-from typing import Optional, Callable, Any, Dict, List
 from contextlib import contextmanager
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
+from rich import box
 from rich.console import Console
-from rich.progress import (
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-    BarColumn,
-    TaskProgressColumn,
-)
-from rich.panel import Panel
-from rich.text import Text
-from rich.table import Table
 from rich.layout import Layout
 from rich.live import Live
-from rich import box
+from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.table import Table
+from rich.text import Text
 
 from .icons import Icons
 from .terminal_ui import EnhancedTerminalUI
@@ -69,9 +69,7 @@ class UIManager:
             def update(self, description: str, advance: int = 1):
                 """Update current step with timing."""
                 step_start = time.time()
-                self.progress.update(
-                    self.task_id, description=f"{Icons.PROGRESS} {description}"
-                )
+                self.progress.update(self.task_id, description=f"{Icons.PROGRESS} {description}")
                 if total_steps:
                     self.progress.update(self.task_id, advance=advance)
                 self.current_step += advance
@@ -84,9 +82,7 @@ class UIManager:
             def complete(self, message: Optional[str] = None):
                 """Mark as complete with success icon."""
                 if message:
-                    self.progress.update(
-                        self.task_id, description=f"{Icons.SUCCESS} {message}"
-                    )
+                    self.progress.update(self.task_id, description=f"{Icons.SUCCESS} {message}")
                 else:
                     self.progress.update(
                         self.task_id, description=f"{Icons.SUCCESS} {title} completed"
@@ -100,9 +96,7 @@ class UIManager:
 
             def error(self, message: str):
                 """Mark as error."""
-                self.progress.update(
-                    self.task_id, description=f"{Icons.ERROR} {message}"
-                )
+                self.progress.update(self.task_id, description=f"{Icons.ERROR} {message}")
 
         tracker = StepTracker(progress, task_id, self)
 
@@ -121,29 +115,27 @@ class UIManager:
                 self.operation_timings[title] = elapsed
 
                 if show_timing:
-                    self.console.print(
-                        f"   {Icons.CLOCK} Completed in {elapsed:.2f}s", style="dim"
-                    )
+                    self.console.print(f"   {Icons.CLOCK} Completed in {elapsed:.2f}s", style="dim")
 
     @contextmanager
     def live_status(self, title: str, show_details: bool = True):
         """Live updating status display with details panel."""
         # Check if we're already in a Live context
-        if hasattr(self.console, '_live') and self.console._live and self.console._live.is_started:
+        if hasattr(self.console, "_live") and self.console._live and self.console._live.is_started:
             # Use simple progress if already in Live context
             class SimpleStatusUpdater:
                 def update(self, message: str, **kwargs):
                     print(f"{Icons.PROGRESS} {message}")
-                
+
                 def success(self, message: str):
                     print(f"{Icons.SUCCESS} {message}")
-                    
+
                 def error(self, message: str):
                     print(f"{Icons.ERROR} {message}")
-            
+
             yield SimpleStatusUpdater()
             return
-            
+
         layout = Layout()
 
         if show_details:
@@ -153,14 +145,10 @@ class UIManager:
                 Layout(name="details", ratio=1),
             )
         else:
-            layout.split_column(
-                Layout(name="header", size=3), Layout(name="status", size=3)
-            )
+            layout.split_column(Layout(name="header", size=3), Layout(name="status", size=3))
 
         # Header
-        header_text = Text(
-            f"{Icons.BUILD} {title}", style="bold cyan", justify="center"
-        )
+        header_text = Text(f"{Icons.BUILD} {title}", style="bold cyan", justify="center")
         layout["header"].update(Panel(header_text, box=box.DOUBLE))
 
         # Status tracking
@@ -201,15 +189,11 @@ class UIManager:
                 status_text.append(f"{Icons.PROGRESS} ", style="cyan")
                 status_text.append(self.status["current"], style="white")
                 status_text.append(f"\n{Icons.CLOCK} ", style="yellow")
-                status_text.append(
-                    f"Elapsed: {self.status['elapsed']:.1f}s", style="white"
-                )
+                status_text.append(f"Elapsed: {self.status['elapsed']:.1f}s", style="white")
 
                 if self.status["progress"] > 0:
                     status_text.append(f"\n{Icons.CHART} ", style="green")
-                    status_text.append(
-                        f"Progress: {self.status['progress']}%", style="white"
-                    )
+                    status_text.append(f"Progress: {self.status['progress']}%", style="white")
 
                 self.layout["status"].update(
                     Panel(status_text, title="Status", border_style="cyan")
@@ -251,9 +235,7 @@ class UIManager:
                 time.sleep(1)  # Show error briefly
                 raise
 
-    def show_summary(
-        self, title: str, items: List[Dict[str, Any]], show_timing: bool = True
-    ):
+    def show_summary(self, title: str, items: List[Dict[str, Any]], show_timing: bool = True):
         """Show a summary panel with optional timing information."""
         # Create summary table
         table = Table(
@@ -299,9 +281,7 @@ class UIManager:
             table.add_section()
             table.add_row(*[""] * len(items[0].keys())) if items else None
 
-            timing_text = (
-                f"{Icons.CLOCK} Total time: {sum(self.operation_timings.values()):.2f}s"
-            )
+            timing_text = f"{Icons.CLOCK} Total time: {sum(self.operation_timings.values()):.2f}s"
             if len(items[0].keys()) > 1:
                 table.add_row(timing_text, *[""] * (len(items[0].keys()) - 1))
             else:
@@ -360,9 +340,7 @@ class UIManager:
         total_time = sum(self.operation_timings.values())
 
         # Sort by time descending
-        sorted_ops = sorted(
-            self.operation_timings.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_ops = sorted(self.operation_timings.items(), key=lambda x: x[1], reverse=True)
 
         for op_name, op_time in sorted_ops:
             percentage = (op_time / total_time) * 100 if total_time > 0 else 0
@@ -383,9 +361,7 @@ class UIManager:
         metrics_text.append(f"\n{Icons.INFO} Total elapsed time: ", style="cyan")
         metrics_text.append(f"{elapsed_total:.2f}s\n", style="white")
         metrics_text.append(f"{Icons.CHART} Operation efficiency: ", style="cyan")
-        metrics_text.append(
-            f"{efficiency:.1f}%", style="green" if efficiency > 80 else "yellow"
-        )
+        metrics_text.append(f"{efficiency:.1f}%", style="green" if efficiency > 80 else "yellow")
 
         self.console.print(Panel(table, border_style="magenta", padding=(1, 2)))
         self.console.print(metrics_text)

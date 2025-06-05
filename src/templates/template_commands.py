@@ -5,12 +5,12 @@ from typing import Dict
 
 class CommandTemplates:
     """Templates for custom Claude commands."""
-    
+
     @staticmethod
     def get_templates() -> Dict[str, str]:
         """Return all command templates."""
         return {
-            'init-tasks.md': '''Initialize and review the task list for this project.
+            "init-tasks.md": """Initialize and review the task list for this project.
 
 First, read through CLAUDE.md to understand the project structure and all defined modules.
 
@@ -29,9 +29,8 @@ After creating the task list, provide a summary showing:
 - Suggested next steps based on priority
 
 This will prepare the project for systematic development following the defined structure.
-''',
-
-            'dev.md': '''Start or resume development on this project by following these steps:
+""",
+            "dev.md": """Start or resume development on this project by following these steps:
 
 1. First, use TodoRead to check the current task list and see what needs to be done
 2. Read CLAUDE.md to understand the project structure, modules, and constraints
@@ -48,9 +47,8 @@ This will prepare the project for systematic development following the defined s
 Remember: You must ONLY work on tasks that are defined in TASKS.md and ONLY create code in the modules specified in CLAUDE.md. Do not add new features or modules beyond what has been defined.
 
 $ARGUMENTS
-''',
-
-            'test.md': '''Run the project test suite and analyze the results.
+""",
+            "test.md": """Run the project test suite and analyze the results.
 
 Execute the following test command:
 ```bash
@@ -65,9 +63,8 @@ After running tests:
 5. If all tests pass, confirm the code quality
 
 Provide a clear summary of the test results and any recommended actions.
-''',
-
-            'status.md': '''Provide a comprehensive project status report.
+""",
+            "status.md": """Provide a comprehensive project status report.
 
 1. Use TodoRead to get the current task list
 2. Analyze task completion status:
@@ -86,9 +83,8 @@ Create a status report that includes:
 - Recommended next actions
 
 $ARGUMENTS
-''',
-
-            'review.md': '''Review code changes for quality and compliance with project standards.
+""",
+            "review.md": """Review code changes for quality and compliance with project standards.
 
 $ARGUMENTS
 
@@ -106,9 +102,8 @@ Provide feedback on:
 - Documentation completeness
 - Compliance with project rules
 - Suggestions for improvement
-''',
-
-            'research.md': '''Research and document approach for implementing a specific task or feature.
+""",
+            "research.md": """Research and document approach for implementing a specific task or feature.
 
 $ARGUMENTS
 
@@ -125,5 +120,5 @@ Deliverables:
 - Test strategy
 - Potential risks and mitigations
 - Integration considerations
-'''
+""",
         }

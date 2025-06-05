@@ -1,0 +1,6 @@
+[flake8]
+# Ignore E501 (line too long) since it's difficult to fix in template strings
+# Ignore W503 (line break before binary operator) as it's a style preference
+ignore = E501,W503
+max-line-length = 100
+exclude = venv,.git,__pycache__,*.egg-info

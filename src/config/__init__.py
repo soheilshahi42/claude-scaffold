@@ -2,4 +2,4 @@
 
 from .project_config import ProjectConfig
 
-__all__ = ['ProjectConfig']
+__all__ = ["ProjectConfig"]

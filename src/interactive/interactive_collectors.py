@@ -1,8 +1,9 @@
 """Interactive collectors for project information."""
 
+from typing import Any, Dict, List
+
 import questionary
-from typing import Dict, List, Any
-import textwrap
+
 from ..utils.icons import icons
 from ..utils.ui_manager import ui_manager
 
@@ -18,9 +19,9 @@ class InteractiveCollectors:
         modules = []
 
         with ui_manager.live_status("Collecting Module Information") as status:
-            suggested = self.project_config.project_types[
-                project_data["metadata"]["project_type"]
-            ]["suggested_modules"]
+            suggested = self.project_config.project_types[project_data["metadata"]["project_type"]][
+                "suggested_modules"
+            ]
 
             # Ask about suggested modules
             if suggested:
@@ -30,9 +31,7 @@ class InteractiveCollectors:
                     suggested_count=len(suggested),
                 )
 
-                print(
-                    f"\n{icons.MODULE} Suggested modules for {project_data['metadata']['project_type_name']}:"
-                )
+                print(f"Suggested modules for {project_data['metadata']['project_type_name']}:")
                 for module in suggested:
                     print(f"   {icons.BULLET} {module}")
 
@@ -49,9 +48,7 @@ class InteractiveCollectors:
                         }
                         for m in suggested
                     ]
-                    status.update(
-                        f"Added {len(suggested)} suggested modules", progress=50
-                    )
+                    status.update(f"Added {len(suggested)} suggested modules", progress=50)
 
             # Allow adding custom modules
             custom_count = 0
@@ -76,9 +73,7 @@ class InteractiveCollectors:
                     default=f"{module_name.title()} functionality",
                 ).ask()
 
-                modules.append(
-                    {"name": module_name, "description": module_desc, "type": "custom"}
-                )
+                modules.append({"name": module_name, "description": module_desc, "type": "custom"})
                 custom_count += 1
 
                 status.update(
@@ -101,9 +96,7 @@ class InteractiveCollectors:
 
         return modules
 
-    def collect_tasks(
-        self, project_data: Dict[str, Any], modules: List[Dict]
-    ) -> List[Dict]:
+    def collect_tasks(self, project_data: Dict[str, Any], modules: List[Dict]) -> List[Dict]:
         """Collect task information."""
         tasks = []
 
@@ -120,9 +113,7 @@ class InteractiveCollectors:
                     suggested_count=len(suggested_tasks),
                 )
 
-                print(
-                    f"\n{icons.TASK} Suggested tasks for {project_data['metadata']['project_type_name']}:"
-                )
+                print(f"Suggested tasks for {project_data['metadata']['project_type_name']}:")
                 for i, task in enumerate(suggested_tasks[:5], 1):
                     print(f"   {i}. {task}")
                 if len(suggested_tasks) > 5:
@@ -137,14 +128,12 @@ class InteractiveCollectors:
                         "Select tasks to include:", choices=suggested_tasks
                     ).ask()
 
-                    status.update(
-                        f"Assigning {len(selected)} tasks to modules", progress=30
-                    )
+                    status.update(f"Assigning {len(selected)} tasks to modules", progress=30)
 
                     for i, task_title in enumerate(selected):
                         status.update(
-                            f"Configuring task {i+1}/{len(selected)}: {task_title[:40]}...",
-                            progress=30 + int((i+1) / len(selected) * 50)
+                            f"Configuring task {i + 1}/{len(selected)}: {task_title[:40]}...",
+                            progress=30 + int((i + 1) / len(selected) * 50),
                         )
 
                         module = self._assign_task_to_module(task_title, modules)
@@ -178,9 +167,7 @@ class InteractiveCollectors:
 
                 status.update(f"Adding custom task {custom_count + 1}")
 
-                task_title = questionary.text(
-                    "Task title:", validate=lambda x: len(x) > 0
-                ).ask()
+                task_title = questionary.text("Task title:", validate=lambda x: len(x) > 0).ask()
 
                 module = questionary.select(
                     f"Which module should handle '{task_title}'?",
@@ -218,24 +205,27 @@ class InteractiveCollectors:
         rules = {"suggested": [], "custom": []}
 
         # Get suggested rules
-        suggested = self.project_config.project_types[
-            project_data["metadata"]["project_type"]
-        ]["suggested_rules"]
+        suggested = self.project_config.project_types[project_data["metadata"]["project_type"]][
+            "suggested_rules"
+        ]
 
         if suggested:
-            print(
-                f"\n{icons.RULE} Suggested rules for {project_data['metadata']['project_type_name']}:"
-            )
+            print(f"Suggested rules for {project_data['metadata']['project_type_name']}:")
             for rule in suggested:
-                print(f"   {icons.BULLET} {rule}")
+                print(f"  - {rule}")
+        # Allow selecting suggested rules
+        if (
+            suggested
+            and questionary.confirm(
+                "\nWould you like to select from suggested rules?", default=True
+            ).ask()
+        ):
 
             from questionary import Choice
 
             rule_choices = [Choice(rule, checked=True) for rule in suggested]
 
-            selected = questionary.checkbox(
-                "Select rules to include:", choices=rule_choices
-            ).ask()
+            selected = questionary.checkbox("Select rules to include:", choices=rule_choices).ask()
 
             rules["suggested"] = selected
 
@@ -277,9 +267,7 @@ class InteractiveCollectors:
 
         # Language version
         if project_data["metadata"]["language"] in ["Python", "Both"]:
-            py_version = questionary.text(
-                "Minimum Python version:", default="3.8+"
-            ).ask()
+            py_version = questionary.text("Minimum Python version:", default="3.8+").ask()
             constraints.append(f"Python {py_version}")
 
         # Add custom constraints
@@ -300,12 +288,8 @@ class InteractiveCollectors:
         command_types = ["install", "test", "build", "dev", "lint"]
 
         for cmd_type in command_types:
-            default = next(
-                (cmd for cmd in default_commands if cmd_type in cmd.lower()), ""
-            )
-            command = questionary.text(
-                f"{cmd_type.title()} command:", default=default
-            ).ask()
+            default = next((cmd for cmd in default_commands if cmd_type in cmd.lower()), "")
+            command = questionary.text(f"{cmd_type.title()} command:", default=default).ask()
             if command:
                 commands[cmd_type] = command
 
@@ -316,9 +300,7 @@ class InteractiveCollectors:
         git_init = questionary.confirm("Initialize git repository?", default=True).ask()
 
         if git_init:
-            initial_branch = questionary.text(
-                "Initial branch name:", default="main"
-            ).ask()
+            initial_branch = questionary.text("Initial branch name:", default="main").ask()
 
             project_data["metadata"]["git"] = {
                 "init": True,

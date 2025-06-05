@@ -5,12 +5,12 @@ from typing import Dict
 
 class WorkflowTemplates:
     """Templates for various workflow documents."""
-    
+
     @staticmethod
     def get_templates() -> Dict[str, str]:
         """Return all workflow templates."""
         return {
-            'research_template': """# Research: {task_name}
+            "research_template": """# Research: {task_name}
 
 ## Objective
 {research_objective}
@@ -44,11 +44,10 @@ _List any unresolved questions or concerns_
 - **Rationale**: _Why this approach was chosen_
 
 ---
-Research completed by: _Your name_  
+Research completed by: _Your name_
 Date: _Completion date_
 """,
-
-            'tdd_template': """# Test-Driven Development Plan: {task_name}
+            "tdd_template": """# Test-Driven Development Plan: {task_name}
 
 ## Test Categories
 
@@ -78,8 +77,7 @@ _Define what "done" looks like_
 ## Performance Benchmarks
 _If applicable, define performance requirements_
 """,
-
-            'implementation_checklist': """# Implementation Checklist: {task_name}
+            "implementation_checklist": """# Implementation Checklist: {task_name}
 
 ## Pre-Implementation
 - [ ] Research completed and documented
@@ -94,7 +92,7 @@ _If applicable, define performance requirements_
 - [ ] Performance optimized
 - [ ] Security considerations addressed
 
-## Post-Implementation  
+## Post-Implementation
 - [ ] All tests passing
 - [ ] Code reviewed
 - [ ] Documentation updated
@@ -108,7 +106,7 @@ _If applicable, define performance requirements_
 - [ ] Team notified
 
 ---
-Completed by: _Your name_  
+Completed by: _Your name_
 Date: _Completion date_
-"""
+""",
         }

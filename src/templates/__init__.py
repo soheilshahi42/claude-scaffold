@@ -2,4 +2,4 @@
 
 from .templates import ProjectTemplates
 
-__all__ = ['ProjectTemplates']
+__all__ = ["ProjectTemplates"]

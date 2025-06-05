@@ -5,12 +5,12 @@ from typing import Dict
 
 class ProjectSpecificTemplates:
     """Templates for project configuration files."""
-    
+
     @staticmethod
     def get_templates() -> Dict[str, str]:
         """Return project-specific templates."""
         return {
-            'claude_settings': """{{
+            "claude_settings": """{{
   "tools": {{
     "file_operations": true,
     "bash_commands": true,
@@ -61,8 +61,7 @@ class ProjectSpecificTemplates:
   }}
 }}
 """,
-
-            'gitignore': """# Python
+            "gitignore": """# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -125,5 +124,5 @@ GLOBAL_RULES.md
 
 # Project specific
 {project_specific_ignores}
-"""
+""",
         }
