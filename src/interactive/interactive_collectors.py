@@ -220,7 +220,6 @@ class InteractiveCollectors:
                 "\nWould you like to select from suggested rules?", default=True
             ).ask()
         ):
-
             from questionary import Choice
 
             rule_choices = [Choice(rule, checked=True) for rule in suggested]

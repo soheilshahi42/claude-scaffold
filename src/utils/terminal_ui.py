@@ -256,12 +256,13 @@ class EnhancedTerminalUI:
             table.add_column("Status", style="green", justify="center")
 
             for task in module_tasks:
-
                 status = task.get("status", "pending")
                 status_style = (
                     "green"
                     if status.lower() == "completed"
-                    else "yellow" if status.lower() == "in_progress" else "red"
+                    else "yellow"
+                    if status.lower() == "in_progress"
+                    else "red"
                 )
                 table.add_row(
                     task["title"],

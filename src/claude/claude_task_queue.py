@@ -116,7 +116,6 @@ class ClaudeTaskQueue:
         with progress_indicator.batch_claude_operations(
             total_tasks, f"Processing {total_tasks} Claude Tasks"
         ) as batch_progress:
-
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 # Submit all tasks
                 futures: Dict[Future, ClaudeTask] = {}

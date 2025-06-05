@@ -99,7 +99,6 @@ class ProjectCreator:
             with ui_manager.step_progress(
                 f"Creating project '{project_name}'", total_steps=total_steps
             ) as progress:
-
                 # Project structure and setup steps follow
 
                 # Create project structure
