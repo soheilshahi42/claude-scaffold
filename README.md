@@ -1,7 +1,7 @@
 # Claude Scaffold
 ![claude-scaffold](https://github.com/user-attachments/assets/01168397-4dff-40fc-92d9-274f1d1934c7)
 
-[![Python Version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/soheilshahi42/claude-scaffold/actions/workflows/tests.yml/badge.svg)](https://github.com/soheilshahi42/claude-scaffold/actions/workflows/tests.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -150,7 +150,7 @@ The generated project structure and custom commands ensure Claude has complete u
 
 ## Requirements
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - Git (optional, for repository initialization)
 - Claude Code CLI (required for using custom commands)
   - Install with: `npm install -g @anthropic-ai/claude-cli`
