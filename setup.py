@@ -10,7 +10,7 @@ setup(
     description="Command-line scaffolding tool for self-documenting Claude code projects",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/claude-scaffold",
+    url="https://github.com/soheilshahi42/claude-scaffold",
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     classifiers=[
