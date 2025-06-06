@@ -67,17 +67,108 @@ claude-scaffold add-task . api "Create user authentication endpoints" --priority
 - **Machine Learning**: Data science and ML projects
 - **Custom**: Define your own project structure
 
-## Generated Project Structure
+## Advanced Features
+
+### Subdirectory Modules
+
+Claude Scaffold supports organizing modules in subdirectories, perfect for larger projects with complex structures:
+
+```yaml
+# project-config.yaml
+project_name: my-app
+project_type: web
+description: My application with nested modules
+modules:
+  - name: core/auth
+    description: Authentication and authorization
+  - name: core/database
+    description: Database models and queries
+  - name: api/v1/users
+    description: User management endpoints
+  - name: api/v1/products
+    description: Product catalog endpoints
+  - name: ui/components/common
+    description: Shared UI components
+  - name: ui/pages/dashboard
+    description: Dashboard page components
+```
+
+Create the project using:
+
+```bash
+claude-scaffold new my-app --config project-config.yaml --no-interactive
+```
+
+This generates a well-organized structure:
 
 ```
-my-project/
-├── src/              # Source code modules
-├── tests/            # Test files (mirrors src structure)
-├── docs/             # Project documentation
-├── .claude/          # Claude Code integration
-│   └── commands/     # Custom Claude Code commands
-├── .github/          # GitHub workflows (optional)
-└── setup.py          # Package configuration
+my-app/
+├── core/
+│   ├── auth/
+│   │   ├── __init__.py
+│   │   ├── CLAUDE.md
+│   │   ├── TODO.md
+│   │   └── docs/
+│   └── database/
+│       ├── __init__.py
+│       ├── CLAUDE.md
+│       ├── TODO.md
+│       └── docs/
+├── api/
+│   └── v1/
+│       ├── users/
+│       └── products/
+├── ui/
+│   ├── components/
+│   │   └── common/
+│   └── pages/
+│       └── dashboard/
+└── tests/
+    ├── core/
+    │   ├── auth/
+    │   └── database/
+    ├── api/
+    │   └── v1/
+    │       ├── users/
+    │       └── products/
+    └── ui/
+        ├── components/
+        └── pages/
+```
+
+### Configuration Files
+
+For complex projects, you can define the entire structure in a YAML configuration file:
+
+```yaml
+project_name: enterprise-app
+project_type: web
+description: Enterprise application
+modules:
+  - name: core/models
+    description: Data models
+  - name: core/services
+    description: Business logic services
+  - name: api/graphql
+    description: GraphQL API layer
+tasks:
+  - title: Design user model
+    module: core/models
+    priority: high
+  - title: Implement auth service
+    module: core/services
+    priority: high
+rules:
+  suggested:
+    - Use dependency injection
+    - Follow SOLID principles
+  custom:
+    - All services must have interfaces
+    - Use repository pattern for data access
+constraints:
+  - Python 3.10+
+  - PostgreSQL 14+
+  - Redis for caching
 ```
 
 ## Claude Code Integration
