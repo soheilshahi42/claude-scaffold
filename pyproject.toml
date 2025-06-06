@@ -65,13 +65,13 @@ dev = [
 ]
 
 [project.scripts]
-claude-scaffold = "cli:main"
+claude-scaffold = "claude_scaffold.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.dynamic]
-version = {attr = "src.__version__"}
+version = {attr = "claude_scaffold.__version__"}
 
 [tool.black]
 line-length = 100

@@ -11,8 +11,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/claude-scaffold",
-    packages=['src'],
-    package_dir={'src': 'src'},
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -25,7 +25,7 @@ setup(
     python_requires=">=3.10",
     entry_points={
         "console_scripts": [
-            "claude-scaffold=src.cli:main",
+            "claude-scaffold=claude_scaffold.cli:main",
         ],
     },
     install_requires=[
