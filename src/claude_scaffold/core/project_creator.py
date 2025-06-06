@@ -24,6 +24,8 @@ class ProjectCreator:
         self.doc_generator = DocumentationGenerator()
         self.helpers = ProjectHelpers()
         self.logger = get_logger(debug_mode)
+        from ..config.project_config import ProjectConfig
+        self.project_config = ProjectConfig()
 
     def check_claude_available(self) -> bool:
         """Check if Claude CLI is available."""
@@ -87,8 +89,31 @@ class ProjectCreator:
                     project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
                 print(f"{icons.SUCCESS} Interactive setup completed\n")
             else:
-                # Use minimal defaults for non-interactive mode
-                project_data = self.helpers.get_default_project_data(project_name)
+                # Use config file if provided, otherwise minimal defaults
+                if config_file and config_file.exists():
+                    import yaml
+                    from datetime import datetime
+                    with open(config_file, 'r') as f:
+                        project_data = yaml.safe_load(f)
+                    # Ensure project_name is set
+                    project_data['project_name'] = project_name
+                    # Add required metadata if missing
+                    if 'metadata' not in project_data:
+                        project_data['metadata'] = {}
+                    if 'timestamp' not in project_data:
+                        project_data['timestamp'] = datetime.now().isoformat()
+                    if 'version' not in project_data:
+                        project_data['version'] = '0.1.0'
+                    # Set project type metadata
+                    project_type = project_data.get('project_type', 'custom')
+                    project_data['metadata']['project_type'] = project_type
+                    project_data['metadata']['project_type_name'] = self.project_config.project_types.get(
+                        project_type, {}).get('name', 'Custom Project')
+                    if 'description' not in project_data['metadata']:
+                        project_data['metadata']['description'] = project_data.get(
+                            'description', f'{project_name} - A Claude Scaffold project')
+                else:
+                    project_data = self.helpers.get_default_project_data(project_name)
 
             # Determine total steps based on configuration
             total_steps = 4  # Base steps: structure, docs, claude, config
