@@ -183,7 +183,7 @@ class ProjectCreator:
         # Create module directories
         for module in project_data.get("modules", []):
             module_path = project_path / module["name"]
-            module_path.mkdir(exist_ok=True)
+            module_path.mkdir(parents=True, exist_ok=True)
             (module_path / "docs").mkdir(exist_ok=True)
             (module_path / "__init__.py").touch()
 
@@ -197,11 +197,13 @@ class ProjectCreator:
 
         for module in project_data.get("modules", []):
             test_module_path = tests_path / module["name"]
-            test_module_path.mkdir(exist_ok=True)
+            test_module_path.mkdir(parents=True, exist_ok=True)
             (test_module_path / "__init__.py").touch()
 
             # Create initial test file
-            test_file = test_module_path / f'test_{module["name"]}.py'
+            # Extract the last part of the module name for the test file name
+            module_base_name = module["name"].split("/")[-1]
+            test_file = test_module_path / f'test_{module_base_name}.py'
             test_content = f'''"""Tests for {module['name']} module."""
 import pytest
 
