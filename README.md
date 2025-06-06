@@ -67,109 +67,62 @@ claude-scaffold add-task . api "Create user authentication endpoints" --priority
 - **Machine Learning**: Data science and ML projects
 - **Custom**: Define your own project structure
 
-## Advanced Features
+## Configuration Files
 
-### Subdirectory Modules
-
-Claude Scaffold supports organizing modules in subdirectories, perfect for larger projects with complex structures:
+For complex projects, you can define the entire project structure in a YAML configuration file:
 
 ```yaml
-# project-config.yaml
+# claude-scaffold.yaml
 project_name: my-app
 project_type: web
-description: My application with nested modules
+description: A full-stack web application
 modules:
-  - name: core/auth
+  - name: frontend
+    description: React frontend application
+  - name: backend
+    description: FastAPI backend service
+  - name: database
+    description: Database models and migrations
+  - name: auth
     description: Authentication and authorization
-  - name: core/database
-    description: Database models and queries
-  - name: api/v1/users
-    description: User management endpoints
-  - name: api/v1/products
-    description: Product catalog endpoints
-  - name: ui/components/common
-    description: Shared UI components
-  - name: ui/pages/dashboard
-    description: Dashboard page components
-```
-
-Create the project using:
-
-```bash
-claude-scaffold new my-app --config project-config.yaml --no-interactive
-```
-
-This generates a well-organized structure:
-
-```
-my-app/
-├── core/
-│   ├── auth/
-│   │   ├── __init__.py
-│   │   ├── CLAUDE.md
-│   │   ├── TODO.md
-│   │   └── docs/
-│   └── database/
-│       ├── __init__.py
-│       ├── CLAUDE.md
-│       ├── TODO.md
-│       └── docs/
-├── api/
-│   └── v1/
-│       ├── users/
-│       └── products/
-├── ui/
-│   ├── components/
-│   │   └── common/
-│   └── pages/
-│       └── dashboard/
-└── tests/
-    ├── core/
-    │   ├── auth/
-    │   └── database/
-    ├── api/
-    │   └── v1/
-    │       ├── users/
-    │       └── products/
-    └── ui/
-        ├── components/
-        └── pages/
-```
-
-### Configuration Files
-
-For complex projects, you can define the entire structure in a YAML configuration file:
-
-```yaml
-project_name: enterprise-app
-project_type: web
-description: Enterprise application
-modules:
-  - name: core/models
-    description: Data models
-  - name: core/services
-    description: Business logic services
-  - name: api/graphql
-    description: GraphQL API layer
 tasks:
-  - title: Design user model
-    module: core/models
+  - title: Set up user authentication
+    module: auth
     priority: high
-  - title: Implement auth service
-    module: core/services
+  - title: Create database schema
+    module: database
     priority: high
+  - title: Design API endpoints
+    module: backend
+    priority: medium
+  - title: Build login UI
+    module: frontend
+    priority: medium
 rules:
   suggested:
-    - Use dependency injection
-    - Follow SOLID principles
+    - Follow REST API conventions
+    - Use TypeScript for type safety
+    - Write unit tests for all endpoints
   custom:
-    - All services must have interfaces
-    - Use repository pattern for data access
+    - All API endpoints must have OpenAPI documentation
+    - Use JWT tokens for authentication
 constraints:
   - Python 3.10+
+  - Node.js 18+
   - PostgreSQL 14+
-  - Redis for caching
 ```
+
+Create a project using the configuration file:
+
+```bash
+claude-scaffold new my-app --config claude-scaffold.yaml --no-interactive
+```
+
+This is especially useful for:
+- Team templates and standards
+- Reproducing project structures
+- CI/CD automation
+- Sharing project blueprints
 
 ## Claude Code Integration
 
