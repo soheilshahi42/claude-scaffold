@@ -65,58 +65,84 @@ class EnhancedClaudeInteractiveSetup:
         return project_data
 
     def _refine_with_claude(
-        self, current_value: Any, refinement_prompt: str, value_type: str = "text"
+        self, current_value: Any, refinement_prompt: str, value_type: str = "text", 
+        max_iterations: int = 3
     ) -> Any:
-        """Allow user to refine Claude's suggestion with feedback."""
-        print(f"\n{icons.INFO} Would you like to refine this suggestion?")
-        refine = questionary.confirm("Provide feedback to Claude?", default=False).ask()
+        """Allow user to iteratively refine Claude's suggestion with feedback."""
+        refined_value = current_value
+        iteration = 0
+        
+        while iteration < max_iterations:
+            print(f"\n{icons.INFO} Would you like to refine this suggestion?")
+            refine = questionary.confirm("Provide feedback to Claude?", default=False).ask()
+    
+            if not refine:
+                return refined_value
+    
+            feedback = questionary.text(
+                "Your feedback (e.g., 'remove the part about X', 'add Y', 'make it shorter'):",
+                multiline=True,
+            ).ask()
+    
+            if not feedback:
+                return refined_value
+    
+            # Build refinement prompt
+            if value_type == "text":
+                prompt = f"""{refinement_prompt}
 
-        if not refine:
-            return current_value
-
-        feedback = questionary.text(
-            "Your feedback (e.g., 'remove the part about X', 'add Y', 'make it shorter'):",
-            multiline=True,
-        ).ask()
-
-        if not feedback:
-            return current_value
-
-        # Build refinement prompt
-        if value_type == "text":
-            prompt = f"""{refinement_prompt}
-
-Current version: {current_value}
+Current version: {refined_value}
 
 User feedback: {feedback}
 
 Provide an improved version based on the feedback. Return only the improved text."""
-        elif value_type == "list":
-            prompt = f"""{refinement_prompt}
+            elif value_type == "list":
+                prompt = f"""{refinement_prompt}
 
-Current items: {json.dumps(current_value)}
+Current items: {json.dumps(refined_value)}
 
 User feedback: {feedback}
 
 Provide an improved list based on the feedback. Return a JSON array."""
-        elif value_type == "dict":
-            prompt = f"""{refinement_prompt}
+            elif value_type == "dict":
+                prompt = f"""{refinement_prompt}
 
-Current data: {json.dumps(current_value)}
+Current data: {json.dumps(refined_value)}
 
 User feedback: {feedback}
 
 Provide improved data based on the feedback. Return a JSON object."""
-
-        try:
-            response = self.processor._call_claude(prompt, expect_json=(value_type != "text"))
-            if value_type == "text":
-                return response.strip()
-            else:
-                return json.loads(response)
-        except Exception:
-            print(f"{icons.WARNING} Could not process refinement, keeping original.")
-            return current_value
+    
+            try:
+                print(f"\n{icons.ROBOT} Refining based on your feedback...")
+                response = self.processor._call_claude(prompt, expect_json=(value_type != "text"))
+                if value_type == "text":
+                    refined_value = response.strip()
+                else:
+                    refined_value = json.loads(response)
+                    
+                # Show the refined result
+                print(f"\n{icons.SUCCESS} Refined result:")
+                if value_type == "text":
+                    print(f"   {refined_value}")
+                elif value_type == "list":
+                    for i, item in enumerate(refined_value[:10], 1):
+                        if isinstance(item, dict):
+                            print(f"   {i}. {item}")
+                        else:
+                            print(f"   {i}. {item}")
+                    if len(refined_value) > 10:
+                        print(f"   ... and {len(refined_value) - 10} more items")
+                else:
+                    print(f"   {json.dumps(refined_value, indent=2)[:500]}...")
+                    
+                iteration += 1
+                
+            except Exception as e:
+                print(f"{icons.WARNING} Could not process refinement: {e}")
+                return refined_value
+                
+        return refined_value
 
     def _collect_project_type(
         self, project_data: Dict[str, Any], use_claude: bool
@@ -171,11 +197,12 @@ Provide improved data based on the feedback. Return a JSON object."""
                 ).ask()
 
                 if use_enhanced:
-                    # Allow refinement
+                    # Allow iterative refinement
                     refined_desc = self._refine_with_claude(
                         enhanced_desc,
                         f"Refine this project description for {project_data['project_name']}",
                         "text",
+                        max_iterations=3
                     )
                     project_data["metadata"]["description"] = refined_desc
 
@@ -226,11 +253,12 @@ Provide improved data based on the feedback. Return a JSON object."""
                 ).ask()
 
                 if use_suggested:
-                    # Allow refinement
+                    # Allow iterative refinement
                     refined_modules = self._refine_with_claude(
                         claude_modules,
                         f"Refine module structure for {project_data['project_name']}",
                         "list",
+                        max_iterations=3
                     )
                     modules = [
                         {"name": m, "description": f"{m.title()} module"} for m in refined_modules
@@ -316,11 +344,12 @@ Provide improved data based on the feedback. Return a JSON object."""
                 ).ask()
 
                 if use_suggested:
-                    # Allow refinement
+                    # Allow iterative refinement
                     refined_tasks = self._refine_with_claude(
                         suggested_tasks,
                         f"Refine task list for {project_data['project_name']}",
                         "list",
+                        max_iterations=3
                     )
 
                     # Let user select which tasks to include
@@ -397,11 +426,12 @@ Provide improved data based on the feedback. Return a JSON object."""
                 ).ask()
 
                 if use_suggested:
-                    # Allow refinement
+                    # Allow iterative refinement
                     refined_rules = self._refine_with_claude(
                         claude_rules,
                         f"Refine project rules for {project_data['project_name']}",
                         "list",
+                        max_iterations=3
                     )
 
                     # Let user select which rules to include
@@ -457,11 +487,12 @@ Provide improved data based on the feedback. Return a JSON object."""
                 use_constraints = questionary.confirm("Use these constraints?", default=True).ask()
 
                 if use_constraints:
-                    # Allow refinement
+                    # Allow iterative refinement
                     constraints = self._refine_with_claude(
                         constraints,
                         f"Refine technical constraints for {project_data['project_name']}",
                         "list",
+                        max_iterations=3
                     )
                 else:
                     constraints = []

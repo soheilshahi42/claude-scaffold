@@ -110,9 +110,11 @@ challenges, research_topics"""
             progress.update_status("Parsing task details", "Finalizing")
             return json.loads(response)
 
-    def enhance_module_documentation(self, module: Dict, project_context: Dict) -> Dict[str, Any]:
-        """Generate enhanced module documentation using Claude."""
-
+    def enhance_module_documentation(self, module: Dict, project_context: Dict, allow_feedback: bool = True) -> Dict[str, Any]:
+        """Generate enhanced module documentation using Claude with optional feedback."""
+        import questionary
+        from ..utils.icons import icons
+        
         with progress_indicator.claude_thinking(
             f"Enhancing documentation for module: {module['name']}"
         ) as progress:
@@ -140,7 +142,63 @@ Return as JSON."""
             response = self._call_claude(prompt, progress_callback=progress.update_status)
 
             progress.update_status("Parsing module documentation", "Finalizing")
-            return json.loads(response)
+            documentation = json.loads(response)
+            
+        if allow_feedback:
+            # Show summary of generated documentation
+            print(f"\n{icons.MODULE} Generated documentation for {module['name']}:")
+            if 'responsibilities' in documentation:
+                print(f"   Responsibilities: {documentation['responsibilities'][:100]}...")
+            if 'public_api' in documentation:
+                print(f"   API suggestions: {len(documentation.get('public_api', []))} items")
+                
+            # Ask for feedback
+            refine = questionary.confirm(
+                f"\n{icons.QUESTION} Would you like to refine this documentation?",
+                default=False
+            ).ask()
+            
+            if refine:
+                max_iterations = 3
+                for iteration in range(max_iterations):
+                    feedback = questionary.text(
+                        "Your feedback for improvement:",
+                        multiline=True
+                    ).ask()
+                    
+                    if not feedback:
+                        break
+                        
+                    # Refine with feedback
+                    refine_prompt = f"""Refine this module documentation based on user feedback:
+
+Module: {module['name']}
+Current documentation: {json.dumps(documentation)}
+User feedback: {feedback}
+
+Return improved documentation as JSON."""
+                    
+                    try:
+                        print(f"\n{icons.ROBOT} Refining documentation...")
+                        refined_response = self._call_claude(refine_prompt)
+                        documentation = json.loads(refined_response)
+                        
+                        print(f"{icons.SUCCESS} Documentation refined!")
+                        if 'responsibilities' in documentation:
+                            print(f"   New responsibilities: {documentation['responsibilities'][:100]}...")
+                            
+                        if iteration < max_iterations - 1:
+                            continue_refining = questionary.confirm(
+                                "Continue refining?",
+                                default=False
+                            ).ask()
+                            if not continue_refining:
+                                break
+                    except Exception as e:
+                        print(f"{icons.WARNING} Refinement failed: {e}")
+                        break
+                        
+        return documentation
 
     def generate_global_rules(self, project_data: Dict) -> List[str]:
         """Generate project-specific global rules using Claude."""
@@ -468,17 +526,21 @@ Return only the description text, no JSON."""
         return descriptions
 
     def generate_task_details_batch(
-        self, tasks: List[Dict], project_context: Dict
+        self, tasks: List[Dict], project_context: Dict, allow_feedback: bool = True
     ) -> Dict[str, Dict]:
-        """Generate details for multiple tasks concurrently.
+        """Generate details for multiple tasks concurrently with optional feedback.
 
         Args:
             tasks: List of task dictionaries with title and module
             project_context: Project context information
+            allow_feedback: Whether to allow user feedback on generated details
 
         Returns:
             Dictionary mapping task titles to task details
         """
+        import questionary
+        from ..utils.icons import icons
+        
         self.logger.info(f"Generating details for {len(tasks)} tasks concurrently")
 
         # Create task queue
@@ -530,5 +592,70 @@ challenges, research_topics"""
                     task_details[title] = {"error": "Failed to parse details"}
             else:
                 task_details[title] = {"error": "No details generated"}
+                
+        if allow_feedback and task_details:
+            # Show summary of generated task details
+            print(f"\n{icons.TASK} Generated details for {len(task_details)} tasks:")
+            for i, (title, details) in enumerate(list(task_details.items())[:5], 1):
+                if 'error' not in details:
+                    goal = details.get('goal', 'No goal defined')[:80]
+                    print(f"   {i}. {title}")
+                    print(f"      Goal: {goal}...")
+            
+            if len(task_details) > 5:
+                print(f"   ... and {len(task_details) - 5} more tasks")
+                
+            # Ask if user wants to refine any tasks
+            refine = questionary.confirm(
+                f"\n{icons.QUESTION} Would you like to refine any task details?",
+                default=False
+            ).ask()
+            
+            if refine:
+                # Let user select which tasks to refine
+                task_choices = []
+                for title in task_details.keys():
+                    if 'error' not in task_details[title]:
+                        task_choices.append(title)
+                        
+                if task_choices:
+                    tasks_to_refine = questionary.checkbox(
+                        "Select tasks to refine:",
+                        choices=task_choices[:10]  # Limit to 10 for UI
+                    ).ask()
+                    
+                    for task_title in tasks_to_refine:
+                        print(f"\n{icons.DOCUMENT} Refining task: {task_title}")
+                        current_details = task_details[task_title]
+                        
+                        # Show current details
+                        print(f"   Current goal: {current_details.get('goal', 'N/A')}")
+                        print(f"   Subtasks: {len(current_details.get('subtasks', []))} items")
+                        
+                        feedback = questionary.text(
+                            "Your feedback for this task:",
+                            multiline=True
+                        ).ask()
+                        
+                        if feedback:
+                            # Find the original task
+                            original_task = next((t for t in tasks if t['title'] == task_title), None)
+                            if original_task:
+                                refine_prompt = f"""Refine these task details based on user feedback:
+
+Task: {task_title}
+Module: {original_task['module']}
+Current details: {json.dumps(current_details)}
+User feedback: {feedback}
+
+Return improved task details as JSON with the same structure."""
+                                
+                                try:
+                                    print(f"{icons.ROBOT} Refining task details...")
+                                    refined_response = self._call_claude(refine_prompt)
+                                    task_details[task_title] = json.loads(refined_response)
+                                    print(f"{icons.SUCCESS} Task details refined!")
+                                except Exception as e:
+                                    print(f"{icons.WARNING} Refinement failed: {e}")
 
         return task_details

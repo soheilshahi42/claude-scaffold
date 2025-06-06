@@ -5,7 +5,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
-from rich import box
 from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
@@ -148,8 +147,8 @@ class UIManager:
             layout.split_column(Layout(name="header", size=3), Layout(name="status", size=3))
 
         # Header
-        header_text = Text(f"{Icons.BUILD} {title}", style="bold cyan", justify="center")
-        layout["header"].update(Panel(header_text, box=box.DOUBLE))
+        header_text = Text(f"{Icons.BUILD} {title}", style="bold cyan")
+        layout["header"].update(Panel(header_text, box=None, padding=(0, 1)))
 
         # Status tracking
         status_info = {
@@ -196,7 +195,7 @@ class UIManager:
                     status_text.append(f"Progress: {self.status['progress']}%", style="white")
 
                 self.layout["status"].update(
-                    Panel(status_text, title="Status", border_style="cyan")
+                    Panel(status_text, border_style="cyan", box=None, padding=(0, 1))
                 )
 
                 # Details panel (if enabled)
@@ -209,7 +208,7 @@ class UIManager:
                         details_table.add_row(f"{Icons.BULLET} {key}:", str(value))
 
                     self.layout["details"].update(
-                        Panel(details_table, title="Details", border_style="dim")
+                        Panel(details_table, border_style="dim", box=None, padding=(0, 1))
                     )
 
             def success(self, message: str):
@@ -243,7 +242,7 @@ class UIManager:
             show_header=True,
             header_style="bold cyan",
             border_style="blue",
-            box=box.ROUNDED,
+            box=None,
         )
 
         # Add columns based on first item
@@ -288,7 +287,7 @@ class UIManager:
                 table.add_row(timing_text)
 
         # Display the panel
-        self.console.print(Panel(table, border_style="blue", padding=(1, 2)))
+        self.console.print(Panel(table, border_style="blue", box=None, padding=(1, 2)))
 
     def show_progress_spinner(self, message: str, task: Callable[[], Any]) -> Any:
         """Show a simple spinner while executing a task."""
@@ -363,7 +362,7 @@ class UIManager:
         metrics_text.append(f"{Icons.CHART} Operation efficiency: ", style="cyan")
         metrics_text.append(f"{efficiency:.1f}%", style="green" if efficiency > 80 else "yellow")
 
-        self.console.print(Panel(table, border_style="magenta", padding=(1, 2)))
+        self.console.print(Panel(table, border_style="magenta", box=None, padding=(1, 2)))
         self.console.print(metrics_text)
 
 

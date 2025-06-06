@@ -11,15 +11,11 @@ from .utils.logger import get_logger
 def print_banner():
     """Print the Claude Scaffold banner."""
     banner = """
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║     ╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔═╗╔═╗╔═╗╔═╗╔═╗╦  ╔╦╗           ║
-║     ║  ║  ╠═╣║ ║ ║║║╣   ╚═╗║  ╠═╣╠╣ ╠╣ ║ ║║   ║║           ║
-║     ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╚═╝╚═╝╩ ╩╚  ╚  ╚═╝╩═╝═╩╝           ║
-║                                                               ║
-║     Generate self-documenting Claude Code project skeletons   ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
+    ╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔═╗╔═╗╔═╗╔═╗╔═╗╦  ╔╦╗
+    ║  ║  ╠═╣║ ║ ║║║╣   ╚═╗║  ╠═╣╠╣ ╠╣ ║ ║║   ║║
+    ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╚═╝╚═╝╩ ╩╚  ╚  ╚═╝╩═╝═╩╝
+    
+    Generate self-documenting Claude Code project skeletons
     """
     print(banner)
 

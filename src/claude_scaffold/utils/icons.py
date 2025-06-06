@@ -64,7 +64,8 @@ class Icons:
     LIGHTNING = "⚡"  # Lightning
     CLOCK = "◷"  # Clock
     PACKAGE = "◰"  # Package
-    CHART = "📊"  # Chart/Statistics
+    CHART = "▊"  # Chart/Statistics
+    CANCEL = "⊗"  # Cancel
 
     @classmethod
     def get_priority_icon(cls, priority: str) -> str:

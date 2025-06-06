@@ -48,7 +48,7 @@ class ClaudeEnhancedSetup:
             if tasks_needing_details:
                 print(f"{icons.DOCUMENT} Generating detailed task specifications...")
                 task_details = self.processor.generate_task_details_batch(
-                    tasks_needing_details, enhanced_data
+                    tasks_needing_details, enhanced_data, allow_feedback=True
                 )
                 # Update tasks with details
                 for task in enhanced_data["tasks"]:
@@ -66,7 +66,7 @@ class ClaudeEnhancedSetup:
                 for module in modules_needing_docs:
                     try:
                         module["documentation"] = self.processor.enhance_module_documentation(
-                            module, enhanced_data
+                            module, enhanced_data, allow_feedback=True
                         )
                     except Exception as e:
                         self.processor.logger.warning(

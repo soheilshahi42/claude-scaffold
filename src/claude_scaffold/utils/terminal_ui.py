@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import questionary
 from questionary import Style as QStyle
-from rich.box import ROUNDED
+from rich.box import MINIMAL
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
@@ -18,25 +18,25 @@ class MessageType:
     """Message types with their corresponding styles and icons."""
 
     CLAUDE_QUESTION = {
-        "icon": icons.QUESTION,
-        "border_style": "yellow",
-        "title": "Claude Question",
+        "icon": "🤖",
+        "border_style": "bright_black",
+        "title": "Claude",
     }
     CLAUDE_SUGGESTION = {
-        "icon": icons.INFO,
-        "border_style": "green",
-        "title": "Claude Suggestion",
+        "icon": "💡",
+        "border_style": "bright_black",
+        "title": "Suggestion",
     }
     CLAUDE_RESPONSE = {
-        "icon": icons.ROBOT,
-        "border_style": "blue",
-        "title": "Claude Response",
+        "icon": "🤖",
+        "border_style": "bright_black",
+        "title": "Claude",
     }
-    USER_MESSAGE = {"icon": icons.CHEVRON, "border_style": "cyan", "title": "User"}
-    ERROR_MESSAGE = {"icon": icons.ERROR, "border_style": "red", "title": "Error"}
-    INFO_MESSAGE = {"icon": icons.INFO, "border_style": "white", "title": "Information"}
+    USER_MESSAGE = {"icon": "👤", "border_style": "bright_black", "title": "You"}
+    ERROR_MESSAGE = {"icon": "❌", "border_style": "red", "title": "Error"}
+    INFO_MESSAGE = {"icon": "ℹ️", "border_style": "bright_black", "title": "Info"}
     SUCCESS_MESSAGE = {
-        "icon": icons.SUCCESS,
+        "icon": "✅",
         "border_style": "green",
         "title": "Success",
     }
@@ -51,19 +51,19 @@ class EnhancedTerminalUI:
         self.layout = Layout()
         self._setup_layout()
 
-        # Enhanced questionary style
+        # Minimal questionary style matching Claude Code
         self.qstyle = QStyle(
             [
-                ("qmark", "fg:#FF9D00 bold"),
-                ("question", "bold"),
-                ("answer", "fg:#44B4D5 bold"),
-                ("pointer", "fg:#FF9D00 bold"),
-                ("highlighted", "fg:#FF9D00 bold"),
-                ("selected", "fg:#44B4D5"),
-                ("separator", "fg:#808080"),
-                ("instruction", "fg:#808080"),
+                ("qmark", "fg:#666666"),
+                ("question", ""),
+                ("answer", "fg:#0066cc"),
+                ("pointer", "fg:#0066cc"),
+                ("highlighted", "fg:#0066cc"),
+                ("selected", "fg:#0066cc"),
+                ("separator", "fg:#666666"),
+                ("instruction", "fg:#666666"),
                 ("text", ""),
-                ("disabled", "fg:#808080 italic"),
+                ("disabled", "fg:#999999"),
             ]
         )
 
@@ -77,15 +77,15 @@ class EnhancedTerminalUI:
 
         # Set header
         header_text = Text(
-            f"{icons.BUILD} Claude Scaffold - Enhanced Interactive Setup",
-            style="bold white",
-            justify="center",
+            "claude-scaffold",
+            style="dim",
+            justify="left",
         )
-        self.layout["header"].update(Panel(header_text, style="blue"))
+        self.layout["header"].update(Panel(header_text, style="bright_black", box=None, padding=(0, 1)))
 
         # Initialize conversation area
         self.layout["conversation"].update(
-            Panel("", title="Conversation History", border_style="dim")
+            Panel("", border_style="bright_black", box=None)
         )
 
         # Initialize input area
@@ -94,10 +94,10 @@ class EnhancedTerminalUI:
     def _update_input_area(self, prompt_text: str = ""):
         """Update the input area with prompt text."""
         input_content = Text()
-        input_content.append(f"{icons.CHEVRON} ", style="bold")
-        input_content.append(prompt_text, style="white")
+        input_content.append("› ", style="bright_black")
+        input_content.append(prompt_text, style="")
         self.layout["input"].update(
-            Panel(input_content, title="Your Input", border_style="cyan", box=ROUNDED)
+            Panel(input_content, border_style="bright_black", box=MINIMAL, padding=(0, 1))
         )
 
     def add_message(self, content: str, message_type: Dict[str, str]):
@@ -122,9 +122,8 @@ class EnhancedTerminalUI:
 
             panel = Panel(
                 content,
-                title=msg_type["title"],
                 border_style=msg_type["border_style"],
-                box=ROUNDED,
+                box=MINIMAL,
                 padding=(0, 1),
             )
 
@@ -133,7 +132,7 @@ class EnhancedTerminalUI:
 
         # Update the conversation layout
         self.layout["conversation"].update(
-            Panel(table, title="Conversation History", border_style="dim", box=ROUNDED)
+            Panel(table, border_style="dim", box=MINIMAL, padding=(0, 1))
         )
 
     def display(self):
@@ -213,22 +212,23 @@ class EnhancedTerminalUI:
         """Display module suggestions in a nice format."""
         # Create a table for modules
         table = Table(
-            title=f"{icons.MODULE} Suggested Modules",
+            title=f"{icons.MODULE} Modules",
             show_header=True,
-            header_style="bold magenta",
-            border_style="blue",
+            header_style="",
+            border_style="bright_black",
+            box=MINIMAL,
         )
 
-        table.add_column("Module", style="cyan", no_wrap=True)
-        table.add_column("Description", style="white")
-        table.add_column("Key Features", style="yellow")
+        table.add_column("Module", style="", no_wrap=True)
+        table.add_column("Description", style="dim")
+        table.add_column("Key Features", style="dim")
 
         for module in modules:
             features = "\n".join([f"{icons.BULLET} {f}" for f in module.get("key_features", [])])
             table.add_row(module["name"], module["description"], features)
 
         # Create a panel with the table
-        panel = Panel(table, border_style="blue", box=ROUNDED, padding=(1, 2))
+        panel = Panel(table, border_style="bright_black", box=MINIMAL, padding=(1, 2))
 
         self.console.print(panel)
 
@@ -247,13 +247,14 @@ class EnhancedTerminalUI:
             table = Table(
                 title=f"{icons.TASK} {module} Tasks",
                 show_header=True,
-                header_style="bold cyan",
-                border_style="green",
+                header_style="",
+                border_style="bright_black",
+                box=MINIMAL,
             )
 
-            table.add_column("Task", style="white", no_wrap=True)
-            table.add_column("Priority", style="yellow", justify="center")
-            table.add_column("Status", style="green", justify="center")
+            table.add_column("Task", style="", no_wrap=True)
+            table.add_column("Priority", style="dim", justify="center")
+            table.add_column("Status", style="dim", justify="center")
 
             for task in module_tasks:
                 status = task.get("status", "pending")
@@ -269,6 +270,6 @@ class EnhancedTerminalUI:
                     f"[{status_style}]{status}[/{status_style}]",
                 )
 
-            panel = Panel(table, border_style="green", box=ROUNDED, padding=(1, 2))
+            panel = Panel(table, border_style="bright_black", box=MINIMAL, padding=(1, 2))
 
             self.console.print(panel)

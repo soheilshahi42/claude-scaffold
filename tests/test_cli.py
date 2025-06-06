@@ -6,7 +6,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from src.cli import main, print_banner
+from src.claude_scaffold.cli import main, print_banner
 
 
 class TestCLI:
@@ -17,11 +17,11 @@ class TestCLI:
         print_banner()
         
         captured = capsys.readouterr()
-        assert "CLAUDE SCAFFOLD" in captured.out
+        assert "╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔═╗╔═╗╔═╗╔═╗╔═╗╦  ╔╦╗" in captured.out
         assert "Generate self-documenting Claude Code project skeletons" in captured.out
     
-    @patch('src.cli.argparse.ArgumentParser.parse_args')
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.argparse.ArgumentParser.parse_args')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_no_command(self, mock_scaffold, mock_parse_args, capsys):
         """Test main with no command."""
         mock_parse_args.return_value = argparse.Namespace(command=None)
@@ -31,10 +31,10 @@ class TestCLI:
         
         assert exc_info.value.code == 1
         captured = capsys.readouterr()
-        assert "CLAUDE SCAFFOLD" in captured.out  # Banner printed
+        assert "╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔═╗╔═╗╔═╗╔═╗╔═╗╦  ╔╦╗" in captured.out  # Banner printed
     
     @patch('sys.argv', ['claude-scaffold', 'new', 'test_project'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_new_command_success(self, mock_scaffold_class):
         """Test new command - success."""
         mock_scaffold = mock_scaffold_class.return_value
@@ -52,7 +52,7 @@ class TestCLI:
         )
     
     @patch('sys.argv', ['claude-scaffold', 'new', 'test_project', '--path', '/custom/path'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_new_with_custom_path(self, mock_scaffold_class):
         """Test new command with custom path."""
         mock_scaffold = mock_scaffold_class.return_value
@@ -66,7 +66,7 @@ class TestCLI:
         assert call_args[1]['project_path'] == Path('/custom/path')
     
     @patch('sys.argv', ['claude-scaffold', 'new', 'test_project', '--force'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_new_with_force(self, mock_scaffold_class):
         """Test new command with force flag."""
         mock_scaffold = mock_scaffold_class.return_value
@@ -84,7 +84,7 @@ class TestCLI:
         )
     
     @patch('sys.argv', ['claude-scaffold', 'new', 'test_project', '--no-interactive'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_new_non_interactive(self, mock_scaffold_class, capsys):
         """Test new command in non-interactive mode."""
         mock_scaffold = mock_scaffold_class.return_value
@@ -106,7 +106,7 @@ class TestCLI:
         assert "CLAUDE SCAFFOLD" not in captured.out
     
     @patch('sys.argv', ['claude-scaffold', 'new', 'test_project'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_new_command_failure(self, mock_scaffold_class):
         """Test new command - failure."""
         mock_scaffold = mock_scaffold_class.return_value
@@ -118,7 +118,7 @@ class TestCLI:
         assert exc_info.value.code == 1
     
     @patch('sys.argv', ['claude-scaffold', 'add-task', '.', 'api', 'Create endpoints'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     @patch('pathlib.Path.resolve')
     def test_main_add_task_success(self, mock_resolve, mock_scaffold_class):
         """Test add-task command - success."""
@@ -138,7 +138,7 @@ class TestCLI:
         )
     
     @patch('sys.argv', ['claude-scaffold', 'add-task', '/project', 'backend', 'Add auth', '--priority', 'high'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     @patch('pathlib.Path.resolve')
     def test_main_add_task_with_priority(self, mock_resolve, mock_scaffold_class):
         """Test add-task command with priority."""
@@ -158,7 +158,7 @@ class TestCLI:
         )
     
     @patch('sys.argv', ['claude-scaffold', 'add-task', '.', 'api', 'Task'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_add_task_failure(self, mock_scaffold_class):
         """Test add-task command - failure."""
         mock_scaffold = mock_scaffold_class.return_value
@@ -170,7 +170,7 @@ class TestCLI:
         assert exc_info.value.code == 1
     
     @patch('sys.argv', ['claude-scaffold', 'new', 'test_project'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_keyboard_interrupt(self, mock_scaffold_class, capsys):
         """Test handling keyboard interrupt."""
         mock_scaffold = mock_scaffold_class.return_value
@@ -184,7 +184,7 @@ class TestCLI:
         assert "Operation cancelled by user" in captured.out
     
     @patch('sys.argv', ['claude-scaffold', 'new', 'test_project'])
-    @patch('src.cli.ClaudeScaffold')
+    @patch('src.claude_scaffold.cli.ClaudeScaffold')
     def test_main_unexpected_exception(self, mock_scaffold_class, capsys):
         """Test handling unexpected exception."""
         mock_scaffold = mock_scaffold_class.return_value
