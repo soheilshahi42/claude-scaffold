@@ -8,6 +8,7 @@ from ..claude.claude_interactive_enhanced import EnhancedClaudeInteractiveSetup
 from ..config.project_config import ProjectConfig
 from ..utils.icons import icons
 from ..utils.retro_ui import RetroUI
+from ..utils.logger import get_logger
 
 
 class RetroInteractiveSetup:
@@ -18,6 +19,13 @@ class RetroInteractiveSetup:
         self.project_config = ProjectConfig()
         self.use_claude = use_claude
         self.debug_mode = debug_mode
+        self.logger = get_logger(debug_mode)
+        
+        # Log initialization
+        self.logger.info("RetroInteractiveSetup initialized", {
+            "use_claude": use_claude,
+            "debug_mode": debug_mode
+        })
         
         # Use Claude-enhanced setup if available
         if use_claude:
@@ -113,6 +121,11 @@ Provide an improved list based on the feedback. Return a JSON array."""
                 
             except Exception as e:
                 self.ui.stop_progress()
+                self.logger.error(f"Refinement failed at iteration {iteration + 1}", e, {
+                    "value_type": value_type,
+                    "feedback": feedback,
+                    "current_value_preview": str(refined_value)[:200]
+                })
                 self.ui.show_results(
                     "REFINEMENT ERROR",
                     {"Error": str(e)},
@@ -125,6 +138,8 @@ Provide an improved list based on the feedback. Return a JSON array."""
     def run(self, project_name: str) -> Dict[str, Any]:
         """Run the retro interactive setup."""
         try:
+            self.logger.info(f"Starting interactive setup for project: {project_name}")
+            
             # Show welcome screen
             self.ui.show_welcome_screen(project_name)
             
@@ -137,20 +152,35 @@ Provide an improved list based on the feedback. Return a JSON array."""
                 "metadata": {},
             }
             
-            # Run setup steps
-            project_data = self._collect_project_type(project_data)
-            project_data = self._collect_description(project_data)
-            project_data = self._collect_language(project_data)
-            project_data = self._collect_modules(project_data)
-            project_data = self._collect_tasks(project_data)
-            project_data = self._collect_rules(project_data)
-            project_data = self._collect_additional_config(project_data)
+            # Log each step
+            steps = [
+                ("project_type", self._collect_project_type),
+                ("description", self._collect_description),
+                ("language", self._collect_language),
+                ("modules", self._collect_modules),
+                ("tasks", self._collect_tasks),
+                ("rules", self._collect_rules),
+                ("additional_config", self._collect_additional_config)
+            ]
+            
+            for step_name, step_func in steps:
+                try:
+                    self.logger.debug(f"Starting step: {step_name}")
+                    project_data = step_func(project_data)
+                    self.logger.debug(f"Completed step: {step_name}")
+                except Exception as e:
+                    self.logger.error(f"Error in step {step_name}", e)
+                    raise
             
             # Show final review
             if not self._review_and_confirm(project_data):
+                self.logger.info("Setup cancelled by user at review stage")
                 raise KeyboardInterrupt("Setup cancelled by user")
                 
             # Show completion
+            # Get log file location
+            log_file = self.logger.get_log_file_path()
+            
             self.ui.show_completion(
                 "PROJECT CONFIGURED",
                 f"Project '{project_name}' is ready!",
@@ -158,19 +188,34 @@ Provide an improved list based on the feedback. Return a JSON array."""
                     "Modules": len(project_data.get("modules", [])),
                     "Tasks": len(project_data.get("tasks", [])),
                     "Rules": len(project_data.get("rules", {}).get("suggested", [])),
+                    "Log File": str(log_file)
                 },
                 "Setup Complete"
             )
             
+            self.logger.info("Interactive setup completed successfully", {
+                "project_name": project_name,
+                "modules_count": len(project_data.get("modules", [])),
+                "tasks_count": len(project_data.get("tasks", [])),
+                "claude_enhanced": project_data.get("enhanced_with_claude", False)
+            })
+            
             return project_data
             
         except KeyboardInterrupt:
+            self.logger.info("Setup cancelled by user")
             self.ui.show_completion(
                 "SETUP CANCELLED",
                 "Project setup was cancelled",
                 None,
                 "Cancelled"
             )
+            raise
+        except Exception as e:
+            self.logger.error("Unexpected error during interactive setup", e, {
+                "project_name": project_name,
+                "step": locals().get('step_name', 'unknown')
+            })
             raise
             
     def _collect_project_type(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -235,9 +280,17 @@ Provide an improved list based on the feedback. Return a JSON array."""
             
             # Get enhanced description
             try:
+                self.logger.debug("Calling Claude to enhance description")
                 enhanced_desc = self.claude_setup._enhance_description(project_data)
+                self.logger.info("Description enhanced successfully", {
+                    "original_length": len(description),
+                    "enhanced_length": len(enhanced_desc) if enhanced_desc else 0
+                })
             except Exception as e:
                 enhanced_desc = None
+                self.logger.error("Failed to enhance description", e, {
+                    "project_data": project_data
+                })
                 print(f"\nError enhancing description: {e}")
             finally:
                 self.ui.stop_progress()

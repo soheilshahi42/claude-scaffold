@@ -19,6 +19,7 @@ from rich.padding import Padding
 from rich.live import Live
 
 from .icons import icons
+from .logger import get_logger
 
 
 class RetroTheme:
@@ -60,6 +61,12 @@ class RetroUI:
         # Create console with reduced height to prevent scrolling
         self.console = Console(height=self.height)
         self.theme = RetroTheme()
+        self.logger = get_logger()
+        
+        # Log UI initialization
+        self.logger.debug("RetroUI initialized", {
+            "terminal_size": f"{self.width}x{self.height}"
+        })
         
         # Questionary style with retro theme
         self.qstyle = QStyle([
