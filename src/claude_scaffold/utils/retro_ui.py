@@ -12,7 +12,7 @@ from rich.layout import Layout
 from rich.panel import Panel
 from rich.text import Text
 from rich.align import Align
-from rich.box import DOUBLE, HEAVY
+from rich.box import DOUBLE, HEAVY, MINIMAL
 from rich.table import Table
 from rich.columns import Columns
 from rich.padding import Padding
