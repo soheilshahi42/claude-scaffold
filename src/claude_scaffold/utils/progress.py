@@ -103,7 +103,7 @@ class ProgressIndicator:
                         layout["main"].update(main_panel)
 
                         # Details table
-                        details_table = Table(show_header=False, box=None, padding=(0, 1))
+                        details_table = Table(show_header=False, box="minimal", padding=(0, 1))
                         details_table.add_column("Key", style="cyan", width=15)
                         details_table.add_column("Value", style="white")
 

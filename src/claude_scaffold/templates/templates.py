@@ -34,9 +34,19 @@ class ProjectTemplates:
         else:
             raise ValueError(f"Template '{template_name}' not found")
 
+        # Additional safety check
+        if template is None:
+            raise ValueError(f"Template '{template_name}' exists but is None")
+
         # Prepare and format context
         prepared_context = self._prepare_context(context)
-        return template.format(**prepared_context)
+        
+        try:
+            return template.format(**prepared_context)
+        except KeyError as e:
+            raise ValueError(f"Template '{template_name}' missing required context key: {e}")
+        except Exception as e:
+            raise ValueError(f"Template '{template_name}' formatting failed: {e}")
 
     def _prepare_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare context for template formatting."""

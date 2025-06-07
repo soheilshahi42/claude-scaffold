@@ -139,8 +139,8 @@ class TaskManager:
             "references": "To be added during research",
             "next_steps": "1. Complete research\n2. Write tests\n3. Implement solution",
         }
-        research_content = self.templates.workflow_templates["research_template"].format(
-            **research_context
+        research_content = self.templates.get_template(
+            "research_template", research_context
         )
         research_file.write_text(research_content)
 

@@ -81,11 +81,11 @@ class EnhancedTerminalUI:
             style="dim",
             justify="left",
         )
-        self.layout["header"].update(Panel(header_text, style="bright_black", box=None, padding=(0, 1)))
+        self.layout["header"].update(Panel(header_text, style="bright_black", box=MINIMAL, padding=(0, 1)))
 
         # Initialize conversation area
         self.layout["conversation"].update(
-            Panel("", border_style="bright_black", box=None)
+            Panel("", border_style="bright_black", box=MINIMAL)
         )
 
         # Initialize input area
@@ -108,7 +108,7 @@ class EnhancedTerminalUI:
     def _update_conversation_display(self):
         """Update the conversation display with all messages."""
         # Create a table for messages
-        table = Table(show_header=False, show_edge=False, pad_edge=False, box=None)
+        table = Table(show_header=False, show_edge=False, pad_edge=False, box=MINIMAL)
         table.add_column("Messages", style="white")
 
         # Add all messages
