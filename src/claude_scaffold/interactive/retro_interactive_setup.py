@@ -31,7 +31,7 @@ class RetroInteractiveSetup:
         title: str,
         subtitle: str = "",
         value_type: str = "text",
-        max_iterations: int = 3
+        max_iterations: int = 100
     ) -> Any:
         """Allow user to iteratively refine Claude's suggestion with feedback."""
         refined_value = current_value
@@ -253,7 +253,7 @@ Provide an improved list based on the feedback. Return a JSON array."""
                         "REFINE DESCRIPTION",
                         "AI-powered refinement",
                         value_type="text",
-                        max_iterations=3
+                        max_iterations=100
                     )
                     project_data["metadata"]["description"] = refined_desc
                     
@@ -354,7 +354,7 @@ Provide an improved list based on the feedback. Return a JSON array."""
                             "REFINE MODULES",
                             "Module refinement",
                             value_type="list",
-                            max_iterations=3
+                            max_iterations=100
                         )
                                 
         else:
@@ -462,7 +462,7 @@ Provide an improved list based on the feedback. Return a JSON array."""
                             "REFINE TASKS",
                             "Task refinement",
                             value_type="list",
-                            max_iterations=3
+                            max_iterations=100
                         )
                     
         # Allow adding custom tasks
