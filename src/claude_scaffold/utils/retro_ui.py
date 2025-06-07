@@ -52,9 +52,10 @@ class RetroUI:
     """Full-screen retro UI for Claude Scaffold."""
     
     def __init__(self):
-        self.console = Console()
-        self.theme = RetroTheme()
         self.width, self.height = self._get_terminal_size()
+        # Create console with reduced height to prevent scrolling
+        self.console = Console(height=self.height)
+        self.theme = RetroTheme()
         
         # Questionary style with retro theme
         self.qstyle = QStyle([
@@ -86,7 +87,8 @@ class RetroUI:
     def _get_terminal_size(self) -> Tuple[int, int]:
         """Get terminal dimensions."""
         size = shutil.get_terminal_size()
-        return size.columns, size.lines
+        # Reduce height by 1 to prevent scrolling
+        return size.columns, size.lines - 1
         
     def _clear_screen(self):
         """Clear the terminal screen."""
@@ -176,9 +178,9 @@ class RetroUI:
         
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=10),
+            Layout(name="header", size=9),
             Layout(name="content", ratio=1),
-            Layout(name="footer", size=4)
+            Layout(name="footer", size=3)
         )
         
         # Header
@@ -257,9 +259,9 @@ class RetroUI:
             # Create layout
             layout = Layout()
             layout.split_column(
-                Layout(name="header", size=10),
+                Layout(name="header", size=9),
                 Layout(name="content", ratio=1),
-                Layout(name="footer", size=4)
+                Layout(name="footer", size=3)
             )
             
             # Header
@@ -378,10 +380,10 @@ class RetroUI:
         # Create layout
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=10),
+            Layout(name="header", size=9),
             Layout(name="question", size=4),
             Layout(name="content", ratio=1),
-            Layout(name="footer", size=4)
+            Layout(name="footer", size=3)
         )
         
         # Header
@@ -421,16 +423,14 @@ class RetroUI:
         # Footer
         layout["footer"].update(self._create_footer(hint or "Type your answer"))
         
-        # Print layout and move cursor to top to avoid line at bottom
+        # Print layout without newline
         self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
-        # Move cursor to top-left to avoid any extra lines
-        print('\033[H', end='', flush=True)
         
         # Clear screen again to prepare for centered input
         self._clear_screen()
         
         # Calculate center position
-        term_height = self.console.height
+        term_height = self.height  # Use our adjusted height
         center_y = term_height // 2
         
         # Move to center
@@ -501,9 +501,9 @@ class RetroUI:
             # Create layout
             layout = Layout()
             layout.split_column(
-                Layout(name="header", size=10),
+                Layout(name="header", size=9),
                 Layout(name="content", ratio=1),
-                Layout(name="footer", size=4)
+                Layout(name="footer", size=3)
             )
             
             # Header
@@ -634,9 +634,9 @@ class RetroUI:
                 # Create layout
                 layout = Layout()
                 layout.split_column(
-                    Layout(name="header", size=10),
+                    Layout(name="header", size=9),
                     Layout(name="content", ratio=1),
-                    Layout(name="footer", size=4)
+                    Layout(name="footer", size=3)
                 )
                 
                 # Header
@@ -729,9 +729,9 @@ class RetroUI:
         # Create layout
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=10),
+            Layout(name="header", size=9),
             Layout(name="content", ratio=1),
-            Layout(name="footer", size=4)
+            Layout(name="footer", size=3)
         )
         
         # Header
@@ -780,10 +780,8 @@ class RetroUI:
             self._create_footer("Press Enter to continue" if not actions else "Select an action")
         )
         
-        # Print layout and move cursor to top to avoid line at bottom
+        # Print layout without newline
         self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
-        # Move cursor to top-left to avoid any extra lines
-        print('\033[H', end='', flush=True)
         
         if actions:
             # Get action selection
@@ -822,9 +820,9 @@ class RetroUI:
         # Create layout
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=10),
+            Layout(name="header", size=9),
             Layout(name="content", ratio=1),
-            Layout(name="footer", size=4)
+            Layout(name="footer", size=3)
         )
         
         # Header
@@ -867,10 +865,8 @@ class RetroUI:
             self._create_footer("Press Enter to exit")
         )
         
-        # Print layout and move cursor to top to avoid line at bottom
+        # Print layout without newline
         self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
-        # Move cursor to top-left to avoid any extra lines
-        print('\033[H', end='', flush=True)
         
         # Wait for Enter without showing cursor
         import sys, tty, termios
