@@ -458,29 +458,101 @@ class RetroUI:
             self.console.print(Align.center(default_text))
             self.console.print()
         
-        # Create a centered input prompt
-        input_prompt = Text()
-        input_prompt.append("▶ ", style=f"bold {self.theme.ORANGE}")
-        self.console.print(Align.center(input_prompt), end="")
-        
-        # Show cursor for input
-        print('\033[?25h', end='', flush=True)
-        
-        # Get input using standard input (questionary doesn't center well)
         if not multiline:
+            # Single line input
+            input_prompt = Text()
+            input_prompt.append("▶ ", style=f"bold {self.theme.ORANGE}")
+            self.console.print(Align.center(input_prompt), end="")
+            
+            # Show cursor for input
+            print('\033[?25h', end='', flush=True)
+            
             answer = input(f"") or default
+            
+            # Hide cursor again
+            print('\033[?25l', end='', flush=True)
         else:
-            # For multiline, still use questionary but with better positioning
-            answer = questionary.text(
-                "",
-                default=default,
-                multiline=multiline,
-                style=self.qstyle,
-                qmark=""
-            ).ask()
-        
-        # Hide cursor again
-        print('\033[?25l', end='', flush=True)
+            # Multiline input - create a notepad-like text area
+            self._clear_screen()
+            
+            # Create text editor layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=7),
+                Layout(name="editor", ratio=1),
+                Layout(name="footer", size=5)
+            )
+            
+            # Header with question
+            header_group = []
+            header_group.append(Align.center(Text(title, style=f"bold {self.theme.ORANGE}")))
+            header_group.append(Text(""))
+            header_group.append(Align.center(question_text))
+            
+            layout["header"].update(
+                Panel(
+                    Group(*header_group),
+                    border_style=self.theme.ORANGE_DARK,
+                    box=DOUBLE
+                )
+            )
+            
+            # Editor area
+            editor_content = Panel(
+                Text("\n  Type your text below (Press ESC then ENTER when done):\n", 
+                     style=self.theme.TEXT_DIM),
+                title=f"[{self.theme.ORANGE}]▌ TEXT EDITOR ▐[/]",
+                border_style=self.theme.ORANGE,
+                box=HEAVY,
+                padding=(1, 2)
+            )
+            
+            layout["editor"].update(editor_content)
+            
+            # Footer
+            footer_text = Text()
+            footer_text.append("ESC + ENTER ", style=f"bold {self.theme.ORANGE}")
+            footer_text.append("Save & Exit   ", style=self.theme.TEXT_DIM)
+            footer_text.append("CTRL+C ", style=f"bold {self.theme.ORANGE}")
+            footer_text.append("Cancel", style=self.theme.TEXT_DIM)
+            
+            layout["footer"].update(
+                Align.center(
+                    Panel(
+                        Align.center(footer_text),
+                        border_style=self.theme.GRAY,
+                        box=MINIMAL
+                    )
+                )
+            )
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+            
+            # Show cursor and get multiline input
+            print('\033[?25h', end='', flush=True)
+            
+            # Collect lines until ESC+ENTER
+            lines = []
+            if default:
+                lines = default.split('\n')
+            
+            # Simple multiline input collection
+            print("\n")  # Move to content area
+            try:
+                while True:
+                    line = input()
+                    # Check if user wants to finish (empty line followed by another empty line)
+                    if line == "" and len(lines) > 0 and lines[-1] == "":
+                        break
+                    lines.append(line)
+            except KeyboardInterrupt:
+                lines = [default] if default else [""]
+            
+            answer = '\n'.join(lines[:-1]) if len(lines) > 1 else (lines[0] if lines else default)
+            
+            # Hide cursor
+            print('\033[?25l', end='', flush=True)
         
         return answer
         
@@ -668,6 +740,92 @@ class RetroUI:
     def stop_progress(self):
         """Stop the progress animation."""
         self.loading_active = False
+    
+    def ask_feedback(
+        self,
+        title: str,
+        current_value: Any,
+        value_type: str = "text",
+        subtitle: str = ""
+    ) -> Optional[str]:
+        """Ask for refinement feedback in retro style."""
+        self._clear_screen()
+        
+        # Create layout
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header", size=9),
+            Layout(name="content", ratio=1),
+            Layout(name="input", size=8),
+            Layout(name="footer", size=3)
+        )
+        
+        # Header
+        layout["header"].update(
+            self._create_header(title, subtitle)
+        )
+        
+        # Content - show current value
+        content_group = []
+        content_group.append(Text("\nCurrent suggestion:\n", style=f"bold {self.theme.WHITE}"))
+        
+        if value_type == "text":
+            # Wrap text for better display
+            lines = str(current_value).split('\n')
+            for line in lines[:10]:  # Show first 10 lines
+                if len(line) > 80:
+                    line = line[:77] + "..."
+                content_group.append(Text(f"  {line}", style=self.theme.ORANGE_LIGHT))
+            if len(lines) > 10:
+                content_group.append(Text(f"  ... and {len(lines) - 10} more lines", style=self.theme.TEXT_DIM))
+        elif value_type == "list":
+            for i, item in enumerate(current_value[:5], 1):
+                content_group.append(Text(f"  {i}. {str(item)[:80]}", style=self.theme.ORANGE_LIGHT))
+            if len(current_value) > 5:
+                content_group.append(Text(f"  ... and {len(current_value) - 5} more items", style=self.theme.TEXT_DIM))
+        
+        content_group.append(Text("\n"))
+        content_group.append(Text("Would you like to refine this suggestion?", style=f"bold {self.theme.WHITE}"))
+        
+        layout["content"].update(
+            Panel(
+                Align.center(Group(*content_group), vertical="middle"),
+                border_style=self.theme.ORANGE_DARK,
+                box=DOUBLE,
+                padding=(1, 2)
+            )
+        )
+        
+        # Input area
+        input_text = Text()
+        input_text.append("Enter feedback or press ", style=self.theme.TEXT_DIM)
+        input_text.append("ENTER", style=f"bold {self.theme.ORANGE}")
+        input_text.append(" to accept as-is", style=self.theme.TEXT_DIM)
+        
+        layout["input"].update(
+            Panel(
+                Align.center(input_text),
+                title=f"[{self.theme.ORANGE}]▌ FEEDBACK ▐[/]",
+                border_style=self.theme.ORANGE,
+                box=MINIMAL,
+                padding=(1, 2)
+            )
+        )
+        
+        # Footer
+        layout["footer"].update(
+            self._create_footer("Type your feedback or press ENTER to skip")
+        )
+        
+        # Print layout
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        
+        # Get feedback
+        print('\033[?25h', end='', flush=True)  # Show cursor
+        feedback = input().strip()
+        print('\033[?25l', end='', flush=True)  # Hide cursor
+        
+        return feedback if feedback else None
         
     def show_results(
         self,

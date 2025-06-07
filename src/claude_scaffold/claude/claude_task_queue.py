@@ -112,10 +112,12 @@ class ClaudeTaskQueue:
 
         self.logger.info(f"Processing {total_tasks} Claude tasks with {self.max_workers} workers")
 
-        # Use batch progress indicator
-        with progress_indicator.batch_claude_operations(
-            total_tasks, f"Processing {total_tasks} Claude Tasks"
-        ) as batch_progress:
+        # Check if we're in retro UI mode (default is now retro)
+        import os
+        is_retro_mode = os.environ.get('CLAUDE_SCAFFOLD_UI_MODE', 'retro') == 'retro'
+        
+        if is_retro_mode:
+            # Simple processing without Rich progress indicator for retro UI
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 # Submit all tasks
                 futures: Dict[Future, ClaudeTask] = {}
@@ -132,7 +134,6 @@ class ClaudeTaskQueue:
                 # Process completed tasks
                 for future in as_completed(futures):
                     task = futures[future]
-                    batch_progress.start_operation(f"Processing: {task.name}")
 
                     try:
                         result = future.result()
@@ -144,8 +145,49 @@ class ClaudeTaskQueue:
                         if task.callback:
                             task.callback(result)
 
-                        batch_progress.complete_operation(success=True)
                         self.logger.debug(f"Task completed: {task.id}")
+                    except Exception as e:
+                        task.status = TaskStatus.FAILED
+                        task.error = str(e)
+                        self.logger.error(f"Task failed: {task.id} - {e}")
+                        
+                        if self._progress_callback:
+                            self._progress_callback(task.id, task.status, error=str(e))
+        else:
+            # Use batch progress indicator for non-retro UI
+            with progress_indicator.batch_claude_operations(
+                total_tasks, f"Processing {total_tasks} Claude Tasks"
+            ) as batch_progress:
+                with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    # Submit all tasks
+                    futures: Dict[Future, ClaudeTask] = {}
+
+                    while not self.task_queue.empty():
+                        try:
+                            task = self.task_queue.get_nowait()
+                            future = executor.submit(self._process_single_task, task, claude_processor)
+                            futures[future] = task
+                            self._update_task_status(task.id, TaskStatus.RUNNING)
+                        except queue.Empty:
+                            break
+
+                    # Process completed tasks
+                    for future in as_completed(futures):
+                        task = futures[future]
+                        batch_progress.start_operation(f"Processing: {task.name}")
+
+                        try:
+                            result = future.result()
+                            task.result = result
+                            task.status = TaskStatus.COMPLETED
+                            self.results[task.id] = result
+
+                            # Call task-specific callback if provided
+                            if task.callback:
+                                task.callback(result)
+
+                            batch_progress.complete_operation(success=True)
+                            self.logger.debug(f"Task completed: {task.id}")
 
                     except Exception as e:
                         task.error = e

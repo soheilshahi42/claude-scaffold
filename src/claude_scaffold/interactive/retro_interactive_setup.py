@@ -24,6 +24,103 @@ class RetroInteractiveSetup:
             self.claude_setup = EnhancedClaudeInteractiveSetup(debug_mode)
         else:
             self.claude_setup = None
+    
+    def _refine_with_retro_ui(
+        self,
+        current_value: Any,
+        title: str,
+        subtitle: str = "",
+        value_type: str = "text",
+        max_iterations: int = 3
+    ) -> Any:
+        """Allow user to iteratively refine Claude's suggestion with feedback."""
+        refined_value = current_value
+        iteration = 0
+        
+        while iteration < max_iterations:
+            # Ask if they want to refine
+            feedback = self.ui.ask_feedback(
+                title,
+                refined_value,
+                value_type,
+                f"{subtitle} - Iteration {iteration + 1}/{max_iterations}"
+            )
+            
+            if not feedback:
+                # No feedback means accept as is
+                return refined_value
+            
+            # Show progress while Claude processes feedback
+            self.ui.show_progress(
+                "REFINING SUGGESTION",
+                "Claude is processing your feedback...",
+                "AI refinement in progress"
+            )
+            
+            try:
+                # Build refinement prompt based on type
+                if value_type == "text":
+                    prompt = f"""Refine this text based on user feedback:
+
+Current version: {refined_value}
+
+User feedback: {feedback}
+
+Provide an improved version based on the feedback. Return only the improved text."""
+                elif value_type == "list":
+                    import json
+                    prompt = f"""Refine this list based on user feedback:
+
+Current items: {json.dumps(refined_value)}
+
+User feedback: {feedback}
+
+Provide an improved list based on the feedback. Return a JSON array."""
+                
+                # Get refined result from Claude
+                response = self.claude_setup.processor._call_claude(
+                    prompt, 
+                    expect_json=(value_type != "text")
+                )
+                
+                if value_type == "text":
+                    refined_value = response.strip()
+                else:
+                    import json
+                    refined_value = json.loads(response)
+                
+                self.ui.stop_progress()
+                
+                # Show refined result
+                self.ui.show_results(
+                    "REFINED RESULT",
+                    {"Result": refined_value},
+                    "Claude has updated the suggestion"
+                )
+                
+                # Ask if they want to continue refining
+                continue_refining = self.ui.ask_confirm(
+                    "CONTINUE REFINEMENT",
+                    "Would you like to refine further?",
+                    default=False,
+                    subtitle=f"Iteration {iteration + 1} complete"
+                )
+                
+                if not continue_refining:
+                    return refined_value
+                    
+                iteration += 1
+                
+            except Exception as e:
+                self.ui.stop_progress()
+                self.ui.show_results(
+                    "REFINEMENT ERROR",
+                    {"Error": str(e)},
+                    "Failed to process refinement"
+                )
+                return refined_value
+        
+        return refined_value
             
     def run(self, project_name: str) -> Dict[str, Any]:
         """Run the retro interactive setup."""
@@ -150,7 +247,15 @@ class RetroInteractiveSetup:
                 )
                 
                 if use_enhanced:
-                    project_data["metadata"]["description"] = enhanced_desc
+                    # Allow iterative refinement
+                    refined_desc = self._refine_with_retro_ui(
+                        enhanced_desc,
+                        "REFINE DESCRIPTION",
+                        "AI-powered refinement",
+                        value_type="text",
+                        max_iterations=3
+                    )
+                    project_data["metadata"]["description"] = refined_desc
                     
         return project_data
         
@@ -234,6 +339,23 @@ class RetroInteractiveSetup:
                                 module["description"] = descriptions[module["name"]]
                                 
                     self.ui.stop_progress()
+                    
+                    # Allow refinement of modules
+                    want_refine = self.ui.ask_confirm(
+                        "REFINE MODULES",
+                        "Would you like to refine the module list?",
+                        default=False,
+                        subtitle="Claude has generated module descriptions"
+                    )
+                    
+                    if want_refine:
+                        modules = self._refine_with_retro_ui(
+                            modules,
+                            "REFINE MODULES",
+                            "Module refinement",
+                            value_type="list",
+                            max_iterations=3
+                        )
                                 
         else:
             # Use default suggestions
@@ -325,6 +447,23 @@ class RetroInteractiveSetup:
                 if use_suggested:
                     # For simplicity, take first 10-15 tasks
                     tasks = suggested_tasks[:15]
+                    
+                    # Allow refinement of tasks
+                    want_refine = self.ui.ask_confirm(
+                        "REFINE TASKS",
+                        "Would you like to refine the task list?",
+                        default=False,
+                        subtitle="Claude has generated tasks"
+                    )
+                    
+                    if want_refine:
+                        tasks = self._refine_with_retro_ui(
+                            tasks,
+                            "REFINE TASKS",
+                            "Task refinement",
+                            value_type="list",
+                            max_iterations=3
+                        )
                     
         # Allow adding custom tasks
         while self.ui.ask_confirm(
