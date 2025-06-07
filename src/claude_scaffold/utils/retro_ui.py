@@ -208,98 +208,132 @@ class RetroUI:
         subtitle: str = "",
         hint: str = ""
     ) -> Any:
-        """Show a full-screen selection page."""
-        self._clear_screen()
+        """Show a full-screen selection page with interactive selection."""
+        import sys
+        import tty
+        import termios
         
-        # Create layout
-        layout = Layout()
-        layout.split_column(
-            Layout(name="header", size=10),
-            Layout(name="question", size=4),
-            Layout(name="content", ratio=1),
-            Layout(name="footer", size=4)
-        )
-        
-        # Header
-        layout["header"].update(
-            self._create_header(title, subtitle)
-        )
-        
-        # Question
-        question_text = Text()
-        question_text.append("? ", style=f"bold {self.theme.ORANGE}")
-        question_text.append(question, style=f"bold {self.theme.WHITE}")
-        layout["question"].update(
-            Align.center(
-                Panel(
-                    Align.center(question_text),
-                    border_style=self.theme.ORANGE_DARK,
-                    box=DOUBLE,
-                    padding=(0, 2)
-                )
-            )
-        )
-        
-        # Placeholder for choices (will be handled by questionary)
-        layout["content"].update(
-            Align.center(
-                Text("\n\n" + "━" * 60, style=self.theme.GRAY),
-                vertical="middle"
-            )
-        )
-        
-        # Footer
-        layout["footer"].update(self._create_footer(hint))
-        
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-        
-        # Clear screen again to prepare for centered input
-        self._clear_screen()
-        
-        # Calculate center position
-        term_height = self.console.height
-        center_y = term_height // 2
-        
-        # Move to center
-        for _ in range(max(0, center_y - 10)):
-            self.console.print()
-        
-        # Create centered question panel
-        question_panel = Panel(
-            Align.center(question_text),
-            border_style=self.theme.ORANGE_DARK,
-            box=DOUBLE,
-            padding=(1, 4),
-            width=80
-        )
-        self.console.print(Align.center(question_panel))
-        self.console.print()
-        
-        # Ask question with styled choices
+        # Process choices
         if isinstance(choices[0], dict):
-            # Choices with names and values
-            q_choices = [
-                questionary.Choice(
-                    title=choice.get("name", str(choice)),
-                    value=choice.get("value", choice)
-                )
-                for choice in choices
-            ]
+            choice_items = [(c.get("name", str(c)), c.get("value", c)) for c in choices]
         else:
-            q_choices = choices
+            choice_items = [(str(c), c) for c in choices]
         
-        # Center the selection prompt
-        with self.console.capture() as capture:
-            answer = questionary.select(
-                "",  # Empty question since we already displayed it
-                choices=q_choices,
-                style=self.qstyle,
-                qmark="▶",
-                pointer="►"
-            ).ask()
+        selected_index = 0
+        max_visible = 10  # Maximum visible choices
+        scroll_offset = 0
         
-        return answer
+        while True:
+            self._clear_screen()
+            
+            # Create layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=10),
+                Layout(name="content", ratio=1),
+                Layout(name="footer", size=4)
+            )
+            
+            # Header
+            layout["header"].update(
+                self._create_header(title, subtitle)
+            )
+            
+            # Content
+            content_group = []
+            
+            # Question
+            question_text = Text()
+            question_text.append("\n? ", style=f"bold {self.theme.ORANGE}")
+            question_text.append(question, style=f"bold {self.theme.WHITE}")
+            question_text.append("\n\n")
+            content_group.append(Align.center(question_text))
+            
+            # Calculate visible range
+            total_choices = len(choice_items)
+            if total_choices > max_visible:
+                # Adjust scroll offset to keep selected item visible
+                if selected_index < scroll_offset:
+                    scroll_offset = selected_index
+                elif selected_index >= scroll_offset + max_visible:
+                    scroll_offset = selected_index - max_visible + 1
+                    
+                visible_start = scroll_offset
+                visible_end = min(scroll_offset + max_visible, total_choices)
+            else:
+                visible_start = 0
+                visible_end = total_choices
+            
+            # Show scroll indicator if needed
+            if visible_start > 0:
+                content_group.append(Align.center(Text("▲ More above ▲", style=self.theme.TEXT_DIM)))
+                content_group.append(Text(""))
+            
+            # Choices
+            for i in range(visible_start, visible_end):
+                choice_text = Text()
+                if i == selected_index:
+                    choice_text.append("  ► ", style=f"bold {self.theme.ORANGE}")
+                    choice_text.append(choice_items[i][0], style=f"bold {self.theme.WHITE}")
+                else:
+                    choice_text.append("    ", style="")
+                    choice_text.append(choice_items[i][0], style=self.theme.TEXT_DIM)
+                content_group.append(Align.center(choice_text))
+            
+            # Show scroll indicator if needed
+            if visible_end < total_choices:
+                content_group.append(Text(""))
+                content_group.append(Align.center(Text("▼ More below ▼", style=self.theme.TEXT_DIM)))
+            
+            # Instructions
+            content_group.append(Text("\n"))
+            instructions = Text()
+            instructions.append("↑↓ ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Navigate   ", style=self.theme.TEXT_DIM)
+            instructions.append("ENTER ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Select   ", style=self.theme.TEXT_DIM)
+            instructions.append("ESC ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Cancel", style=self.theme.TEXT_DIM)
+            content_group.append(Align.center(instructions))
+            
+            content = Panel(
+                Align.center(Group(*content_group), vertical="middle"),
+                border_style=self.theme.ORANGE_DARK,
+                box=DOUBLE,
+                padding=(2, 4)
+            )
+            
+            layout["content"].update(
+                Align.center(content, vertical="middle")
+            )
+            
+            # Footer
+            layout["footer"].update(self._create_footer(hint or "Select an option"))
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Get single keypress
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                key = sys.stdin.read(1)
+                
+                if key == '\r' or key == '\n':  # Enter
+                    return choice_items[selected_index][1]
+                elif key == '\x1b':  # Escape sequence
+                    next_keys = sys.stdin.read(2)
+                    if next_keys == '[A':  # Up arrow
+                        selected_index = max(0, selected_index - 1)
+                    elif next_keys == '[B':  # Down arrow
+                        selected_index = min(len(choice_items) - 1, selected_index + 1)
+                    elif next_keys == '':  # Just ESC
+                        return None
+                elif key == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt()
+                    
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         
     def ask_text(
         self,
@@ -390,14 +424,23 @@ class RetroUI:
             self.console.print(Align.center(default_text))
             self.console.print()
         
-        # Get input
-        answer = questionary.text(
-            "",
-            default=default,
-            multiline=multiline,
-            style=self.qstyle,
-            qmark="▶"
-        ).ask()
+        # Create a centered input prompt
+        input_prompt = Text()
+        input_prompt.append("▶ ", style=f"bold {self.theme.ORANGE}")
+        self.console.print(Align.center(input_prompt), end="")
+        
+        # Get input using standard input (questionary doesn't center well)
+        if not multiline:
+            answer = input(f"") or default
+        else:
+            # For multiline, still use questionary but with better positioning
+            answer = questionary.text(
+                "",
+                default=default,
+                multiline=multiline,
+                style=self.qstyle,
+                qmark=""
+            ).ask()
         
         return answer
         
@@ -409,86 +452,101 @@ class RetroUI:
         subtitle: str = "",
         hint: str = ""
     ) -> bool:
-        """Show a full-screen confirmation page."""
-        self._clear_screen()
+        """Show a full-screen confirmation page with interactive selection."""
+        import sys
+        import tty
+        import termios
         
-        # Create layout
-        layout = Layout()
-        layout.split_column(
-            Layout(name="header", size=10),
-            Layout(name="content", ratio=1),
-            Layout(name="footer", size=4)
-        )
+        selected = default  # True = Yes, False = No
         
-        # Header
-        layout["header"].update(
-            self._create_header(title, subtitle)
-        )
-        
-        # Content
-        confirm_text = Text()
-        confirm_text.append("\n\n? ", style=f"bold {self.theme.ORANGE}")
-        confirm_text.append(question, style=f"bold {self.theme.WHITE}")
-        confirm_text.append("\n\n")
-        
-        # Yes/No options
-        options = Text()
-        options.append("  ▶ ", style=self.theme.ORANGE if default else self.theme.GRAY)
-        options.append("Yes", style=f"bold {self.theme.WHITE if default else self.theme.TEXT_DIM}")
-        options.append("     ")
-        options.append("  ▶ ", style=self.theme.GRAY if default else self.theme.ORANGE)
-        options.append("No", style=f"bold {self.theme.TEXT_DIM if default else self.theme.WHITE}")
-        
-        content = Panel(
-            Align.center(Group(confirm_text, options), vertical="middle"),
-            border_style=self.theme.ORANGE_DARK,
-            box=DOUBLE,
-            padding=(2, 4)
-        )
-        
-        layout["content"].update(
-            Align.center(content, vertical="middle")
-        )
-        
-        # Footer
-        layout["footer"].update(
-            self._create_footer(hint or "Use arrow keys to select, Enter to confirm")
-        )
-        
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-        
-        # Clear screen again to prepare for centered input
-        self._clear_screen()
-        
-        # Calculate center position
-        term_height = self.console.height
-        center_y = term_height // 2
-        
-        # Move to center
-        for _ in range(max(0, center_y - 10)):
-            self.console.print()
-        
-        # Create centered question panel
-        confirm_panel = Panel(
-            Align.center(Group(confirm_text, options)),
-            border_style=self.theme.ORANGE_DARK,
-            box=DOUBLE,
-            padding=(2, 4),
-            width=80
-        )
-        self.console.print(Align.center(confirm_panel))
-        self.console.print()
-        
-        # Get confirmation
-        answer = questionary.confirm(
-            "",
-            default=default,
-            style=self.qstyle,
-            qmark="▶"
-        ).ask()
-        
-        return answer
+        while True:
+            self._clear_screen()
+            
+            # Create layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=10),
+                Layout(name="content", ratio=1),
+                Layout(name="footer", size=4)
+            )
+            
+            # Header
+            layout["header"].update(
+                self._create_header(title, subtitle)
+            )
+            
+            # Content
+            confirm_text = Text()
+            confirm_text.append("\n\n? ", style=f"bold {self.theme.ORANGE}")
+            confirm_text.append(question, style=f"bold {self.theme.WHITE}")
+            confirm_text.append("\n\n\n")
+            
+            # Yes/No options with current selection
+            options = Text()
+            if selected:
+                options.append("    ►  ", style=f"bold {self.theme.ORANGE}")
+                options.append("YES", style=f"bold {self.theme.WHITE}")
+                options.append("        ", style=self.theme.GRAY)
+                options.append("NO", style=self.theme.TEXT_DIM)
+            else:
+                options.append("       ", style=self.theme.GRAY)
+                options.append("YES", style=self.theme.TEXT_DIM)
+                options.append("     ►  ", style=f"bold {self.theme.ORANGE}")
+                options.append("NO", style=f"bold {self.theme.WHITE}")
+            
+            options.append("\n\n", style="")
+            
+            # Instructions
+            instructions = Text()
+            instructions.append("← → ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Navigate   ", style=self.theme.TEXT_DIM)
+            instructions.append("ENTER ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Confirm   ", style=self.theme.TEXT_DIM)
+            instructions.append("Y/N ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Quick Select", style=self.theme.TEXT_DIM)
+            
+            content = Panel(
+                Align.center(Group(confirm_text, options, instructions), vertical="middle"),
+                border_style=self.theme.ORANGE_DARK,
+                box=DOUBLE,
+                padding=(2, 4)
+            )
+            
+            layout["content"].update(
+                Align.center(content, vertical="middle")
+            )
+            
+            # Footer
+            layout["footer"].update(
+                self._create_footer(hint or "Select your choice")
+            )
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Get single keypress
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                key = sys.stdin.read(1)
+                
+                if key == '\r' or key == '\n':  # Enter
+                    return selected
+                elif key.lower() == 'y':
+                    return True
+                elif key.lower() == 'n':
+                    return False
+                elif key == '\x1b':  # Escape sequence
+                    next_key = sys.stdin.read(2)
+                    if next_key == '[C':  # Right arrow
+                        selected = False
+                    elif next_key == '[D':  # Left arrow
+                        selected = True
+                elif key == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt()
+                    
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         
     def show_progress(
         self,
@@ -497,56 +555,130 @@ class RetroUI:
         subtitle: str = "",
         items: Optional[List[str]] = None
     ):
-        """Show a full-screen progress page."""
-        self._clear_screen()
+        """Show a full-screen progress page with animated loading."""
+        import threading
+        import time
         
-        # Create layout
-        layout = Layout()
-        layout.split_column(
-            Layout(name="header", size=10),
-            Layout(name="content", ratio=1),
-            Layout(name="footer", size=4)
-        )
+        # Animation frames for retro loading
+        loading_frames = [
+            "█▒▒▒▒▒▒▒▒▒",
+            "██▒▒▒▒▒▒▒▒",
+            "███▒▒▒▒▒▒▒",
+            "████▒▒▒▒▒▒",
+            "█████▒▒▒▒▒",
+            "██████▒▒▒▒",
+            "███████▒▒▒",
+            "████████▒▒",
+            "█████████▒",
+            "██████████",
+            "▒█████████",
+            "▒▒████████",
+            "▒▒▒███████",
+            "▒▒▒▒██████",
+            "▒▒▒▒▒█████",
+            "▒▒▒▒▒▒████",
+            "▒▒▒▒▒▒▒███",
+            "▒▒▒▒▒▒▒▒██",
+            "▒▒▒▒▒▒▒▒▒█",
+            "▒▒▒▒▒▒▒▒▒▒",
+        ]
         
-        # Header
-        layout["header"].update(
-            self._create_header(title, subtitle)
-        )
+        # Spinner frames
+        spinner_frames = ["◐", "◓", "◑", "◒"]
         
-        # Progress content
-        progress_text = Text()
-        progress_text.append(f"\n{message}\n\n", style=f"bold {self.theme.WHITE}")
+        self.loading_active = True
+        frame_index = 0
+        spinner_index = 0
         
-        if items:
-            for item in items:
-                progress_text.append(f"  {icons.PROGRESS} ", style=self.theme.ORANGE)
-                progress_text.append(f"{item}\n", style=self.theme.TEXT_DIM)
+        def animate():
+            nonlocal frame_index, spinner_index
+            while self.loading_active:
+                self._clear_screen()
                 
-        # Animated loading indicator
-        progress_text.append("\n\n")
-        progress_text.append("█" * 20, style=self.theme.ORANGE_DARK)
-        progress_text.append("█" * 10, style=self.theme.ORANGE)
-        progress_text.append("░" * 10, style=self.theme.GRAY)
+                # Create layout
+                layout = Layout()
+                layout.split_column(
+                    Layout(name="header", size=10),
+                    Layout(name="content", ratio=1),
+                    Layout(name="footer", size=4)
+                )
+                
+                # Header
+                layout["header"].update(
+                    self._create_header(title, subtitle)
+                )
+                
+                # Progress content
+                progress_group = []
+                
+                # Message
+                msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
+                progress_group.append(Align.center(msg_text))
+                
+                # Loading bar
+                loading_text = Text()
+                loading_text.append("  ", style="")
+                loading_text.append(loading_frames[frame_index], style=f"bold {self.theme.ORANGE}")
+                loading_text.append("  ", style="")
+                progress_group.append(Align.center(loading_text))
+                progress_group.append(Text(""))
+                
+                # Spinner with text
+                spinner_text = Text()
+                spinner_text.append(spinner_frames[spinner_index], style=f"bold {self.theme.ORANGE}")
+                spinner_text.append(" PROCESSING ", style=f"bold {self.theme.WHITE}")
+                spinner_text.append(spinner_frames[spinner_index], style=f"bold {self.theme.ORANGE}")
+                progress_group.append(Align.center(spinner_text))
+                
+                # Items if provided
+                if items:
+                    progress_group.append(Text("\n"))
+                    for i, item in enumerate(items):
+                        item_text = Text()
+                        # Animate current item
+                        if i == len(items) - 1:
+                            item_text.append(f"{spinner_frames[spinner_index]} ", style=f"bold {self.theme.ORANGE}")
+                            item_text.append(item, style=f"bold {self.theme.WHITE}")
+                        else:
+                            item_text.append("✓ ", style=f"bold {self.theme.GREEN}")
+                            item_text.append(item, style=self.theme.TEXT_DIM)
+                        progress_group.append(Align.center(item_text))
+                
+                content = Panel(
+                    Align.center(Group(*progress_group), vertical="middle"),
+                    title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
+                    border_style=self.theme.ORANGE,
+                    box=HEAVY,
+                    padding=(2, 4)
+                )
+                
+                layout["content"].update(
+                    Align.center(content, vertical="middle")
+                )
+                
+                # Footer
+                layout["footer"].update(
+                    self._create_footer("Please wait...")
+                )
+                
+                # Print layout
+                self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+                
+                # Update animation indices
+                frame_index = (frame_index + 1) % len(loading_frames)
+                spinner_index = (spinner_index + 1) % len(spinner_frames)
+                
+                time.sleep(0.1)
         
-        content = Panel(
-            Align.center(progress_text, vertical="middle"),
-            title=f"[{self.theme.ORANGE}]▶ PROCESSING[/]",
-            border_style=self.theme.ORANGE,
-            box=HEAVY,
-            padding=(2, 4)
-        )
-        
-        layout["content"].update(
-            Align.center(content, vertical="middle")
-        )
-        
-        # Footer
-        layout["footer"].update(
-            self._create_footer("Please wait...")
-        )
-        
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+        # Start animation in background
+        self.animation_thread = threading.Thread(target=animate, daemon=True)
+        self.animation_thread.start()
+    
+    def stop_progress(self):
+        """Stop the progress animation."""
+        self.loading_active = False
+        if hasattr(self, 'animation_thread'):
+            self.animation_thread.join(timeout=0.5)
         
     def show_results(
         self,

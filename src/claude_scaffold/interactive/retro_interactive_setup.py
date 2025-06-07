@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import time
 
 from ..claude.claude_interactive_enhanced import EnhancedClaudeInteractiveSetup
 from ..config.project_config import ProjectConfig
@@ -113,6 +114,8 @@ class RetroInteractiveSetup:
                     "Optimizing configuration"
                 ]
             )
+            time.sleep(1)  # Give time to see the animation
+            self.ui.stop_progress()
             
         description = self.ui.ask_text(
             "PROJECT DESCRIPTION",
@@ -134,6 +137,7 @@ class RetroInteractiveSetup:
             
             # Get enhanced description
             enhanced_desc = self.claude_setup._enhance_description(project_data)
+            self.ui.stop_progress()
             
             if enhanced_desc and enhanced_desc != description:
                 # Show Claude's suggestion
@@ -192,6 +196,7 @@ class RetroInteractiveSetup:
             )
             
             claude_modules = self.claude_setup._get_claude_module_suggestions(project_data)
+            self.ui.stop_progress()
             
             if claude_modules:
                 # Show suggestions
@@ -227,6 +232,8 @@ class RetroInteractiveSetup:
                         for module in modules:
                             if module["name"] in descriptions:
                                 module["description"] = descriptions[module["name"]]
+                                
+                    self.ui.stop_progress()
                                 
         else:
             # Use default suggestions
@@ -296,6 +303,7 @@ class RetroInteractiveSetup:
             )
             
             suggested_tasks = self.claude_setup._get_claude_task_suggestions(project_data)
+            self.ui.stop_progress()
             
             if suggested_tasks:
                 # Show task summary
@@ -373,6 +381,7 @@ class RetroInteractiveSetup:
             )
             
             claude_rules = self.claude_setup._get_claude_rule_suggestions(project_data)
+            self.ui.stop_progress()
             
             if claude_rules:
                 # Show rules summary
@@ -446,6 +455,7 @@ class RetroInteractiveSetup:
             )
             
             claude_commands = self.claude_setup._get_claude_commands(project_data)
+            self.ui.stop_progress()
             
             if claude_commands:
                 # Show commands
