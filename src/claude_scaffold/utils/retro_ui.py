@@ -493,18 +493,22 @@ class RetroUI:
             # Get terminal dimensions
             term_width, term_height = self._get_terminal_size()
             
-            # Calculate box dimensions to fit screen
-            box_width = min(term_width - 10, 120)  # Max 120 chars wide, with margins
-            box_height = term_height - 15  # Leave room for header and footer
+            # Calculate box dimensions to fit inside the panel
+            # Account for panel borders and padding
+            panel_padding = 8  # Panel has borders and padding
+            box_width = term_width - panel_padding - 4  # Leave some margin
+            if box_width > 150:
+                box_width = 150  # Max width for readability
+            elif box_width < 60:
+                box_width = 60  # Minimum width
+                
+            box_height = term_height - 20  # Leave room for all UI elements
             if box_height < 10:
                 box_height = 10  # Minimum height
             elif box_height > 30:
                 box_height = 30  # Maximum height
             
-            # Center the box horizontally
-            start_col = (term_width - box_width - 2) // 2
-            if start_col < 2:
-                start_col = 2
+            # The box will be centered by the panel, so we don't need to calculate start_col
             
             while True:
                 self._clear_screen()
@@ -548,8 +552,8 @@ class RetroUI:
                     editor_lines.append(Text(f"  {default_preview}", style=self.theme.GRAY))
                     editor_lines.append(Text("  (Press Enter twice to keep, or start typing to replace)\n", style=self.theme.TEXT_DIM))
                 
-                # Draw the text input box
-                editor_lines.append(Text("┌" + "─" * box_width + "┐", style=self.theme.ORANGE))
+                # Draw the text input box (center it)
+                editor_lines.append(Align.center(Text("┌" + "─" * box_width + "┐", style=self.theme.ORANGE)))
                 
                 # Show typed lines
                 all_lines = lines + [current_line]
@@ -565,12 +569,12 @@ class RetroUI:
                             line_text = line_text[:box_width - 2]
                         # Pad to fill box width
                         line_text = line_text.ljust(box_width - 2)
-                        editor_lines.append(Text("│ " + line_text + " │", style=self.theme.ORANGE))
+                        editor_lines.append(Align.center(Text("│ " + line_text + " │", style=self.theme.ORANGE)))
                     else:
                         # Empty line
-                        editor_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
+                        editor_lines.append(Align.center(Text("│" + " " * box_width + "│", style=self.theme.ORANGE)))
                 
-                editor_lines.append(Text("└" + "─" * box_width + "┘", style=self.theme.ORANGE))
+                editor_lines.append(Align.center(Text("└" + "─" * box_width + "┘", style=self.theme.ORANGE)))
                 
                 layout["editor"].update(
                     Panel(
@@ -578,7 +582,7 @@ class RetroUI:
                         title=f"[{self.theme.ORANGE}]▌ TEXT EDITOR ▐[/]",
                         border_style=self.theme.ORANGE,
                         box=HEAVY,
-                        padding=(0, 1)
+                        padding=(0, 0)  # No horizontal padding
                     )
                 )
                 
@@ -600,10 +604,12 @@ class RetroUI:
                 self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
                 
                 # Position cursor inside the box
-                # Calculate where in the editor panel the box starts
-                box_start_row = header_size + 2  # Header + border
+                # Calculate where the text box starts on screen
+                header_lines = 7  # Header panel size
                 if default and len(lines) == 0 and current_line == "":
-                    box_start_row += 4  # Add lines for default text preview
+                    text_box_start = header_lines + 6  # Additional lines for default text
+                else:
+                    text_box_start = header_lines + 2
                 
                 # Calculate which line of the box the cursor is on
                 current_display_line = len(lines)  # We're always editing the last line
@@ -611,13 +617,17 @@ class RetroUI:
                 
                 # Only show cursor if it's in the visible area
                 if 0 <= visible_line < box_height:
-                    cursor_screen_row = box_start_row + visible_line + 1  # +1 for top border
-                    cursor_screen_col = start_col + 2 + cursor_pos  # +2 for border and space
+                    # Calculate cursor row (accounting for box position and border)
+                    cursor_row = text_box_start + visible_line + 1  # +1 for top border of text box
                     
-                    # Move cursor to position (account for panel padding)
-                    # The panel has padding which shifts content
-                    actual_col = start_col + 4 + cursor_pos  # +4 for "│ " and panel padding
-                    print(f'\033[{cursor_screen_row};{actual_col}H', end='', flush=True)
+                    # Calculate cursor column
+                    # We need to find where the box actually starts horizontally
+                    # The box is centered, so calculate its actual position
+                    box_left_margin = (term_width - box_width - 2) // 2
+                    cursor_col = box_left_margin + 2 + cursor_pos  # +2 for "│ " border
+                    
+                    # Move cursor to position
+                    print(f'\033[{cursor_row};{cursor_col}H', end='', flush=True)
                     print('\033[?25h', end='', flush=True)  # Show cursor
                 
                 # Get single character input
