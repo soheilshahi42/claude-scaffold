@@ -84,6 +84,15 @@ Current items: {json.dumps(refined_value)}
 User feedback: {feedback}
 
 Provide an improved list based on the feedback. Return a JSON array."""
+                elif value_type == "dict":
+                    import json
+                    prompt = f"""Refine this dictionary based on user feedback:
+
+Current data: {json.dumps(refined_value)}
+
+User feedback: {feedback}
+
+Provide an improved dictionary based on the feedback. Return a JSON object."""
                 
                 # Get refined result from Claude
                 response = self.claude_setup.processor._call_claude(
@@ -419,22 +428,35 @@ Provide an improved list based on the feedback. Return a JSON array."""
                         f"Claude generated {len(modules)} modules with descriptions"
                     )
                     
-                    # Allow refinement of modules
-                    want_refine = self.ui.ask_confirm(
-                        "REFINE MODULES",
-                        "Would you like to refine the module list?",
-                        default=False,
-                        subtitle="Claude has generated module descriptions"
+                    # Ask if they want to use these modules
+                    use_modules = self.ui.ask_confirm(
+                        "USE MODULES",
+                        "Use these Claude-generated modules?",
+                        default=True,
+                        subtitle="Review the modules above"
                     )
                     
-                    if want_refine:
-                        modules = self._refine_with_retro_ui(
-                            modules,
+                    if use_modules:
+                        # Now ask if they want to refine
+                        want_refine = self.ui.ask_confirm(
                             "REFINE MODULES",
-                            "Module refinement",
-                            value_type="list",
-                            max_iterations=100
+                            "Would you like to refine or provide feedback on these modules?",
+                            default=True,  # Default to True to encourage refinement
+                            subtitle="Improve the modules with your feedback"
                         )
+                        
+                        if want_refine:
+                            modules = self._refine_with_retro_ui(
+                                modules,
+                                "REFINE MODULES",
+                                "Module refinement",
+                                value_type="list",
+                                max_iterations=100
+                            )
+                    else:
+                        # Don't use Claude's modules, start over
+                        modules = []
+                    
                                 
         else:
             # Use default suggestions
@@ -534,12 +556,12 @@ Provide an improved list based on the feedback. Return a JSON array."""
                     # For simplicity, take first 10-15 tasks
                     tasks = suggested_tasks[:15]
                     
-                    # Allow refinement of tasks
+                    # Ask if they want to refine the tasks
                     want_refine = self.ui.ask_confirm(
                         "REFINE TASKS",
-                        "Would you like to refine the task list?",
-                        default=False,
-                        subtitle="Claude has generated tasks"
+                        "Would you like to refine or provide feedback on these tasks?",
+                        default=True,  # Default to True to encourage refinement
+                        subtitle="Improve the tasks with your feedback"
                     )
                     
                     if want_refine:
@@ -627,6 +649,24 @@ Provide an improved list based on the feedback. Return a JSON array."""
                 if use_suggested:
                     rules["suggested"] = claude_rules[:10]
                     
+                    # Ask if they want to refine the rules
+                    want_refine_rules = self.ui.ask_confirm(
+                        "REFINE RULES",
+                        "Would you like to refine or provide feedback on these rules?",
+                        default=True,  # Default to True to encourage refinement
+                        subtitle="Improve the rules with your feedback"
+                    )
+                    
+                    if want_refine_rules:
+                        refined_rules = self._refine_with_retro_ui(
+                            rules["suggested"],
+                            "REFINE RULES",
+                            "Rule refinement",
+                            value_type="list",
+                            max_iterations=100
+                        )
+                        rules["suggested"] = refined_rules
+                    
         else:
             # Use standard suggestions
             suggested = self.project_config.project_types[
@@ -698,6 +738,24 @@ Provide an improved list based on the feedback. Return a JSON array."""
                 
                 if use_commands:
                     commands = claude_commands
+                    
+                    # Ask if they want to refine the commands
+                    want_refine_commands = self.ui.ask_confirm(
+                        "REFINE COMMANDS",
+                        "Would you like to refine or provide feedback on these commands?",
+                        default=False,  # Commands are usually more technical, default to False
+                        subtitle="Improve the commands with your feedback"
+                    )
+                    
+                    if want_refine_commands:
+                        refined_commands = self._refine_with_retro_ui(
+                            commands,
+                            "REFINE COMMANDS",
+                            "Command refinement",
+                            value_type="dict",
+                            max_iterations=100
+                        )
+                        commands = refined_commands
                     
         # Git setup
         git_init = self.ui.ask_confirm(

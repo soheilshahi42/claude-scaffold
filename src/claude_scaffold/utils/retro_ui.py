@@ -983,6 +983,11 @@ class RetroUI:
                 content_group.append(Text(f"  {i}. {str(item)[:80]}", style=self.theme.ORANGE_LIGHT))
             if len(current_value) > 5:
                 content_group.append(Text(f"  ... and {len(current_value) - 5} more items", style=self.theme.TEXT_DIM))
+        elif value_type == "dict":
+            for i, (key, value) in enumerate(list(current_value.items())[:5], 1):
+                content_group.append(Text(f"  {i}. {key}: {str(value)[:60]}", style=self.theme.ORANGE_LIGHT))
+            if len(current_value) > 5:
+                content_group.append(Text(f"  ... and {len(current_value) - 5} more items", style=self.theme.TEXT_DIM))
         
         content_group.append(Text("\n"))
         content_group.append(Text("Would you like to refine this suggestion?", style=f"bold {self.theme.WHITE}"))
