@@ -254,8 +254,27 @@ class RetroUI:
         # Print layout
         self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
         
-        # Move cursor up to the content area for questionary
-        self.console.print("\033[15A")  # Move up 15 lines
+        # Clear screen again to prepare for centered input
+        self._clear_screen()
+        
+        # Calculate center position
+        term_height = self.console.height
+        center_y = term_height // 2
+        
+        # Move to center
+        for _ in range(max(0, center_y - 10)):
+            self.console.print()
+        
+        # Create centered question panel
+        question_panel = Panel(
+            Align.center(question_text),
+            border_style=self.theme.ORANGE_DARK,
+            box=DOUBLE,
+            padding=(1, 4),
+            width=80
+        )
+        self.console.print(Align.center(question_panel))
+        self.console.print()
         
         # Ask question with styled choices
         if isinstance(choices[0], dict):
@@ -269,12 +288,16 @@ class RetroUI:
             ]
         else:
             q_choices = choices
-            
-        answer = questionary.select(
-            "",  # Empty question since we already displayed it
-            choices=q_choices,
-            style=self.qstyle
-        ).ask()
+        
+        # Center the selection prompt
+        with self.console.capture() as capture:
+            answer = questionary.select(
+                "",  # Empty question since we already displayed it
+                choices=q_choices,
+                style=self.qstyle,
+                qmark="▶",
+                pointer="►"
+            ).ask()
         
         return answer
         
@@ -339,15 +362,41 @@ class RetroUI:
         # Print layout
         self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
         
-        # Move cursor to input area
-        self.console.print("\033[12A")  # Move up
+        # Clear screen again to prepare for centered input
+        self._clear_screen()
+        
+        # Calculate center position
+        term_height = self.console.height
+        center_y = term_height // 2
+        
+        # Move to center
+        for _ in range(max(0, center_y - 10)):
+            self.console.print()
+        
+        # Create centered question panel
+        question_panel = Panel(
+            Align.center(question_text),
+            border_style=self.theme.ORANGE_DARK,
+            box=DOUBLE,
+            padding=(1, 4),
+            width=80
+        )
+        self.console.print(Align.center(question_panel))
+        self.console.print()
+        
+        # Show default value if present
+        if default:
+            default_text = Text(f"Default: {default}", style=self.theme.TEXT_DIM)
+            self.console.print(Align.center(default_text))
+            self.console.print()
         
         # Get input
         answer = questionary.text(
             "",
             default=default,
             multiline=multiline,
-            style=self.qstyle
+            style=self.qstyle,
+            qmark="▶"
         ).ask()
         
         return answer
@@ -409,11 +458,34 @@ class RetroUI:
         # Print layout
         self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
         
+        # Clear screen again to prepare for centered input
+        self._clear_screen()
+        
+        # Calculate center position
+        term_height = self.console.height
+        center_y = term_height // 2
+        
+        # Move to center
+        for _ in range(max(0, center_y - 10)):
+            self.console.print()
+        
+        # Create centered question panel
+        confirm_panel = Panel(
+            Align.center(Group(confirm_text, options)),
+            border_style=self.theme.ORANGE_DARK,
+            box=DOUBLE,
+            padding=(2, 4),
+            width=80
+        )
+        self.console.print(Align.center(confirm_panel))
+        self.console.print()
+        
         # Get confirmation
         answer = questionary.confirm(
             "",
             default=default,
-            style=self.qstyle
+            style=self.qstyle,
+            qmark="▶"
         ).ask()
         
         return answer
