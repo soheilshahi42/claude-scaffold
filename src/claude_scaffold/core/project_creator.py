@@ -18,6 +18,7 @@ class ProjectCreator:
     """Handles the main project creation workflow."""
 
     def __init__(self, debug_mode: bool = False):
+        self.debug_mode = debug_mode
         self.templates = ProjectTemplates()
         self.interactive_setup = InteractiveSetup(debug_mode=debug_mode)
         self.enhanced_setup = None  # Created on demand
@@ -50,6 +51,7 @@ class ProjectCreator:
         force: bool = False,
         interactive: bool = True,
         enhanced: bool = False,
+        retro: bool = False,
         config_file: Optional[Path] = None,
     ) -> bool:
         """Create a new Claude Scaffold project."""
@@ -75,19 +77,27 @@ class ProjectCreator:
         try:
             # Handle interactive setup separately to avoid terminal conflicts
             if interactive:
-                print(f"\n{icons.PROGRESS} Starting interactive setup...")
-                if enhanced:
+                if retro:
+                    # Use retro full-screen UI
+                    from ..interactive.retro_interactive_setup import RetroInteractiveSetup
+                    use_claude = self.check_claude_available()
+                    retro_setup = RetroInteractiveSetup(use_claude=use_claude, debug_mode=self.debug_mode)
+                    project_data = retro_setup.run(project_name)
+                elif enhanced:
                     # Use enhanced setup with deep discovery
+                    print(f"\n{icons.PROGRESS} Starting interactive setup...")
                     if self.enhanced_setup is None:
                         self.enhanced_setup = EnhancedInteractiveSetup(
                             config_file=str(config_file) if config_file else None
                         )
                     project_data = self.enhanced_setup.run()
+                    print(f"{icons.SUCCESS} Interactive setup completed\n")
                 else:
-                    # Check if Claude is available
+                    # Use standard interactive setup
+                    print(f"\n{icons.PROGRESS} Starting interactive setup...")
                     use_claude = self.check_claude_available()
                     project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
-                print(f"{icons.SUCCESS} Interactive setup completed\n")
+                    print(f"{icons.SUCCESS} Interactive setup completed\n")
             else:
                 # Use config file if provided, otherwise minimal defaults
                 if config_file and config_file.exists():

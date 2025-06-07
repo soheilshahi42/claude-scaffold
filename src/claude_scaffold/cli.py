@@ -87,6 +87,11 @@ Project Types:
         help="Use enhanced UI with deep discovery system (experimental)",
     )
     new_parser.add_argument(
+        "--retro",
+        action="store_true",
+        help="Use retro full-screen UI with Anthropic black/orange theme",
+    )
+    new_parser.add_argument(
         "--config", type=Path, help="Path to configuration file (claude-scaffold.yaml)"
     )
 
@@ -142,6 +147,7 @@ Project Types:
                 force=args.force,
                 interactive=not args.no_interactive,
                 enhanced=args.enhanced,
+                retro=args.retro,
                 config_file=args.config,
             )
             sys.exit(0 if success else 1)
