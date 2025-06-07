@@ -43,6 +43,10 @@ class RetroTheme:
     TEXT = WHITE
     TEXT_DIM = LIGHT_GRAY
     
+    # Status colors
+    GREEN = "#00ff00"  # Bright green for success
+    RED = "#ff0000"    # Bright red for errors
+    
     # Retro CRT effect colors
     SCANLINE = "#111111"
     GLOW = ORANGE_DARK
