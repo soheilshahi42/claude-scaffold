@@ -482,12 +482,12 @@ class RetroUI:
             # Multiline input - create a notepad-like text area
             self._clear_screen()
             
-            # Create text editor layout
+            # Show header and initial instructions
             layout = Layout()
             layout.split_column(
                 Layout(name="header", size=7),
-                Layout(name="editor", ratio=1),
-                Layout(name="footer", size=5)
+                Layout(name="instructions", size=12),
+                Layout(name="footer", size=3)
             )
             
             # Header with question
@@ -504,93 +504,73 @@ class RetroUI:
                 )
             )
             
-            # Editor area with default text preview
-            editor_lines = []
-            editor_lines.append(Text("\n  Type your text below:\n", style=self.theme.TEXT_DIM))
+            # Instructions
+            instr_lines = []
+            instr_lines.append(Text("\n  TEXT EDITOR MODE", style=f"bold {self.theme.ORANGE}"))
+            instr_lines.append(Text("  " + "─" * 40, style=self.theme.ORANGE_DARK))
             
             if default:
-                editor_lines.append(Text("  Current text:", style=self.theme.ORANGE))
-                # Show default text with wrapping
+                instr_lines.append(Text("\n  Current text:", style=self.theme.TEXT_DIM))
                 default_lines = default.split('\n')
-                for line in default_lines[:5]:
-                    if len(line) > 70:
-                        line = line[:67] + "..."
-                    editor_lines.append(Text(f"  {line}", style=self.theme.WHITE))
-                if len(default_lines) > 5:
-                    editor_lines.append(Text(f"  ... and {len(default_lines) - 5} more lines", style=self.theme.TEXT_DIM))
-                editor_lines.append(Text(""))
+                for line in default_lines[:3]:
+                    if len(line) > 60:
+                        line = line[:57] + "..."
+                    instr_lines.append(Text(f"  • {line}", style=self.theme.WHITE))
+                if len(default_lines) > 3:
+                    instr_lines.append(Text(f"  ... and {len(default_lines) - 3} more lines", style=self.theme.TEXT_DIM))
             
-            editor_lines.append(Text("  Press ENTER twice to finish", style=f"bold {self.theme.ORANGE}"))
+            instr_lines.append(Text("\n  Start typing below. Press ENTER twice when done.", style=f"bold {self.theme.ORANGE}"))
             
-            editor_content = Panel(
-                Group(*editor_lines),
-                title=f"[{self.theme.ORANGE}]▌ TEXT EDITOR ▐[/]",
-                border_style=self.theme.ORANGE,
-                box=HEAVY,
-                padding=(1, 2)
+            layout["instructions"].update(
+                Panel(
+                    Group(*instr_lines),
+                    border_style=self.theme.ORANGE,
+                    box=MINIMAL,
+                    padding=(1, 2)
+                )
             )
-            
-            layout["editor"].update(editor_content)
             
             # Footer
             footer_text = Text()
             footer_text.append("ENTER ENTER ", style=f"bold {self.theme.ORANGE}")
-            footer_text.append("Save & Continue   ", style=self.theme.TEXT_DIM)
+            footer_text.append("Save   ", style=self.theme.TEXT_DIM)
             footer_text.append("CTRL+C ", style=f"bold {self.theme.ORANGE}")
             footer_text.append("Cancel", style=self.theme.TEXT_DIM)
             
             layout["footer"].update(
-                Align.center(
-                    Panel(
-                        Align.center(footer_text),
-                        border_style=self.theme.GRAY,
-                        box=MINIMAL
-                    )
-                )
+                Align.center(footer_text)
             )
             
             # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
-            # Show cursor and get multiline input
-            print('\033[?25h', end='', flush=True)
-            
-            # Position cursor for input
-            print("\n\n", end='')  # Move down from editor box
-            print("  > ", end='', flush=True)  # Input prompt
+            # Simple input area below
+            print(f"\n\033[38;2;218;119;86m{'─' * 80}\033[0m")  # Orange line
+            print('\033[?25h', end='', flush=True)  # Show cursor
             
             # Collect lines
             lines = []
             empty_line_count = 0
             
             try:
-                # If user wants to edit default, they need to type new content
-                # Otherwise just press Enter twice to accept default
                 while True:
-                    line = input()
+                    line = input("\033[38;2;218;119;86m▶\033[0m ")
                     
                     if line == "":
                         empty_line_count += 1
                         if empty_line_count >= 2:
-                            # Two empty lines = finish
                             break
                     else:
                         empty_line_count = 0
                         lines.append(line)
-                    
-                    if line != "" or empty_line_count < 2:
-                        print("  > ", end='', flush=True)  # Next line prompt
                         
             except KeyboardInterrupt:
-                # Cancelled - use default
                 lines = []
             
             # Determine final answer
             if lines:
-                # User entered new text
                 answer = '\n'.join(lines)
             else:
-                # User accepted default or cancelled
                 answer = default
             
             # Hide cursor
