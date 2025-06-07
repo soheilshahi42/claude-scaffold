@@ -219,7 +219,8 @@ Provide an improved list based on the feedback. Return a JSON array."""
             "Brief project description:",
             default=f"A {project_data['metadata']['project_type_name'].lower()} built with Claude Scaffold",
             subtitle="Step 2 of 7",
-            hint="Describe what your project will do"
+            hint="Describe what your project will do",
+            multiline=True  # Enable multiline text editor
         )
         
         project_data["metadata"]["description"] = description

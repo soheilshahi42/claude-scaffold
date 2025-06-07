@@ -497,10 +497,26 @@ class RetroUI:
                 )
             )
             
-            # Editor area
+            # Editor area with default text preview
+            editor_lines = []
+            editor_lines.append(Text("\n  Type your text below:\n", style=self.theme.TEXT_DIM))
+            
+            if default:
+                editor_lines.append(Text("  Current text:", style=self.theme.ORANGE))
+                # Show default text with wrapping
+                default_lines = default.split('\n')
+                for line in default_lines[:5]:
+                    if len(line) > 70:
+                        line = line[:67] + "..."
+                    editor_lines.append(Text(f"  {line}", style=self.theme.WHITE))
+                if len(default_lines) > 5:
+                    editor_lines.append(Text(f"  ... and {len(default_lines) - 5} more lines", style=self.theme.TEXT_DIM))
+                editor_lines.append(Text(""))
+            
+            editor_lines.append(Text("  Press ENTER twice to finish", style=f"bold {self.theme.ORANGE}"))
+            
             editor_content = Panel(
-                Text("\n  Type your text below (Press ESC then ENTER when done):\n", 
-                     style=self.theme.TEXT_DIM),
+                Group(*editor_lines),
                 title=f"[{self.theme.ORANGE}]▌ TEXT EDITOR ▐[/]",
                 border_style=self.theme.ORANGE,
                 box=HEAVY,
@@ -511,8 +527,8 @@ class RetroUI:
             
             # Footer
             footer_text = Text()
-            footer_text.append("ESC + ENTER ", style=f"bold {self.theme.ORANGE}")
-            footer_text.append("Save & Exit   ", style=self.theme.TEXT_DIM)
+            footer_text.append("ENTER ENTER ", style=f"bold {self.theme.ORANGE}")
+            footer_text.append("Save & Continue   ", style=self.theme.TEXT_DIM)
             footer_text.append("CTRL+C ", style=f"bold {self.theme.ORANGE}")
             footer_text.append("Cancel", style=self.theme.TEXT_DIM)
             
@@ -532,24 +548,43 @@ class RetroUI:
             # Show cursor and get multiline input
             print('\033[?25h', end='', flush=True)
             
-            # Collect lines until ESC+ENTER
-            lines = []
-            if default:
-                lines = default.split('\n')
+            # Position cursor for input
+            print("\n\n", end='')  # Move down from editor box
+            print("  > ", end='', flush=True)  # Input prompt
             
-            # Simple multiline input collection
-            print("\n")  # Move to content area
+            # Collect lines
+            lines = []
+            empty_line_count = 0
+            
             try:
+                # If user wants to edit default, they need to type new content
+                # Otherwise just press Enter twice to accept default
                 while True:
                     line = input()
-                    # Check if user wants to finish (empty line followed by another empty line)
-                    if line == "" and len(lines) > 0 and lines[-1] == "":
-                        break
-                    lines.append(line)
+                    
+                    if line == "":
+                        empty_line_count += 1
+                        if empty_line_count >= 2:
+                            # Two empty lines = finish
+                            break
+                    else:
+                        empty_line_count = 0
+                        lines.append(line)
+                    
+                    if line != "" or empty_line_count < 2:
+                        print("  > ", end='', flush=True)  # Next line prompt
+                        
             except KeyboardInterrupt:
-                lines = [default] if default else [""]
+                # Cancelled - use default
+                lines = []
             
-            answer = '\n'.join(lines[:-1]) if len(lines) > 1 else (lines[0] if lines else default)
+            # Determine final answer
+            if lines:
+                # User entered new text
+                answer = '\n'.join(lines)
+            else:
+                # User accepted default or cancelled
+                answer = default
             
             # Hide cursor
             print('\033[?25l', end='', flush=True)
