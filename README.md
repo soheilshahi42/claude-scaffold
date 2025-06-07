@@ -3,7 +3,6 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://github.com/soheilshahi42/claude-scaffold/actions/workflows/tests.yml/badge.svg)](https://github.com/soheilshahi42/claude-scaffold/actions/workflows/tests.yml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![GitHub stars](https://img.shields.io/github/stars/soheilshahi42/claude-scaffold?style=social)](https://github.com/soheilshahi42/claude-scaffold)
 [![GitHub issues](https://img.shields.io/github/issues/soheilshahi42/claude-scaffold)](https://github.com/soheilshahi42/claude-scaffold/issues)
