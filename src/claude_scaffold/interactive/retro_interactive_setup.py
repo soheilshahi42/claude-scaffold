@@ -211,7 +211,7 @@ Provide an improved list based on the feedback. Return a JSON array."""
                     "Optimizing configuration"
                 ]
             )
-            time.sleep(1)  # Give time to see the animation
+            time.sleep(0.5)  # Brief pause
             self.ui.stop_progress()
             
         description = self.ui.ask_text(

@@ -827,7 +827,8 @@ class RetroUI:
             generate_frame(),
             console=self.console,
             refresh_per_second=10,
-            transient=False
+            transient=False,
+            screen=True  # Use alternate screen buffer
         )
         
         def animate():
@@ -850,6 +851,8 @@ class RetroUI:
                 self.live_display.stop()
             except:
                 pass
+        # Clear screen after stopping progress
+        self._clear_screen()
     
     def ask_feedback(
         self,
