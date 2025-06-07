@@ -524,7 +524,9 @@ class RetroUI:
             instr_lines.append(Text("     • Type or paste your text", style=self.theme.WHITE))
             instr_lines.append(Text("     • Press Ctrl+D when done", style=self.theme.WHITE))
             instr_lines.append(Text("     • Press Ctrl+C to cancel", style=self.theme.WHITE))
-            instr_lines.append(Text("\n  💡 Tip: For large texts, paste everything at once!", style=self.theme.TEXT_DIM))
+            instr_lines.append(Text("\n  ⚠️  Note: Arrow keys not supported - use backspace to edit", style=self.theme.ORANGE_LIGHT))
+            instr_lines.append(Text("\n  💡 Tip: For best results, prepare your text in an editor", style=self.theme.TEXT_DIM))
+            instr_lines.append(Text("     then paste it all at once!", style=self.theme.TEXT_DIM))
             
             layout["instructions"].update(
                 Panel(
@@ -558,14 +560,40 @@ class RetroUI:
                 # Read all input until EOF (Ctrl+D)
                 import sys
                 lines = []
-                print("📝 Enter/paste your text (press Ctrl+D when done):\n")
+                print("📝 Enter/paste your text (press Ctrl+D when done):")
+                print("   (Or press Enter for single-line input with arrow key support)\n")
                 
+                # First line - check if user wants multiline or single line
                 try:
-                    while True:
-                        line = input()
-                        lines.append(line)
+                    first_line = input()
+                    if first_line:
+                        # User typed something, continue with multiline
+                        lines.append(first_line)
+                        try:
+                            while True:
+                                line = input()
+                                lines.append(line)
+                        except EOFError:
+                            # Ctrl+D pressed, done entering text
+                            pass
+                    else:
+                        # Empty first line - switch to single line input with questionary
+                        self._clear_screen()
+                        print(f"\n\033[38;2;218;119;86mUsing single-line input mode (with arrow key support)\033[0m\n")
+                        
+                        # Use questionary for better input
+                        import questionary
+                        single_line = questionary.text(
+                            f"Enter your {question.lower()}",
+                            default=default,
+                            style=self.qstyle
+                        ).ask()
+                        
+                        if single_line:
+                            lines = [single_line]
+                        
                 except EOFError:
-                    # Ctrl+D pressed, done entering text
+                    # Ctrl+D on first line
                     pass
                 
                 # Join all lines
