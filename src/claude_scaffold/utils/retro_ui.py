@@ -70,6 +70,19 @@ class RetroUI:
             ("disabled", f"fg:{self.theme.GRAY}"),
         ])
         
+        # Register cleanup handler
+        import atexit
+        atexit.register(self.cleanup)
+    
+    def cleanup(self):
+        """Restore terminal state on exit."""
+        # Show cursor
+        print('\033[?25h', end='', flush=True)
+        # Clear screen
+        self._clear_screen()
+        # Restore cursor
+        print('\033[?25h', end='', flush=True)
+        
     def _get_terminal_size(self) -> Tuple[int, int]:
         """Get terminal dimensions."""
         size = shutil.get_terminal_size()
@@ -78,6 +91,8 @@ class RetroUI:
     def _clear_screen(self):
         """Clear the terminal screen."""
         os.system('clear' if os.name == 'posix' else 'cls')
+        # Hide cursor to prevent it from appearing below the box
+        print('\033[?25l', end='', flush=True)
         
     def _create_header(self, title: str, subtitle: str = "") -> Panel:
         """Create a retro header panel."""
@@ -197,8 +212,21 @@ class RetroUI:
         # Footer
         layout["footer"].update(self._create_footer("Press Enter to start"))
         
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-        input()  # Wait for Enter
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        # Move cursor to top-left to avoid any extra lines
+        print('\033[H', end='', flush=True)
+        
+        # Wait for Enter without showing cursor
+        import sys, tty, termios
+        old_settings = termios.tcgetattr(sys.stdin)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            while True:
+                key = sys.stdin.read(1)
+                if key == '\r' or key == '\n':
+                    break
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         
     def ask_selection(
         self, 
@@ -393,8 +421,10 @@ class RetroUI:
         # Footer
         layout["footer"].update(self._create_footer(hint or "Type your answer"))
         
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+        # Print layout and move cursor to top to avoid line at bottom
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        # Move cursor to top-left to avoid any extra lines
+        print('\033[H', end='', flush=True)
         
         # Clear screen again to prepare for centered input
         self._clear_screen()
@@ -429,6 +459,9 @@ class RetroUI:
         input_prompt.append("▶ ", style=f"bold {self.theme.ORANGE}")
         self.console.print(Align.center(input_prompt), end="")
         
+        # Show cursor for input
+        print('\033[?25h', end='', flush=True)
+        
         # Get input using standard input (questionary doesn't center well)
         if not multiline:
             answer = input(f"") or default
@@ -441,6 +474,9 @@ class RetroUI:
                 style=self.qstyle,
                 qmark=""
             ).ask()
+        
+        # Hide cursor again
+        print('\033[?25l', end='', flush=True)
         
         return answer
         
@@ -744,8 +780,10 @@ class RetroUI:
             self._create_footer("Press Enter to continue" if not actions else "Select an action")
         )
         
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+        # Print layout and move cursor to top to avoid line at bottom
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        # Move cursor to top-left to avoid any extra lines
+        print('\033[H', end='', flush=True)
         
         if actions:
             # Get action selection
@@ -757,7 +795,17 @@ class RetroUI:
             except ValueError:
                 pass
         else:
-            input()  # Wait for Enter
+            # Wait for Enter without showing cursor
+            import sys, tty, termios
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                while True:
+                    key = sys.stdin.read(1)
+                    if key == '\r' or key == '\n':
+                        break
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
             
         return None
         
@@ -819,6 +867,19 @@ class RetroUI:
             self._create_footer("Press Enter to exit")
         )
         
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-        input()  # Wait for Enter
+        # Print layout and move cursor to top to avoid line at bottom
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        # Move cursor to top-left to avoid any extra lines
+        print('\033[H', end='', flush=True)
+        
+        # Wait for Enter without showing cursor
+        import sys, tty, termios
+        old_settings = termios.tcgetattr(sys.stdin)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            while True:
+                key = sys.stdin.read(1)
+                if key == '\r' or key == '\n':
+                    break
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
