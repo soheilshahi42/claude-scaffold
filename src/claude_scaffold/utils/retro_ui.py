@@ -634,18 +634,29 @@ class RetroUI:
                     char = sys.stdin.read(1)
                     
                     if char == '\r' or char == '\n':  # Enter
-                        if current_line == "" and len(lines) > 0 and lines[-1] == "":
-                            # Two enters = done
-                            break
+                        # Check if this is the second consecutive empty line
+                        if current_line == "":
+                            # Check if we're at the end and previous line is also empty
+                            if current_row == len(lines) and len(lines) > 0 and lines[-1] == "":
+                                # Two enters = done
+                                break
+                            elif current_row < len(lines) and current_row > 0 and lines[current_row - 1] == "":
+                                # Two enters in the middle = done
+                                break
+                        
+                        # Normal enter - add new line
+                        if current_row < len(lines):
+                            lines[current_row] = current_line
                         else:
                             lines.append(current_line)
-                            current_line = ""
-                            cursor_pos = 0
-                            current_row += 1
-                            
-                            # Handle scrolling
-                            if current_row - scroll_offset >= box_height:
-                                scroll_offset = current_row - box_height + 1
+                        
+                        current_line = ""
+                        cursor_pos = 0
+                        current_row += 1
+                        
+                        # Handle scrolling
+                        if current_row - scroll_offset >= box_height:
+                            scroll_offset = current_row - box_height + 1
                     
                     elif char == '\x7f' or char == '\x08':  # Backspace
                         if cursor_pos > 0:
@@ -675,16 +686,15 @@ class RetroUI:
                                 arrow = sys.stdin.read(1)
                                 if arrow == 'A':  # Up arrow
                                     if current_row > 0:
-                                        # Save current line
-                                        if current_row == len(lines):
-                                            temp_line = current_line
-                                            current_row -= 1
-                                            current_line = lines[current_row]
-                                            lines.append(temp_line)
-                                        else:
+                                        # Save current line first
+                                        if current_row < len(lines):
                                             lines[current_row] = current_line
-                                            current_row -= 1
-                                            current_line = lines[current_row]
+                                        elif current_line != "":  # Only append if not empty
+                                            lines.append(current_line)
+                                        
+                                        # Move to previous line
+                                        current_row -= 1
+                                        current_line = lines[current_row] if current_row < len(lines) else ""
                                         cursor_pos = min(cursor_pos, len(current_line))
                                         
                                         # Adjust scroll if needed
@@ -692,14 +702,16 @@ class RetroUI:
                                             scroll_offset = current_row
                                             
                                 elif arrow == 'B':  # Down arrow
+                                    # Save current line first
                                     if current_row < len(lines):
-                                        # Save current line
                                         lines[current_row] = current_line
+                                    elif current_line != "":  # Only append if not empty
+                                        lines.append(current_line)
+                                    
+                                    # Move to next line
+                                    if current_row < len(lines):
                                         current_row += 1
-                                        if current_row < len(lines):
-                                            current_line = lines[current_row]
-                                        else:
-                                            current_line = ""
+                                        current_line = lines[current_row] if current_row < len(lines) else ""
                                         cursor_pos = min(cursor_pos, len(current_line))
                                         
                                         # Adjust scroll if needed
