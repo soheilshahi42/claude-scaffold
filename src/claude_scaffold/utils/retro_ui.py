@@ -569,8 +569,101 @@ class RetroUI:
                     pass
                 
                 # Join all lines
-                answer = '\n'.join(lines) if lines else default
+                entered_text = '\n'.join(lines) if lines else ""
                 
+                if entered_text:
+                    # Show what was entered and ask for confirmation
+                    self._clear_screen()
+                    
+                    # Create review layout
+                    review_layout = Layout()
+                    review_layout.split_column(
+                        Layout(name="header", size=5),
+                        Layout(name="content", ratio=1),
+                        Layout(name="footer", size=5)
+                    )
+                    
+                    # Header
+                    review_layout["header"].update(
+                        Panel(
+                            Align.center(Text("REVIEW YOUR TEXT", style=f"bold {self.theme.ORANGE}")),
+                            border_style=self.theme.ORANGE_DARK,
+                            box=DOUBLE
+                        )
+                    )
+                    
+                    # Content - show the text in a scrollable view
+                    text_lines = entered_text.split('\n')
+                    content_lines = []
+                    content_lines.append(Text(f"\n  Total lines: {len(text_lines)}", style=self.theme.ORANGE))
+                    content_lines.append(Text(f"  Total characters: {len(entered_text)}\n", style=self.theme.ORANGE))
+                    content_lines.append(Text("  Preview (first 50 lines):", style=self.theme.TEXT_DIM))
+                    content_lines.append(Text("  " + "─" * 80, style=self.theme.ORANGE_DARK))
+                    
+                    # Show first 50 lines
+                    for i, line in enumerate(text_lines[:50]):
+                        if len(line) > 100:
+                            line = line[:97] + "..."
+                        content_lines.append(Text(f"  {line}", style=self.theme.WHITE))
+                    
+                    if len(text_lines) > 50:
+                        content_lines.append(Text(f"\n  ... and {len(text_lines) - 50} more lines", style=self.theme.TEXT_DIM))
+                    
+                    review_layout["content"].update(
+                        Panel(
+                            Group(*content_lines),
+                            border_style=self.theme.ORANGE,
+                            box=MINIMAL,
+                            padding=(1, 2)
+                        )
+                    )
+                    
+                    # Footer
+                    footer_text = Text()
+                    footer_text.append("Is this correct? ", style=self.theme.TEXT_DIM)
+                    footer_text.append("Y", style=f"bold {self.theme.ORANGE}")
+                    footer_text.append(" = Yes, use this text | ", style=self.theme.TEXT_DIM)
+                    footer_text.append("N", style=f"bold {self.theme.ORANGE}")
+                    footer_text.append(" = No, use default | ", style=self.theme.TEXT_DIM)
+                    footer_text.append("R", style=f"bold {self.theme.ORANGE}")
+                    footer_text.append(" = Retry", style=self.theme.TEXT_DIM)
+                    
+                    review_layout["footer"].update(
+                        Panel(
+                            Align.center(footer_text),
+                            border_style=self.theme.GRAY,
+                            box=MINIMAL
+                        )
+                    )
+                    
+                    # Show review
+                    self.console.print(review_layout, style=f"on {self.theme.BACKGROUND}")
+                    
+                    # Get confirmation
+                    import termios, tty
+                    old_settings = termios.tcgetattr(sys.stdin)
+                    try:
+                        tty.setraw(sys.stdin.fileno())
+                        while True:
+                            key = sys.stdin.read(1).lower()
+                            if key == 'y':
+                                answer = entered_text
+                                break
+                            elif key == 'n':
+                                answer = default
+                                break
+                            elif key == 'r':
+                                # Retry - recursive call
+                                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                                return self.ask_text(title, question, default, subtitle, hint, multiline=True)
+                            elif key == '\x03':  # Ctrl+C
+                                raise KeyboardInterrupt()
+                    finally:
+                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                else:
+                    # No text entered, use default
+                    answer = default
+                    
             except KeyboardInterrupt:
                 # Ctrl+C pressed, use default
                 answer = default
