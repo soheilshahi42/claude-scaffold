@@ -479,225 +479,202 @@ class RetroUI:
             # Hide cursor again
             print('\033[?25l', end='', flush=True)
         else:
-            # Multiline input - use a simpler approach for large text
-            self._clear_screen()
-            
-            # Show instructions
-            layout = Layout()
-            layout.split_column(
-                Layout(name="header", size=7),
-                Layout(name="instructions", size=15),
-                Layout(name="footer", size=3)
+            # Multiline input - first ask user which mode they prefer
+            mode = self.ask_selection(
+                "INPUT MODE",
+                "How would you like to enter your text?",
+                [
+                    {"name": "📝 Simple editor (recommended for short texts)", "value": "simple"},
+                    {"name": "📋 Paste mode (for large texts from external editor)", "value": "paste"},
+                    {"name": "↩️ Keep default text", "value": "default"}
+                ],
+                subtitle=title,
+                hint="Choose your preferred input method"
             )
             
-            # Header
-            header_group = []
-            header_group.append(Align.center(Text(title, style=f"bold {self.theme.ORANGE}")))
-            header_group.append(Text(""))
-            header_group.append(Align.center(question_text))
-            
-            layout["header"].update(
-                Panel(
-                    Group(*header_group),
-                    border_style=self.theme.ORANGE_DARK,
-                    box=DOUBLE
-                )
-            )
-            
-            # Instructions
-            instr_lines = []
-            instr_lines.append(Text("\n  📝 TEXT INPUT MODE", style=f"bold {self.theme.ORANGE}"))
-            instr_lines.append(Text("  " + "─" * 60, style=self.theme.ORANGE_DARK))
-            
-            if default:
-                instr_lines.append(Text("\n  Current text (first 200 chars):", style=self.theme.TEXT_DIM))
-                preview = default[:200] + "..." if len(default) > 200 else default
-                # Show preview in a box
-                for line in preview.split('\n')[:5]:
-                    if len(line) > 80:
-                        line = line[:77] + "..."
-                    instr_lines.append(Text(f"  {line}", style=self.theme.WHITE))
-                if len(preview.split('\n')) > 5:
-                    instr_lines.append(Text("  ...", style=self.theme.TEXT_DIM))
-            
-            instr_lines.append(Text("\n  ⚡ You can:", style=f"bold {self.theme.ORANGE}"))
-            instr_lines.append(Text("     • Type or paste your text", style=self.theme.WHITE))
-            instr_lines.append(Text("     • Press Ctrl+D when done", style=self.theme.WHITE))
-            instr_lines.append(Text("     • Press Ctrl+C to cancel", style=self.theme.WHITE))
-            instr_lines.append(Text("\n  ⚠️  Note: Arrow keys not supported - use backspace to edit", style=self.theme.ORANGE_LIGHT))
-            instr_lines.append(Text("\n  💡 Tip: For best results, prepare your text in an editor", style=self.theme.TEXT_DIM))
-            instr_lines.append(Text("     then paste it all at once!", style=self.theme.TEXT_DIM))
-            
-            layout["instructions"].update(
-                Panel(
-                    Group(*instr_lines),
-                    border_style=self.theme.ORANGE,
-                    box=HEAVY,
-                    padding=(1, 2)
-                )
-            )
-            
-            # Footer
-            footer_text = Text()
-            footer_text.append("Type/Paste your text below | ", style=self.theme.TEXT_DIM)
-            footer_text.append("Ctrl+D ", style=f"bold {self.theme.ORANGE}")
-            footer_text.append("Save | ", style=self.theme.TEXT_DIM)
-            footer_text.append("Ctrl+C ", style=f"bold {self.theme.ORANGE}")
-            footer_text.append("Cancel", style=self.theme.TEXT_DIM)
-            
-            layout["footer"].update(
-                Align.center(footer_text)
-            )
-            
-            # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-            
-            # Simple input collection using standard Python
-            print(f"\n\033[38;2;218;119;86m{'─' * 80}\033[0m\n")  # Orange line
-            print('\033[?25h', end='', flush=True)  # Show cursor
-            
-            try:
-                # Read all input until EOF (Ctrl+D)
-                import sys
-                lines = []
-                print("📝 Enter/paste your text (press Ctrl+D when done):")
-                print("   (Or press Enter for single-line input with arrow key support)\n")
+            if mode == "default":
+                return default
+            elif mode == "simple":
+                # Use questionary with multiline support
+                self._clear_screen()
                 
-                # First line - check if user wants multiline or single line
-                try:
-                    first_line = input()
-                    if first_line:
-                        # User typed something, continue with multiline
-                        lines.append(first_line)
-                        try:
-                            while True:
-                                line = input()
-                                lines.append(line)
-                        except EOFError:
-                            # Ctrl+D pressed, done entering text
-                            pass
-                    else:
-                        # Empty first line - switch to single line input with questionary
-                        self._clear_screen()
-                        print(f"\n\033[38;2;218;119;86mUsing single-line input mode (with arrow key support)\033[0m\n")
-                        
-                        # Use questionary for better input
-                        import questionary
-                        single_line = questionary.text(
-                            f"Enter your {question.lower()}",
-                            default=default,
-                            style=self.qstyle
-                        ).ask()
-                        
-                        if single_line:
-                            lines = [single_line]
-                        
-                except EOFError:
-                    # Ctrl+D on first line
-                    pass
+                # Show header
+                print(f"\n\033[38;2;218;119;86m{'═' * 80}\033[0m")
+                print(f"\033[38;2;218;119;86m{title.center(80)}\033[0m")
+                print(f"\033[38;2;218;119;86m{'═' * 80}\033[0m\n")
                 
-                # Join all lines
-                entered_text = '\n'.join(lines) if lines else ""
+                # Show current text if any
+                if default:
+                    print("Current text:")
+                    print(f"\033[38;2;102;102;102m{default[:200]}{'...' if len(default) > 200 else ''}\033[0m\n")
                 
-                if entered_text:
-                    # Show what was entered and ask for confirmation
-                    self._clear_screen()
-                    
-                    # Create review layout
-                    review_layout = Layout()
-                    review_layout.split_column(
-                        Layout(name="header", size=5),
-                        Layout(name="content", ratio=1),
-                        Layout(name="footer", size=5)
-                    )
-                    
-                    # Header
-                    review_layout["header"].update(
-                        Panel(
-                            Align.center(Text("REVIEW YOUR TEXT", style=f"bold {self.theme.ORANGE}")),
-                            border_style=self.theme.ORANGE_DARK,
-                            box=DOUBLE
-                        )
-                    )
-                    
-                    # Content - show the text in a scrollable view
-                    text_lines = entered_text.split('\n')
-                    content_lines = []
-                    content_lines.append(Text(f"\n  Total lines: {len(text_lines)}", style=self.theme.ORANGE))
-                    content_lines.append(Text(f"  Total characters: {len(entered_text)}\n", style=self.theme.ORANGE))
-                    content_lines.append(Text("  Preview (first 50 lines):", style=self.theme.TEXT_DIM))
-                    content_lines.append(Text("  " + "─" * 80, style=self.theme.ORANGE_DARK))
-                    
-                    # Show first 50 lines
-                    for i, line in enumerate(text_lines[:50]):
-                        if len(line) > 100:
-                            line = line[:97] + "..."
-                        content_lines.append(Text(f"  {line}", style=self.theme.WHITE))
-                    
-                    if len(text_lines) > 50:
-                        content_lines.append(Text(f"\n  ... and {len(text_lines) - 50} more lines", style=self.theme.TEXT_DIM))
-                    
-                    review_layout["content"].update(
-                        Panel(
-                            Group(*content_lines),
-                            border_style=self.theme.ORANGE,
-                            box=MINIMAL,
-                            padding=(1, 2)
-                        )
-                    )
-                    
-                    # Footer
-                    footer_text = Text()
-                    footer_text.append("Is this correct? ", style=self.theme.TEXT_DIM)
-                    footer_text.append("Y", style=f"bold {self.theme.ORANGE}")
-                    footer_text.append(" = Yes, use this text | ", style=self.theme.TEXT_DIM)
-                    footer_text.append("N", style=f"bold {self.theme.ORANGE}")
-                    footer_text.append(" = No, use default | ", style=self.theme.TEXT_DIM)
-                    footer_text.append("R", style=f"bold {self.theme.ORANGE}")
-                    footer_text.append(" = Retry", style=self.theme.TEXT_DIM)
-                    
-                    review_layout["footer"].update(
-                        Panel(
-                            Align.center(footer_text),
-                            border_style=self.theme.GRAY,
-                            box=MINIMAL
-                        )
-                    )
-                    
-                    # Show review
-                    self.console.print(review_layout, style=f"on {self.theme.BACKGROUND}")
-                    
-                    # Get confirmation
-                    import termios, tty
-                    old_settings = termios.tcgetattr(sys.stdin)
-                    try:
-                        tty.setraw(sys.stdin.fileno())
-                        while True:
-                            key = sys.stdin.read(1).lower()
-                            if key == 'y':
-                                answer = entered_text
-                                break
-                            elif key == 'n':
-                                answer = default
-                                break
-                            elif key == 'r':
-                                # Retry - recursive call
-                                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-                                return self.ask_text(title, question, default, subtitle, hint, multiline=True)
-                            elif key == '\x03':  # Ctrl+C
-                                raise KeyboardInterrupt()
-                    finally:
-                        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-                else:
-                    # No text entered, use default
+                print(f"✏️  {question}")
+                print("(Press Tab to toggle between single/multi-line mode)\n")
+                
+                # Use questionary for input with arrow key support
+                import questionary
+                answer = questionary.text(
+                    "",
+                    default=default,
+                    multiline=True,
+                    style=self.qstyle
+                ).ask()
+                
+                if answer is None:  # User cancelled
                     answer = default
                     
-            except KeyboardInterrupt:
-                # Ctrl+C pressed, use default
-                answer = default
+                return answer
                 
-            # Hide cursor
-            print('\033[?25l', end='', flush=True)
+            else:  # paste mode
+                self._clear_screen()
+                
+                # Show instructions
+                layout = Layout()
+                layout.split_column(
+                    Layout(name="header", size=7),
+                    Layout(name="instructions", size=12),
+                    Layout(name="footer", size=3)
+                )
+                
+                # Header
+                header_group = []
+                header_group.append(Align.center(Text(title, style=f"bold {self.theme.ORANGE}")))
+                header_group.append(Text(""))
+                header_group.append(Align.center(question_text))
+                
+                layout["header"].update(
+                    Panel(
+                        Group(*header_group),
+                        border_style=self.theme.ORANGE_DARK,
+                        box=DOUBLE
+                    )
+                )
+                
+                # Instructions
+                instr_lines = []
+                instr_lines.append(Text("\n  📋 PASTE MODE", style=f"bold {self.theme.ORANGE}"))
+                instr_lines.append(Text("  " + "─" * 60, style=self.theme.ORANGE_DARK))
+                
+                if default:
+                    instr_lines.append(Text("\n  Current text preview:", style=self.theme.TEXT_DIM))
+                    preview = default[:150] + "..." if len(default) > 150 else default
+                    instr_lines.append(Text(f"  {preview.split(chr(10))[0][:70]}", style=self.theme.GRAY))
+                
+                instr_lines.append(Text("\n  📌 Instructions:", style=f"bold {self.theme.ORANGE}"))
+                instr_lines.append(Text("     1. Paste your entire text below", style=self.theme.WHITE))
+                instr_lines.append(Text("     2. Press Ctrl+D when done", style=self.theme.WHITE))
+                instr_lines.append(Text("     3. Press Ctrl+C to cancel", style=self.theme.WHITE))
+                
+                layout["instructions"].update(
+                    Panel(
+                        Group(*instr_lines),
+                        border_style=self.theme.ORANGE,
+                        box=HEAVY,
+                        padding=(1, 2)
+                    )
+                )
+                
+                # Footer
+                footer_text = Text()
+                footer_text.append("Paste your text below | ", style=self.theme.TEXT_DIM)
+                footer_text.append("Ctrl+D ", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("Save | ", style=self.theme.TEXT_DIM)
+                footer_text.append("Ctrl+C ", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("Cancel", style=self.theme.TEXT_DIM)
+                
+                layout["footer"].update(
+                    Align.center(footer_text)
+                )
+                
+                # Print layout
+                self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+                
+                # Simple input collection
+                print(f"\n\033[38;2;218;119;86m{'─' * 80}\033[0m\n")
+                print('\033[?25h', end='', flush=True)  # Show cursor
+                
+                try:
+                    lines = []
+                    print("📋 Paste your text now (press Ctrl+D when done):\n")
+                    
+                    try:
+                        while True:
+                            line = input()
+                            lines.append(line)
+                    except EOFError:
+                        pass
+                
+                    # Join all lines
+                    entered_text = '\n'.join(lines) if lines else ""
+                    
+                    if entered_text:
+                        # Show review screen
+                        self._clear_screen()
+                        
+                        # Create review layout
+                        review_layout = Layout()
+                        review_layout.split_column(
+                            Layout(name="header", size=5),
+                            Layout(name="content", ratio=1),
+                            Layout(name="footer", size=5)
+                        )
+                        
+                        # Header
+                        review_layout["header"].update(
+                            Panel(
+                                Align.center(Text("REVIEW YOUR TEXT", style=f"bold {self.theme.ORANGE}")),
+                                border_style=self.theme.ORANGE_DARK,
+                                box=DOUBLE
+                            )
+                        )
+                        
+                        # Content - show the text in a scrollable view
+                        text_lines = entered_text.split('\n')
+                        content_lines = []
+                        content_lines.append(Text(f"\n  Total lines: {len(text_lines)}", style=self.theme.ORANGE))
+                        content_lines.append(Text(f"  Total characters: {len(entered_text)}\n", style=self.theme.ORANGE))
+                        content_lines.append(Text("  Preview (first 30 lines):", style=self.theme.TEXT_DIM))
+                        content_lines.append(Text("  " + "─" * 80, style=self.theme.ORANGE_DARK))
+                        
+                        # Show first 30 lines
+                        for i, line in enumerate(text_lines[:30]):
+                            if len(line) > 100:
+                                line = line[:97] + "..."
+                            content_lines.append(Text(f"  {line}", style=self.theme.WHITE))
+                        
+                        if len(text_lines) > 30:
+                            content_lines.append(Text(f"\n  ... and {len(text_lines) - 30} more lines", style=self.theme.TEXT_DIM))
+                        
+                        review_layout["content"].update(
+                            Panel(
+                                Group(*content_lines),
+                                border_style=self.theme.ORANGE,
+                                box=MINIMAL,
+                                padding=(1, 2)
+                            )
+                        )
+                        
+                        # Footer
+                        confirm = self.ask_confirm(
+                            "CONFIRM TEXT",
+                            "Use this text?",
+                            default=True,
+                            subtitle="Review complete"
+                        )
+                        
+                        if confirm:
+                            answer = entered_text
+                        else:
+                            answer = default
+                    else:
+                        answer = default
+                        
+                except KeyboardInterrupt:
+                    # Ctrl+C pressed, use default
+                    answer = default
+                    
+                # Hide cursor
+                print('\033[?25l', end='', flush=True)
         
         return answer
         
