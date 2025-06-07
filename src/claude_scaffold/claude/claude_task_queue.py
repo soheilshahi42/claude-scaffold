@@ -189,22 +189,22 @@ class ClaudeTaskQueue:
                             batch_progress.complete_operation(success=True)
                             self.logger.debug(f"Task completed: {task.id}")
 
-                    except Exception as e:
-                        task.error = e
-                        task.status = TaskStatus.FAILED
-                        self.results[task.id] = None
+                        except Exception as e:
+                            task.error = e
+                            task.status = TaskStatus.FAILED
+                            self.results[task.id] = None
 
-                        batch_progress.complete_operation(success=False)
-                        self.logger.error(f"Task failed: {task.id}", e)
+                            batch_progress.complete_operation(success=False)
+                            self.logger.error(f"Task failed: {task.id}", e)
 
-                        # Retry logic
-                        if task.retry_count < task.max_retries:
-                            task.retry_count += 1
-                            task.status = TaskStatus.RETRYING
-                            self.task_queue.put(task)
-                            self.logger.info(
-                                f"Retrying task: {task.id} (attempt {task.retry_count})"
-                            )
+                            # Retry logic
+                            if task.retry_count < task.max_retries:
+                                task.retry_count += 1
+                                task.status = TaskStatus.RETRYING
+                                self.task_queue.put(task)
+                                self.logger.info(
+                                    f"Retrying task: {task.id} (attempt {task.retry_count})"
+                                )
 
         return self.results
 
