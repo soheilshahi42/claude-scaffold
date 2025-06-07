@@ -17,13 +17,11 @@ class ClaudeScaffold:
         project_path=None,
         force=False,
         interactive=True,
-        enhanced=False,
-        retro=False,
         config_file=None,
     ):
         """Create a new Claude Scaffold project."""
         return self.project_creator.create_project(
-            project_name, project_path, force, interactive, enhanced, retro, config_file
+            project_name, project_path, force, interactive, config_file
         )
 
     def add_task(self, project_path, module_name, task_title, priority="medium"):

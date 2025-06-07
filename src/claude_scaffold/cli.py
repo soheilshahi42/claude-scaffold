@@ -82,16 +82,6 @@ Project Types:
         help="Skip interactive setup and use minimal defaults",
     )
     new_parser.add_argument(
-        "--enhanced",
-        action="store_true",
-        help="Use enhanced UI with deep discovery system (experimental)",
-    )
-    new_parser.add_argument(
-        "--retro",
-        action="store_true",
-        help="Use retro full-screen UI with Anthropic black/orange theme",
-    )
-    new_parser.add_argument(
         "--config", type=Path, help="Path to configuration file (claude-scaffold.yaml)"
     )
 
@@ -128,9 +118,8 @@ Project Types:
         print(f"{icons.INFO} Debug mode enabled. Logs: {logger.get_log_file_path()}")
         logger.info("CLI started with arguments", {"args": vars(args)})
 
-    # Show banner for interactive commands
-    if args.command == "new" and not args.no_interactive:
-        print_banner()
+    # Don't show banner for interactive mode (retro UI has its own welcome screen)
+    # Only show banner when no command is given
 
     if not args.command:
         print_banner()
@@ -146,8 +135,6 @@ Project Types:
                 project_path=args.path,
                 force=args.force,
                 interactive=not args.no_interactive,
-                enhanced=args.enhanced,
-                retro=args.retro,
                 config_file=args.config,
             )
             sys.exit(0 if success else 1)

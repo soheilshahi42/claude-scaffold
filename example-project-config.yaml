@@ -1,0 +1,58 @@
+# Example Claude Scaffold Project Configuration
+# Use this with: claude-scaffold new myproject --no-interactive --config example-project-config.yaml
+
+project_type: cli
+modules:
+  - name: core
+    description: Core functionality and business logic
+    type: custom
+  - name: core/commands
+    description: CLI command implementations
+    type: custom
+  - name: utils
+    description: Utility functions and helpers
+    type: custom
+  - name: config
+    description: Configuration management
+    type: custom
+
+tasks:
+  - module: core
+    title: Implement main application entry point
+    priority: high
+    description: Create the main entry point for the CLI application
+  - module: core/commands
+    title: Create base command structure
+    priority: high
+    description: Set up the command pattern for CLI commands
+  - module: utils
+    title: Add logging utilities
+    priority: medium
+    description: Implement logging configuration and utilities
+  - module: config
+    title: Create configuration loader
+    priority: medium
+    description: Implement YAML/JSON configuration file loading
+
+rules:
+  suggested:
+    - Use type hints for all function parameters and return values
+    - Follow PEP 8 style guide for Python code
+    - Write comprehensive docstrings for all public functions
+    - Implement proper error handling and logging
+  custom:
+    - All CLI commands must have --help documentation
+    - Configuration files should be validated before use
+
+metadata:
+  description: A command-line tool built with Claude Scaffold
+  language: Python
+  style_guide: pep8
+  test_framework: pytest
+  git:
+    init: true
+    initial_branch: main
+  commands:
+    test: pytest
+    lint: ruff check .
+    format: ruff format .

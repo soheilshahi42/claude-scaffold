@@ -4,8 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from ..interactive.enhanced_setup import EnhancedInteractiveSetup
-from ..interactive.interactive_setup import InteractiveSetup
+# Interactive setup is now handled by retro UI
 from ..templates.templates import ProjectTemplates
 from ..utils.icons import icons
 from ..utils.logger import get_logger
@@ -20,8 +19,6 @@ class ProjectCreator:
     def __init__(self, debug_mode: bool = False):
         self.debug_mode = debug_mode
         self.templates = ProjectTemplates()
-        self.interactive_setup = InteractiveSetup(debug_mode=debug_mode)
-        self.enhanced_setup = None  # Created on demand
         self.doc_generator = DocumentationGenerator()
         self.helpers = ProjectHelpers()
         self.logger = get_logger(debug_mode)
@@ -50,8 +47,6 @@ class ProjectCreator:
         project_path: Optional[Path] = None,
         force: bool = False,
         interactive: bool = True,
-        enhanced: bool = False,
-        retro: bool = False,
         config_file: Optional[Path] = None,
     ) -> bool:
         """Create a new Claude Scaffold project."""
@@ -77,27 +72,11 @@ class ProjectCreator:
         try:
             # Handle interactive setup separately to avoid terminal conflicts
             if interactive:
-                if retro:
-                    # Use retro full-screen UI
-                    from ..interactive.retro_interactive_setup import RetroInteractiveSetup
-                    use_claude = self.check_claude_available()
-                    retro_setup = RetroInteractiveSetup(use_claude=use_claude, debug_mode=self.debug_mode)
-                    project_data = retro_setup.run(project_name)
-                elif enhanced:
-                    # Use enhanced setup with deep discovery
-                    print(f"\n{icons.PROGRESS} Starting interactive setup...")
-                    if self.enhanced_setup is None:
-                        self.enhanced_setup = EnhancedInteractiveSetup(
-                            config_file=str(config_file) if config_file else None
-                        )
-                    project_data = self.enhanced_setup.run()
-                    print(f"{icons.SUCCESS} Interactive setup completed\n")
-                else:
-                    # Use standard interactive setup
-                    print(f"\n{icons.PROGRESS} Starting interactive setup...")
-                    use_claude = self.check_claude_available()
-                    project_data = self.interactive_setup.run(project_name, use_claude=use_claude)
-                    print(f"{icons.SUCCESS} Interactive setup completed\n")
+                # Always use retro full-screen UI for interactive mode
+                from ..interactive.retro_interactive_setup import RetroInteractiveSetup
+                use_claude = self.check_claude_available()
+                retro_setup = RetroInteractiveSetup(use_claude=use_claude, debug_mode=self.debug_mode)
+                project_data = retro_setup.run(project_name)
             else:
                 # Use config file if provided, otherwise minimal defaults
                 if config_file and config_file.exists():
@@ -155,7 +134,7 @@ class ProjectCreator:
 
                 # Save project configuration
                 progress.update("Saving project configuration")
-                self.interactive_setup.save_config(project_data, project_path)
+                self._save_config(project_data, project_path)
 
                 progress.complete(f"Project '{project_name}' created successfully!")
 
@@ -364,3 +343,12 @@ Generated on: {datetime.now().isoformat()}
             print(f"   {icons.WARNING} Git initialization failed: {e}")
         except FileNotFoundError:
             print(f"   {icons.WARNING} Git not found. Please install git to use version control.")
+    
+    def _save_config(self, project_data: Dict[str, Any], project_path: Path):
+        """Save project configuration to .claude directory."""
+        import yaml
+        config_path = project_path / ".claude" / "project_config.yaml"
+        config_path.parent.mkdir(exist_ok=True)
+        
+        with open(config_path, "w") as f:
+            yaml.dump(project_data, f, default_flow_style=False, sort_keys=False)
