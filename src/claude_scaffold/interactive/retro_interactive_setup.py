@@ -411,6 +411,14 @@ Provide an improved list based on the feedback. Return a JSON array."""
                                 
                     self.ui.stop_progress()
                     
+                    # Show the generated modules with descriptions
+                    self.ui.show_results(
+                        "GENERATED MODULES",
+                        {f"Module {i+1}": f"{m['name']} - {m['description']}" 
+                         for i, m in enumerate(modules)},
+                        f"Claude generated {len(modules)} modules with descriptions"
+                    )
+                    
                     # Allow refinement of modules
                     want_refine = self.ui.ask_confirm(
                         "REFINE MODULES",
@@ -499,20 +507,27 @@ Provide an improved list based on the feedback. Return a JSON array."""
             self.ui.stop_progress()
             
             if suggested_tasks:
-                # Show task summary
-                task_summary = f"Claude suggests {len(suggested_tasks)} tasks:\n\n"
-                for i, task in enumerate(suggested_tasks[:5], 1):
+                # Show all tasks in a results page
+                task_display = {}
+                for i, task in enumerate(suggested_tasks, 1):
                     priority_icon = icons.get_priority_icon(task.get("priority", "medium"))
-                    task_summary += f"{priority_icon} [{task['module']}] {task['title']}\n"
-                if len(suggested_tasks) > 5:
-                    task_summary += f"\n...and {len(suggested_tasks) - 5} more tasks"
-                    
+                    task_key = f"{priority_icon} Task {i}"
+                    task_value = f"[{task['module']}] {task['title']}"
+                    task_display[task_key] = task_value
+                
+                self.ui.show_results(
+                    "GENERATED TASKS",
+                    task_display,
+                    f"Claude suggests {len(suggested_tasks)} tasks",
+                    ["Accept all tasks", "Select specific tasks", "Skip tasks"]
+                )
+                
+                # Ask user what to do
                 use_suggested = self.ui.ask_confirm(
-                    "CLAUDE TASKS",
-                    task_summary,
+                    "USE TASKS",
+                    "Use Claude's suggested tasks?",
                     default=True,
-                    subtitle="AI Task Planning",
-                    hint="Review and accept Claude's task list"
+                    subtitle="AI Task Planning"
                 )
                 
                 if use_suggested:

@@ -484,12 +484,11 @@ class RetroUI:
             import tty
             import termios
             
-            # Initialize text buffer
+            # Initialize text buffer  
             lines = []
             current_line = ""
             cursor_pos = 0
-            current_row = 0
-            scroll_offset = 0  # For scrolling support
+            last_was_empty_enter = False  # Track for double enter
             
             # Get terminal dimensions
             term_width, term_height = self._get_terminal_size()
@@ -552,15 +551,15 @@ class RetroUI:
                 # Draw the text input box
                 editor_lines.append(Text("┌" + "─" * box_width + "┐", style=self.theme.ORANGE))
                 
-                # Show typed lines with scrolling support
+                # Show typed lines
                 all_lines = lines + [current_line]
-                visible_start = scroll_offset
-                visible_end = scroll_offset + box_height
+                
+                # Calculate what to show (simple scrolling)
+                start_line = max(0, len(all_lines) - box_height)
                 
                 for i in range(box_height):
-                    line_idx = visible_start + i
-                    if line_idx < len(all_lines):
-                        line_text = all_lines[line_idx]
+                    if start_line + i < len(all_lines):
+                        line_text = all_lines[start_line + i]
                         # Truncate if too long
                         if len(line_text) > box_width - 2:
                             line_text = line_text[:box_width - 2]
@@ -572,12 +571,6 @@ class RetroUI:
                         editor_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
                 
                 editor_lines.append(Text("└" + "─" * box_width + "┘", style=self.theme.ORANGE))
-                
-                # Add scroll indicators if needed
-                if scroll_offset > 0:
-                    editor_lines.append(Text(f"  ↑ {scroll_offset} more lines above", style=self.theme.TEXT_DIM))
-                if len(all_lines) > visible_end:
-                    editor_lines.append(Text(f"  ↓ {len(all_lines) - visible_end} more lines below", style=self.theme.TEXT_DIM))
                 
                 layout["editor"].update(
                     Panel(
@@ -608,24 +601,24 @@ class RetroUI:
                 
                 # Position cursor inside the box
                 # Calculate where in the editor panel the box starts
-                # Account for header, default text preview if shown, and box border
                 box_start_row = header_size + 2  # Header + border
                 if default and len(lines) == 0 and current_line == "":
                     box_start_row += 4  # Add lines for default text preview
                 
-                # Calculate visible cursor row (considering scroll)
-                visible_cursor_row = current_row - scroll_offset
+                # Calculate which line of the box the cursor is on
+                current_display_line = len(lines)  # We're always editing the last line
+                visible_line = current_display_line - start_line
                 
                 # Only show cursor if it's in the visible area
-                if 0 <= visible_cursor_row < box_height:
-                    cursor_screen_row = box_start_row + visible_cursor_row + 1  # +1 for top border
+                if 0 <= visible_line < box_height:
+                    cursor_screen_row = box_start_row + visible_line + 1  # +1 for top border
                     cursor_screen_col = start_col + 2 + cursor_pos  # +2 for border and space
                     
-                    # Move cursor to position
-                    print(f'\033[{cursor_screen_row};{cursor_screen_col}H', end='', flush=True)
+                    # Move cursor to position (account for panel padding)
+                    # The panel has padding which shifts content
+                    actual_col = start_col + 4 + cursor_pos  # +4 for "│ " and panel padding
+                    print(f'\033[{cursor_screen_row};{actual_col}H', end='', flush=True)
                     print('\033[?25h', end='', flush=True)  # Show cursor
-                else:
-                    print('\033[?25l', end='', flush=True)  # Hide cursor if out of view
                 
                 # Get single character input
                 old_settings = termios.tcgetattr(sys.stdin)
@@ -634,106 +627,72 @@ class RetroUI:
                     char = sys.stdin.read(1)
                     
                     if char == '\r' or char == '\n':  # Enter
-                        # Check if this is the second consecutive empty line
-                        if current_line == "":
-                            # Check if we're at the end and previous line is also empty
-                            if current_row == len(lines) and len(lines) > 0 and lines[-1] == "":
-                                # Two enters = done
-                                break
-                            elif current_row < len(lines) and current_row > 0 and lines[current_row - 1] == "":
-                                # Two enters in the middle = done
-                                break
+                        if current_line == "" and last_was_empty_enter:
+                            # Two consecutive empty enters = done
+                            break
                         
-                        # Normal enter - add new line
-                        if current_row < len(lines):
-                            lines[current_row] = current_line
-                        else:
-                            lines.append(current_line)
+                        # Track if this was an empty enter
+                        last_was_empty_enter = (current_line == "")
                         
+                        # Add line and continue
+                        lines.append(current_line)
                         current_line = ""
                         cursor_pos = 0
-                        current_row += 1
-                        
-                        # Handle scrolling
-                        if current_row - scroll_offset >= box_height:
-                            scroll_offset = current_row - box_height + 1
                     
                     elif char == '\x7f' or char == '\x08':  # Backspace
                         if cursor_pos > 0:
                             current_line = current_line[:cursor_pos-1] + current_line[cursor_pos:]
                             cursor_pos -= 1
-                        elif current_row > 0:
-                            # Join with previous line
-                            prev_line = lines.pop()
-                            cursor_pos = len(prev_line)
-                            current_line = prev_line + current_line
-                            current_row -= 1
-                            
-                            # Adjust scroll if needed
-                            if current_row < scroll_offset:
-                                scroll_offset = current_row
+                        last_was_empty_enter = False  # Reset on any edit
                     
                     elif char == '\x03':  # Ctrl+C
                         raise KeyboardInterrupt()
                     
                     elif char == '\x1b':  # ESC or arrow keys
-                        # Check if this is just ESC or an arrow key sequence
-                        import select
-                        if select.select([sys.stdin], [], [], 0)[0]:
-                            # More characters available, likely arrow key
-                            next_char = sys.stdin.read(1)
-                            if next_char == '[':
-                                arrow = sys.stdin.read(1)
-                                if arrow == 'A':  # Up arrow
-                                    if current_row > 0:
-                                        # Save current line first
-                                        if current_row < len(lines):
-                                            lines[current_row] = current_line
-                                        elif current_line != "":  # Only append if not empty
-                                            lines.append(current_line)
-                                        
-                                        # Move to previous line
-                                        current_row -= 1
-                                        current_line = lines[current_row] if current_row < len(lines) else ""
-                                        cursor_pos = min(cursor_pos, len(current_line))
-                                        
-                                        # Adjust scroll if needed
-                                        if current_row < scroll_offset:
-                                            scroll_offset = current_row
-                                            
-                                elif arrow == 'B':  # Down arrow
-                                    # Save current line first
-                                    if current_row < len(lines):
-                                        lines[current_row] = current_line
-                                    elif current_line != "":  # Only append if not empty
-                                        lines.append(current_line)
+                        # Try to peek at next characters without blocking
+                        old_settings2 = termios.tcgetattr(sys.stdin)
+                        try:
+                            # Set non-blocking mode temporarily
+                            import fcntl
+                            import os
+                            flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
+                            fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
+                            
+                            try:
+                                next_char = sys.stdin.read(1)
+                                if next_char == '[':
+                                    arrow = sys.stdin.read(1)
                                     
-                                    # Move to next line
-                                    if current_row < len(lines):
-                                        current_row += 1
-                                        current_line = lines[current_row] if current_row < len(lines) else ""
-                                        cursor_pos = min(cursor_pos, len(current_line))
-                                        
-                                        # Adjust scroll if needed
-                                        if current_row - scroll_offset >= box_height:
-                                            scroll_offset = current_row - box_height + 1
+                                    # We got an arrow key sequence, handle it
+                                    if arrow == 'A' or arrow == 'B':  # Up/Down arrows - ignore them
+                                        pass  # Do nothing for up/down arrows
+                                                
+                                    elif arrow == 'D':  # Left arrow
+                                        if cursor_pos > 0:
+                                            cursor_pos -= 1
                                             
-                                elif arrow == 'D':  # Left arrow
-                                    if cursor_pos > 0:
-                                        cursor_pos -= 1
-                                        
-                                elif arrow == 'C':  # Right arrow
-                                    if cursor_pos < len(current_line):
-                                        cursor_pos += 1
-                        else:
-                            # Just ESC, cancel
-                            lines = []
-                            current_line = ""
-                            break
+                                    elif arrow == 'C':  # Right arrow
+                                        if cursor_pos < len(current_line):
+                                            cursor_pos += 1
+                                else:
+                                    # Not an arrow key sequence, treat as ESC
+                                    lines = []
+                                    current_line = ""
+                                    break
+                            except:
+                                # No more characters, just ESC
+                                lines = []
+                                current_line = ""
+                                break
+                        finally:
+                            # Restore blocking mode
+                            fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags)
+                            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings2)
                     
                     elif char >= ' ' and len(current_line) < box_width - 2:  # Printable character
                         current_line = current_line[:cursor_pos] + char + current_line[cursor_pos:]
                         cursor_pos += 1
+                        last_was_empty_enter = False  # Reset on any edit
                         
                 finally:
                     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
