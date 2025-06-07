@@ -234,8 +234,13 @@ Provide an improved list based on the feedback. Return a JSON array."""
             )
             
             # Get enhanced description
-            enhanced_desc = self.claude_setup._enhance_description(project_data)
-            self.ui.stop_progress()
+            try:
+                enhanced_desc = self.claude_setup._enhance_description(project_data)
+            except Exception as e:
+                enhanced_desc = None
+                print(f"\nError enhancing description: {e}")
+            finally:
+                self.ui.stop_progress()
             
             if enhanced_desc and enhanced_desc != description:
                 # Show Claude's suggestion
@@ -248,15 +253,27 @@ Provide an improved list based on the feedback. Return a JSON array."""
                 )
                 
                 if use_enhanced:
-                    # Allow iterative refinement
-                    refined_desc = self._refine_with_retro_ui(
-                        enhanced_desc,
-                        "REFINE DESCRIPTION",
-                        "AI-powered refinement",
-                        value_type="text",
-                        max_iterations=100
+                    project_data["metadata"]["description"] = enhanced_desc
+                    
+                    # Ask if they want to refine further
+                    want_refine = self.ui.ask_confirm(
+                        "REFINE FURTHER?",
+                        "Would you like to refine this description further?",
+                        default=False,
+                        subtitle="Optional refinement",
+                        hint="You can provide feedback to improve the description"
                     )
-                    project_data["metadata"]["description"] = refined_desc
+                    
+                    if want_refine:
+                        # Allow iterative refinement
+                        refined_desc = self._refine_with_retro_ui(
+                            enhanced_desc,
+                            "REFINE DESCRIPTION",
+                            "AI-powered refinement",
+                            value_type="text",
+                            max_iterations=100
+                        )
+                        project_data["metadata"]["description"] = refined_desc
                     
         return project_data
         

@@ -678,10 +678,16 @@ class RetroUI:
                 key = sys.stdin.read(1)
                 
                 if key == '\r' or key == '\n':  # Enter
+                    # Clear screen before returning
+                    self._clear_screen()
                     return selected
                 elif key.lower() == 'y':
+                    # Clear screen before returning
+                    self._clear_screen()
                     return True
                 elif key.lower() == 'n':
+                    # Clear screen before returning
+                    self._clear_screen()
                     return False
                 elif key == '\x1b':  # Escape sequence
                     next_key = sys.stdin.read(2)
