@@ -595,130 +595,79 @@ class RetroUI:
         subtitle: str = "",
         items: Optional[List[str]] = None
     ):
-        """Show a full-screen progress page with animated loading."""
-        import threading
-        import time
+        """Show a full-screen progress page (static to avoid flickering)."""
+        self._clear_screen()
         
-        # Animation frames for retro loading
-        loading_frames = [
-            "█▒▒▒▒▒▒▒▒▒",
-            "██▒▒▒▒▒▒▒▒",
-            "███▒▒▒▒▒▒▒",
-            "████▒▒▒▒▒▒",
-            "█████▒▒▒▒▒",
-            "██████▒▒▒▒",
-            "███████▒▒▒",
-            "████████▒▒",
-            "█████████▒",
-            "██████████",
-            "▒█████████",
-            "▒▒████████",
-            "▒▒▒███████",
-            "▒▒▒▒██████",
-            "▒▒▒▒▒█████",
-            "▒▒▒▒▒▒████",
-            "▒▒▒▒▒▒▒███",
-            "▒▒▒▒▒▒▒▒██",
-            "▒▒▒▒▒▒▒▒▒█",
-            "▒▒▒▒▒▒▒▒▒▒",
-        ]
+        # Create layout
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header", size=9),
+            Layout(name="content", ratio=1),
+            Layout(name="footer", size=3)
+        )
         
-        # Spinner frames
-        spinner_frames = ["◐", "◓", "◑", "◒"]
+        # Header
+        layout["header"].update(
+            self._create_header(title, subtitle)
+        )
         
+        # Progress content
+        progress_group = []
+        
+        # Message
+        msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
+        progress_group.append(Align.center(msg_text))
+        
+        # Static loading indicator
+        loading_text = Text()
+        loading_text.append("  ", style="")
+        loading_text.append("████████▒▒", style=f"bold {self.theme.ORANGE}")
+        loading_text.append("  ", style="")
+        progress_group.append(Align.center(loading_text))
+        progress_group.append(Text(""))
+        
+        # Processing text
+        processing_text = Text()
+        processing_text.append("◐ ", style=f"bold {self.theme.ORANGE}")
+        processing_text.append("PROCESSING", style=f"bold {self.theme.WHITE}")
+        processing_text.append(" ◐", style=f"bold {self.theme.ORANGE}")
+        progress_group.append(Align.center(processing_text))
+        
+        # Items if provided
+        if items:
+            progress_group.append(Text("\n"))
+            for item in items:
+                item_text = Text()
+                item_text.append("▸ ", style=self.theme.ORANGE)
+                item_text.append(item, style=self.theme.TEXT_DIM)
+                progress_group.append(Align.center(item_text))
+        
+        content = Panel(
+            Align.center(Group(*progress_group), vertical="middle"),
+            title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
+            border_style=self.theme.ORANGE,
+            box=HEAVY,
+            padding=(2, 4)
+        )
+        
+        layout["content"].update(
+            Align.center(content, vertical="middle")
+        )
+        
+        # Footer
+        layout["footer"].update(
+            self._create_footer("Please wait...")
+        )
+        
+        # Print layout without newline
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        
+        # Set flag for other methods
         self.loading_active = True
-        frame_index = 0
-        spinner_index = 0
-        
-        def animate():
-            nonlocal frame_index, spinner_index
-            while self.loading_active:
-                self._clear_screen()
-                
-                # Create layout
-                layout = Layout()
-                layout.split_column(
-                    Layout(name="header", size=9),
-                    Layout(name="content", ratio=1),
-                    Layout(name="footer", size=3)
-                )
-                
-                # Header
-                layout["header"].update(
-                    self._create_header(title, subtitle)
-                )
-                
-                # Progress content
-                progress_group = []
-                
-                # Message
-                msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
-                progress_group.append(Align.center(msg_text))
-                
-                # Loading bar
-                loading_text = Text()
-                loading_text.append("  ", style="")
-                loading_text.append(loading_frames[frame_index], style=f"bold {self.theme.ORANGE}")
-                loading_text.append("  ", style="")
-                progress_group.append(Align.center(loading_text))
-                progress_group.append(Text(""))
-                
-                # Spinner with text
-                spinner_text = Text()
-                spinner_text.append(spinner_frames[spinner_index], style=f"bold {self.theme.ORANGE}")
-                spinner_text.append(" PROCESSING ", style=f"bold {self.theme.WHITE}")
-                spinner_text.append(spinner_frames[spinner_index], style=f"bold {self.theme.ORANGE}")
-                progress_group.append(Align.center(spinner_text))
-                
-                # Items if provided
-                if items:
-                    progress_group.append(Text("\n"))
-                    for i, item in enumerate(items):
-                        item_text = Text()
-                        # Animate current item
-                        if i == len(items) - 1:
-                            item_text.append(f"{spinner_frames[spinner_index]} ", style=f"bold {self.theme.ORANGE}")
-                            item_text.append(item, style=f"bold {self.theme.WHITE}")
-                        else:
-                            item_text.append("✓ ", style=f"bold {self.theme.GREEN}")
-                            item_text.append(item, style=self.theme.TEXT_DIM)
-                        progress_group.append(Align.center(item_text))
-                
-                content = Panel(
-                    Align.center(Group(*progress_group), vertical="middle"),
-                    title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
-                    border_style=self.theme.ORANGE,
-                    box=HEAVY,
-                    padding=(2, 4)
-                )
-                
-                layout["content"].update(
-                    Align.center(content, vertical="middle")
-                )
-                
-                # Footer
-                layout["footer"].update(
-                    self._create_footer("Please wait...")
-                )
-                
-                # Print layout
-                self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-                
-                # Update animation indices
-                frame_index = (frame_index + 1) % len(loading_frames)
-                spinner_index = (spinner_index + 1) % len(spinner_frames)
-                
-                time.sleep(0.1)
-        
-        # Start animation in background
-        self.animation_thread = threading.Thread(target=animate, daemon=True)
-        self.animation_thread.start()
     
     def stop_progress(self):
         """Stop the progress animation."""
         self.loading_active = False
-        if hasattr(self, 'animation_thread'):
-            self.animation_thread.join(timeout=0.5)
         
     def show_results(
         self,
