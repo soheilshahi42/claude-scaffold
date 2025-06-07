@@ -384,18 +384,48 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
             self.ui.stop_progress()
             
             if claude_modules:
-                # Show suggestions
-                module_list = "\n".join([f"• {m}" for m in claude_modules[:10]])
+                # First show ALL modules in a results page so user can see everything
+                module_display = {}
+                for i, module in enumerate(claude_modules, 1):
+                    module_display[f"Module {i}"] = module
+                
+                self.ui.show_results(
+                    "CLAUDE MODULE SUGGESTIONS",
+                    module_display,
+                    f"Claude suggests {len(claude_modules)} modules for your project"
+                )
+                
+                # Ask if they want to use these module suggestions
                 use_suggested = self.ui.ask_confirm(
-                    "CLAUDE MODULES",
-                    f"Use Claude's suggested modules?\n\n{module_list}",
+                    "USE SUGGESTIONS",
+                    "Use Claude's suggested modules?",
                     default=True,
-                    subtitle="AI Architecture",
-                    hint=f"Claude suggests {len(claude_modules)} modules"
+                    subtitle="Review the modules above",
+                    hint="These are the base module names"
                 )
                 
                 if use_suggested:
-                    # Generate descriptions
+                    # Ask if they want to refine the module list BEFORE generating descriptions
+                    want_refine = self.ui.ask_confirm(
+                        "REFINE MODULES",
+                        "Would you like to refine or provide feedback on these modules?",
+                        default=True,  # Default to True to encourage refinement
+                        subtitle="Improve the modules with your feedback"
+                    )
+                    
+                    # Apply refinement if requested
+                    if want_refine:
+                        refined_modules = self._refine_with_retro_ui(
+                            claude_modules,
+                            "REFINE MODULES",
+                            "Module refinement",
+                            value_type="list",
+                            max_iterations=100
+                        )
+                    else:
+                        refined_modules = claude_modules
+                    
+                    # NOW generate descriptions for the final module list
                     self.ui.show_progress(
                         "GENERATING DESCRIPTIONS",
                         "Creating module descriptions...",
@@ -404,7 +434,7 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                     
                     modules = [
                         {"name": m, "description": f"{m.title()} module"}
-                        for m in claude_modules
+                        for m in refined_modules
                     ]
                     
                     # Get descriptions from Claude
@@ -420,42 +450,16 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                                 
                     self.ui.stop_progress()
                     
-                    # Show the generated modules with descriptions
+                    # Show the final modules with descriptions
                     self.ui.show_results(
-                        "GENERATED MODULES",
+                        "FINAL MODULES",
                         {f"Module {i+1}": f"{m['name']} - {m['description']}" 
                          for i, m in enumerate(modules)},
-                        f"Claude generated {len(modules)} modules with descriptions"
+                        f"Generated {len(modules)} modules with descriptions"
                     )
-                    
-                    # Ask if they want to use these modules
-                    use_modules = self.ui.ask_confirm(
-                        "USE MODULES",
-                        "Use these Claude-generated modules?",
-                        default=True,
-                        subtitle="Review the modules above"
-                    )
-                    
-                    if use_modules:
-                        # Now ask if they want to refine
-                        want_refine = self.ui.ask_confirm(
-                            "REFINE MODULES",
-                            "Would you like to refine or provide feedback on these modules?",
-                            default=True,  # Default to True to encourage refinement
-                            subtitle="Improve the modules with your feedback"
-                        )
-                        
-                        if want_refine:
-                            modules = self._refine_with_retro_ui(
-                                modules,
-                                "REFINE MODULES",
-                                "Module refinement",
-                                value_type="list",
-                                max_iterations=100
-                            )
-                    else:
-                        # Don't use Claude's modules, start over
-                        modules = []
+                else:
+                    # Don't use Claude's modules, start over
+                    modules = []
                     
                                 
         else:
