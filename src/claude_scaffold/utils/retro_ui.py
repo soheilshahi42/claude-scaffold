@@ -479,97 +479,172 @@ class RetroUI:
             # Hide cursor again
             print('\033[?25l', end='', flush=True)
         else:
-            # Multiline input - create a notepad-like text area
-            self._clear_screen()
+            # Multiline input - create a notepad-like text area with input inside the box
+            import sys
+            import tty
+            import termios
             
-            # Show header and initial instructions
-            layout = Layout()
-            layout.split_column(
-                Layout(name="header", size=7),
-                Layout(name="instructions", size=12),
-                Layout(name="footer", size=3)
-            )
-            
-            # Header with question
-            header_group = []
-            header_group.append(Align.center(Text(title, style=f"bold {self.theme.ORANGE}")))
-            header_group.append(Text(""))
-            header_group.append(Align.center(question_text))
-            
-            layout["header"].update(
-                Panel(
-                    Group(*header_group),
-                    border_style=self.theme.ORANGE_DARK,
-                    box=DOUBLE
-                )
-            )
-            
-            # Instructions
-            instr_lines = []
-            instr_lines.append(Text("\n  TEXT EDITOR MODE", style=f"bold {self.theme.ORANGE}"))
-            instr_lines.append(Text("  " + "─" * 40, style=self.theme.ORANGE_DARK))
-            
-            if default:
-                instr_lines.append(Text("\n  Current text:", style=self.theme.TEXT_DIM))
-                default_lines = default.split('\n')
-                for line in default_lines[:3]:
-                    if len(line) > 60:
-                        line = line[:57] + "..."
-                    instr_lines.append(Text(f"  • {line}", style=self.theme.WHITE))
-                if len(default_lines) > 3:
-                    instr_lines.append(Text(f"  ... and {len(default_lines) - 3} more lines", style=self.theme.TEXT_DIM))
-            
-            instr_lines.append(Text("\n  Start typing below. Press ENTER twice when done.", style=f"bold {self.theme.ORANGE}"))
-            
-            layout["instructions"].update(
-                Panel(
-                    Group(*instr_lines),
-                    border_style=self.theme.ORANGE,
-                    box=MINIMAL,
-                    padding=(1, 2)
-                )
-            )
-            
-            # Footer
-            footer_text = Text()
-            footer_text.append("ENTER ENTER ", style=f"bold {self.theme.ORANGE}")
-            footer_text.append("Save   ", style=self.theme.TEXT_DIM)
-            footer_text.append("CTRL+C ", style=f"bold {self.theme.ORANGE}")
-            footer_text.append("Cancel", style=self.theme.TEXT_DIM)
-            
-            layout["footer"].update(
-                Align.center(footer_text)
-            )
-            
-            # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-            
-            # Simple input area below
-            print(f"\n\033[38;2;218;119;86m{'─' * 80}\033[0m")  # Orange line
-            print('\033[?25h', end='', flush=True)  # Show cursor
-            
-            # Collect lines
+            # Initialize text buffer
             lines = []
-            empty_line_count = 0
+            current_line = ""
+            cursor_pos = 0
+            current_row = 0
             
-            try:
-                while True:
-                    line = input("\033[38;2;218;119;86m▶\033[0m ")
-                    
-                    if line == "":
-                        empty_line_count += 1
-                        if empty_line_count >= 2:
-                            break
+            # Box dimensions
+            box_width = 76  # Inner width
+            box_height = 15  # Number of lines for text input
+            start_row = 10  # Where the input box starts on screen
+            start_col = 3   # Left margin
+            
+            while True:
+                self._clear_screen()
+                
+                # Create layout with input box
+                layout = Layout()
+                layout.split_column(
+                    Layout(name="header", size=8),
+                    Layout(name="editor", size=20),
+                    Layout(name="footer", size=4)
+                )
+                
+                # Header
+                header_group = []
+                header_group.append(Align.center(Text(title, style=f"bold {self.theme.ORANGE}")))
+                header_group.append(Text(""))
+                header_group.append(Align.center(question_text))
+                
+                layout["header"].update(
+                    Panel(
+                        Group(*header_group),
+                        border_style=self.theme.ORANGE_DARK,
+                        box=DOUBLE
+                    )
+                )
+                
+                # Editor box with current text
+                editor_lines = []
+                editor_lines.append(Text(""))
+                
+                if default and len(lines) == 0 and current_line == "":
+                    editor_lines.append(Text("  Current text:", style=self.theme.TEXT_DIM))
+                    default_preview = default.split('\n')[0]
+                    if len(default_preview) > 70:
+                        default_preview = default_preview[:67] + "..."
+                    editor_lines.append(Text(f"  {default_preview}", style=self.theme.GRAY))
+                    editor_lines.append(Text("  (Press Enter twice to keep, or start typing to replace)", style=self.theme.TEXT_DIM))
+                    editor_lines.append(Text(""))
+                
+                # Draw the text input box
+                editor_lines.append(Text("┌" + "─" * box_width + "┐", style=self.theme.ORANGE))
+                
+                # Show typed lines
+                display_lines = lines + [current_line]
+                for i in range(box_height):
+                    if i < len(display_lines):
+                        line_text = display_lines[i]
+                        # Truncate if too long
+                        if len(line_text) > box_width - 2:
+                            line_text = line_text[:box_width - 2]
+                        # Pad to fill box width
+                        line_text = line_text.ljust(box_width - 2)
+                        editor_lines.append(Text("│ " + line_text + " │", style=self.theme.ORANGE))
                     else:
-                        empty_line_count = 0
-                        lines.append(line)
+                        # Empty line
+                        editor_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
+                
+                editor_lines.append(Text("└" + "─" * box_width + "┘", style=self.theme.ORANGE))
+                
+                layout["editor"].update(
+                    Panel(
+                        Group(*editor_lines),
+                        title=f"[{self.theme.ORANGE}]▌ TEXT EDITOR ▐[/]",
+                        border_style=self.theme.ORANGE,
+                        box=HEAVY,
+                        padding=(0, 1)
+                    )
+                )
+                
+                # Footer
+                footer_text = Text()
+                footer_text.append("Type your text | ", style=self.theme.TEXT_DIM)
+                footer_text.append("ENTER ", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("New line | ", style=self.theme.TEXT_DIM)
+                footer_text.append("ENTER ENTER ", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("Save | ", style=self.theme.TEXT_DIM)
+                footer_text.append("ESC ", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("Cancel", style=self.theme.TEXT_DIM)
+                
+                layout["footer"].update(
+                    Align.center(footer_text)
+                )
+                
+                # Print layout
+                self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+                
+                # Position cursor inside the box
+                # Calculate actual cursor position on screen
+                cursor_screen_row = start_row + 2 + current_row  # +2 for header and top border
+                cursor_screen_col = start_col + 2 + cursor_pos   # +2 for left border and space
+                
+                # Move cursor to position
+                print(f'\033[{cursor_screen_row};{cursor_screen_col}H', end='', flush=True)
+                print('\033[?25h', end='', flush=True)  # Show cursor
+                
+                # Get single character input
+                old_settings = termios.tcgetattr(sys.stdin)
+                try:
+                    tty.setraw(sys.stdin.fileno())
+                    char = sys.stdin.read(1)
+                    
+                    if char == '\r' or char == '\n':  # Enter
+                        if current_line == "" and len(lines) > 0 and lines[-1] == "":
+                            # Two enters = done
+                            break
+                        else:
+                            lines.append(current_line)
+                            current_line = ""
+                            cursor_pos = 0
+                            current_row += 1
+                            if current_row >= box_height:
+                                # Scroll up
+                                lines = lines[1:]
+                                current_row = box_height - 1
+                    
+                    elif char == '\x1b':  # ESC
+                        # Cancel - return default
+                        lines = []
+                        current_line = ""
+                        break
+                    
+                    elif char == '\x7f' or char == '\x08':  # Backspace
+                        if cursor_pos > 0:
+                            current_line = current_line[:cursor_pos-1] + current_line[cursor_pos:]
+                            cursor_pos -= 1
+                        elif current_row > 0:
+                            # Join with previous line
+                            prev_line = lines.pop()
+                            cursor_pos = len(prev_line)
+                            current_line = prev_line + current_line
+                            current_row -= 1
+                    
+                    elif char == '\x03':  # Ctrl+C
+                        raise KeyboardInterrupt()
+                    
+                    elif char >= ' ' and len(current_line) < box_width - 2:  # Printable character
+                        current_line = current_line[:cursor_pos] + char + current_line[cursor_pos:]
+                        cursor_pos += 1
                         
-            except KeyboardInterrupt:
-                lines = []
+                finally:
+                    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
             
-            # Determine final answer
-            if lines:
-                answer = '\n'.join(lines)
+            # Process final result
+            if lines or current_line:
+                # Remove trailing empty line if exists
+                if current_line:
+                    lines.append(current_line)
+                while lines and lines[-1] == "":
+                    lines.pop()
+                answer = '\n'.join(lines) if lines else default
             else:
                 answer = default
             
