@@ -489,22 +489,38 @@ class RetroUI:
             current_line = ""
             cursor_pos = 0
             current_row = 0
+            scroll_offset = 0  # For scrolling support
             
-            # Box dimensions
-            box_width = 76  # Inner width
-            box_height = 15  # Number of lines for text input
-            start_row = 10  # Where the input box starts on screen
-            start_col = 3   # Left margin
+            # Get terminal dimensions
+            term_width, term_height = self._get_terminal_size()
+            
+            # Calculate box dimensions to fit screen
+            box_width = min(term_width - 10, 120)  # Max 120 chars wide, with margins
+            box_height = term_height - 15  # Leave room for header and footer
+            if box_height < 10:
+                box_height = 10  # Minimum height
+            elif box_height > 30:
+                box_height = 30  # Maximum height
+            
+            # Center the box horizontally
+            start_col = (term_width - box_width - 2) // 2
+            if start_col < 2:
+                start_col = 2
             
             while True:
                 self._clear_screen()
                 
                 # Create layout with input box
                 layout = Layout()
+                # Adjust layout sizes based on terminal height
+                header_size = 7
+                footer_size = 3
+                editor_size = term_height - header_size - footer_size - 2
+                
                 layout.split_column(
-                    Layout(name="header", size=8),
-                    Layout(name="editor", size=20),
-                    Layout(name="footer", size=4)
+                    Layout(name="header", size=header_size),
+                    Layout(name="editor", size=editor_size),
+                    Layout(name="footer", size=footer_size)
                 )
                 
                 # Header
@@ -523,25 +539,28 @@ class RetroUI:
                 
                 # Editor box with current text
                 editor_lines = []
-                editor_lines.append(Text(""))
                 
+                # Show default text hint above the box if no input yet
                 if default and len(lines) == 0 and current_line == "":
-                    editor_lines.append(Text("  Current text:", style=self.theme.TEXT_DIM))
+                    editor_lines.append(Text("\n  Current text:", style=self.theme.TEXT_DIM))
                     default_preview = default.split('\n')[0]
-                    if len(default_preview) > 70:
-                        default_preview = default_preview[:67] + "..."
+                    if len(default_preview) > box_width - 10:
+                        default_preview = default_preview[:box_width - 13] + "..."
                     editor_lines.append(Text(f"  {default_preview}", style=self.theme.GRAY))
-                    editor_lines.append(Text("  (Press Enter twice to keep, or start typing to replace)", style=self.theme.TEXT_DIM))
-                    editor_lines.append(Text(""))
+                    editor_lines.append(Text("  (Press Enter twice to keep, or start typing to replace)\n", style=self.theme.TEXT_DIM))
                 
                 # Draw the text input box
                 editor_lines.append(Text("┌" + "─" * box_width + "┐", style=self.theme.ORANGE))
                 
-                # Show typed lines
-                display_lines = lines + [current_line]
+                # Show typed lines with scrolling support
+                all_lines = lines + [current_line]
+                visible_start = scroll_offset
+                visible_end = scroll_offset + box_height
+                
                 for i in range(box_height):
-                    if i < len(display_lines):
-                        line_text = display_lines[i]
+                    line_idx = visible_start + i
+                    if line_idx < len(all_lines):
+                        line_text = all_lines[line_idx]
                         # Truncate if too long
                         if len(line_text) > box_width - 2:
                             line_text = line_text[:box_width - 2]
@@ -553,6 +572,12 @@ class RetroUI:
                         editor_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
                 
                 editor_lines.append(Text("└" + "─" * box_width + "┘", style=self.theme.ORANGE))
+                
+                # Add scroll indicators if needed
+                if scroll_offset > 0:
+                    editor_lines.append(Text(f"  ↑ {scroll_offset} more lines above", style=self.theme.TEXT_DIM))
+                if len(all_lines) > visible_end:
+                    editor_lines.append(Text(f"  ↓ {len(all_lines) - visible_end} more lines below", style=self.theme.TEXT_DIM))
                 
                 layout["editor"].update(
                     Panel(
@@ -582,13 +607,25 @@ class RetroUI:
                 self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
                 
                 # Position cursor inside the box
-                # Calculate actual cursor position on screen
-                cursor_screen_row = start_row + 2 + current_row  # +2 for header and top border
-                cursor_screen_col = start_col + 2 + cursor_pos   # +2 for left border and space
+                # Calculate where in the editor panel the box starts
+                # Account for header, default text preview if shown, and box border
+                box_start_row = header_size + 2  # Header + border
+                if default and len(lines) == 0 and current_line == "":
+                    box_start_row += 4  # Add lines for default text preview
                 
-                # Move cursor to position
-                print(f'\033[{cursor_screen_row};{cursor_screen_col}H', end='', flush=True)
-                print('\033[?25h', end='', flush=True)  # Show cursor
+                # Calculate visible cursor row (considering scroll)
+                visible_cursor_row = current_row - scroll_offset
+                
+                # Only show cursor if it's in the visible area
+                if 0 <= visible_cursor_row < box_height:
+                    cursor_screen_row = box_start_row + visible_cursor_row + 1  # +1 for top border
+                    cursor_screen_col = start_col + 2 + cursor_pos  # +2 for border and space
+                    
+                    # Move cursor to position
+                    print(f'\033[{cursor_screen_row};{cursor_screen_col}H', end='', flush=True)
+                    print('\033[?25h', end='', flush=True)  # Show cursor
+                else:
+                    print('\033[?25l', end='', flush=True)  # Hide cursor if out of view
                 
                 # Get single character input
                 old_settings = termios.tcgetattr(sys.stdin)
@@ -605,16 +642,10 @@ class RetroUI:
                             current_line = ""
                             cursor_pos = 0
                             current_row += 1
-                            if current_row >= box_height:
-                                # Scroll up
-                                lines = lines[1:]
-                                current_row = box_height - 1
-                    
-                    elif char == '\x1b':  # ESC
-                        # Cancel - return default
-                        lines = []
-                        current_line = ""
-                        break
+                            
+                            # Handle scrolling
+                            if current_row - scroll_offset >= box_height:
+                                scroll_offset = current_row - box_height + 1
                     
                     elif char == '\x7f' or char == '\x08':  # Backspace
                         if cursor_pos > 0:
@@ -626,9 +657,67 @@ class RetroUI:
                             cursor_pos = len(prev_line)
                             current_line = prev_line + current_line
                             current_row -= 1
+                            
+                            # Adjust scroll if needed
+                            if current_row < scroll_offset:
+                                scroll_offset = current_row
                     
                     elif char == '\x03':  # Ctrl+C
                         raise KeyboardInterrupt()
+                    
+                    elif char == '\x1b':  # ESC or arrow keys
+                        # Check if this is just ESC or an arrow key sequence
+                        import select
+                        if select.select([sys.stdin], [], [], 0)[0]:
+                            # More characters available, likely arrow key
+                            next_char = sys.stdin.read(1)
+                            if next_char == '[':
+                                arrow = sys.stdin.read(1)
+                                if arrow == 'A':  # Up arrow
+                                    if current_row > 0:
+                                        # Save current line
+                                        if current_row == len(lines):
+                                            temp_line = current_line
+                                            current_row -= 1
+                                            current_line = lines[current_row]
+                                            lines.append(temp_line)
+                                        else:
+                                            lines[current_row] = current_line
+                                            current_row -= 1
+                                            current_line = lines[current_row]
+                                        cursor_pos = min(cursor_pos, len(current_line))
+                                        
+                                        # Adjust scroll if needed
+                                        if current_row < scroll_offset:
+                                            scroll_offset = current_row
+                                            
+                                elif arrow == 'B':  # Down arrow
+                                    if current_row < len(lines):
+                                        # Save current line
+                                        lines[current_row] = current_line
+                                        current_row += 1
+                                        if current_row < len(lines):
+                                            current_line = lines[current_row]
+                                        else:
+                                            current_line = ""
+                                        cursor_pos = min(cursor_pos, len(current_line))
+                                        
+                                        # Adjust scroll if needed
+                                        if current_row - scroll_offset >= box_height:
+                                            scroll_offset = current_row - box_height + 1
+                                            
+                                elif arrow == 'D':  # Left arrow
+                                    if cursor_pos > 0:
+                                        cursor_pos -= 1
+                                        
+                                elif arrow == 'C':  # Right arrow
+                                    if cursor_pos < len(current_line):
+                                        cursor_pos += 1
+                        else:
+                            # Just ESC, cancel
+                            lines = []
+                            current_line = ""
+                            break
                     
                     elif char >= ' ' and len(current_line) < box_width - 2:  # Printable character
                         current_line = current_line[:cursor_pos] + char + current_line[cursor_pos:]
