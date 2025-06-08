@@ -471,10 +471,85 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                                 ]
                             )
                             
-                            # Call the batch processor
-                            descriptions = self.claude_setup.processor.generate_module_descriptions_batch(
-                                module_names, project_data
-                            )
+                            # Create a thread to update progress periodically
+                            import threading
+                            completed_count = 0
+                            stop_progress = threading.Event()
+                            
+                            def update_progress_periodically():
+                                while not stop_progress.is_set():
+                                    elapsed = int(time.time() - start_time)
+                                    mins, secs = divmod(elapsed, 60)
+                                    
+                                    # Check log for completed modules
+                                    completed = 0
+                                    completed_modules = []
+                                    try:
+                                        with open(self.logger.get_log_file_path(), 'r') as f:
+                                            lines = f.readlines()
+                                        
+                                        # Count module description completions from start
+                                        start_found = False
+                                        for line in lines:
+                                            if "Starting module description generation" in line and self.logger.session_id in line:
+                                                start_found = True
+                                            elif start_found and "Operation 'Claude API call (attempt 1)' completed" in line:
+                                                completed += 1
+                                                # Try to extract module name from surrounding context
+                                                if completed <= len(modules):
+                                                    module_name = module_names[completed - 1] if completed <= len(module_names) else "module"
+                                                    completed_modules.append(module_name)
+                                        
+                                        completed = min(completed, len(modules))
+                                    except Exception as e:
+                                        self.logger.debug(f"Error reading progress: {e}")
+                                        completed = 0
+                                    
+                                    # Update progress display
+                                    progress_pct = int((completed / len(modules)) * 100) if modules else 0
+                                    progress_bar = '█' * int(progress_pct / 5) + '░' * (20 - int(progress_pct / 5))
+                                    
+                                    # Build status lines
+                                    status_lines = [
+                                        f"🚀 Processing modules in parallel...",
+                                        f"",
+                                        f"📊 Progress: {progress_bar} {progress_pct}%",
+                                        f"⏱️ Time: {mins}m {secs}s",
+                                        f"✅ Completed: {completed}/{len(modules)}",
+                                        f"⏳ Remaining: {len(modules) - completed}",
+                                        f"⚡ Avg: {elapsed // max(1, completed)}s per module" if completed > 0 else "⚡ Calculating average..."
+                                    ]
+                                    
+                                    # Add last completed module if available
+                                    if completed_modules and completed > 0:
+                                        last_module = completed_modules[-1] if len(completed_modules) >= 1 else ""
+                                        if last_module:
+                                            status_lines.append(f"")
+                                            status_lines.append(f"📝 Last completed: {last_module}")
+                                    
+                                    self.ui.show_progress(
+                                        "GENERATING DESCRIPTIONS",
+                                        f"Completed {completed}/{len(modules)} modules ({progress_pct}%)",
+                                        f"Time elapsed: {mins}m {secs}s • 3 concurrent threads",
+                                        status_lines
+                                    )
+                                    
+                                    # Update every 2 seconds
+                                    stop_progress.wait(2)
+                            
+                            # Start progress updater thread
+                            progress_thread = threading.Thread(target=update_progress_periodically, daemon=True)
+                            progress_thread.start()
+                            
+                            try:
+                                # Call the batch processor
+                                descriptions = self.claude_setup.processor.generate_module_descriptions_batch(
+                                    module_names, project_data
+                                )
+                            finally:
+                                # Stop progress updates
+                                stop_progress.set()
+                                progress_thread.join(timeout=1)
                             
                             # Final timing and stats
                             total_elapsed = int(time.time() - start_time)
