@@ -818,7 +818,7 @@ class RetroUI:
             note_text = Text()
             note_text.append("Note: ", style=f"bold {self.theme.ORANGE}")
             note_text.append("Q&A mode allows you to press ", style=self.theme.TEXT_DIM)
-            note_text.append("Ctrl+E", style=f"bold {self.theme.ORANGE}")
+            note_text.append("Ctrl+\\", style=f"bold {self.theme.ORANGE}")
             note_text.append(" when you have enough information", style=self.theme.TEXT_DIM)
             content_group.append(Align.center(note_text))
             
@@ -1538,3 +1538,164 @@ class RetroUI:
                     break
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+    
+    def ask_qa_input(
+        self,
+        title: str,
+        question: str,
+        question_number: int,
+        category: str,
+        allow_skip_after: int = 20,
+        subtitle: str = ""
+    ) -> Tuple[str, bool]:
+        """Special input method for Q&A with Ctrl+E support and beautiful input box.
+        
+        Returns:
+            Tuple of (answer, enough_signal) where enough_signal is True if user pressed Ctrl+E
+        """
+        import readline
+        import signal
+        
+        self._clear_screen()
+        
+        # Track if Ctrl+E was pressed
+        ctrl_e_pressed = False
+        
+        def handle_ctrl_e(signum, frame):
+            nonlocal ctrl_e_pressed
+            ctrl_e_pressed = True
+            # Raise EOFError to exit readline
+            raise EOFError()
+        
+        # Set up Ctrl+E handler (using SIGQUIT which is Ctrl+\)
+        # We'll instruct users to use Ctrl+\ as Ctrl+E alternative
+        old_handler = signal.signal(signal.SIGQUIT, handle_ctrl_e)
+        
+        try:
+            # Create layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=9),
+                Layout(name="question", size=6),
+                Layout(name="input_area", size=8),
+                Layout(name="footer", size=3)
+            )
+            
+            # Header
+            layout["header"].update(
+                self._create_header(title, subtitle)
+            )
+            
+            # Question panel
+            question_group = []
+            
+            # Category and number
+            cat_text = Text()
+            cat_text.append(f"Category: ", style=self.theme.TEXT_DIM)
+            cat_text.append(category.upper(), style=f"bold {self.theme.ORANGE}")
+            cat_text.append(f"  |  Question ", style=self.theme.TEXT_DIM)
+            cat_text.append(str(question_number), style=f"bold {self.theme.ORANGE}")
+            question_group.append(Align.center(cat_text))
+            question_group.append(Text())
+            
+            # Question text
+            q_text = Text()
+            q_text.append("? ", style=f"bold {self.theme.ORANGE}")
+            q_text.append(question, style=f"bold {self.theme.WHITE}")
+            question_group.append(Align.center(q_text))
+            
+            layout["question"].update(
+                Panel(
+                    Align.center(Group(*question_group), vertical="middle"),
+                    border_style=self.theme.ORANGE_DARK,
+                    box=DOUBLE,
+                    padding=(1, 4)
+                )
+            )
+            
+            # Input area with instructions
+            input_group = []
+            
+            # Show skip hint if past minimum questions
+            if question_number >= allow_skip_after:
+                skip_text = Text()
+                skip_text.append("💡 ", style=f"bold {self.theme.ORANGE}")
+                skip_text.append("Feeling we have enough info? Press ", style=self.theme.TEXT_DIM)
+                skip_text.append("Ctrl+\\", style=f"bold {self.theme.ORANGE}")
+                skip_text.append(" to finish Q&A", style=self.theme.TEXT_DIM)
+                input_group.append(Align.center(skip_text))
+                input_group.append(Text())
+            
+            # Input prompt
+            input_text = Text()
+            input_text.append("📝 ", style=f"bold {self.theme.ORANGE}")
+            input_text.append("Type your answer below:", style=self.theme.WHITE)
+            input_group.append(Align.center(input_text))
+            
+            # Input box visualization
+            box_lines = []
+            box_lines.append(Text("╭" + "─" * 70 + "╮", style=self.theme.ORANGE))
+            box_lines.append(Text("│" + " " * 70 + "│", style=self.theme.ORANGE))
+            box_lines.append(Text("│  > _" + " " * 63 + "│", style=self.theme.ORANGE))
+            box_lines.append(Text("│" + " " * 70 + "│", style=self.theme.ORANGE))
+            box_lines.append(Text("╰" + "─" * 70 + "╯", style=self.theme.ORANGE))
+            
+            for line in box_lines:
+                input_group.append(Align.center(line))
+            
+            layout["input_area"].update(
+                Panel(
+                    Group(*input_group),
+                    title=f"[{self.theme.ORANGE}]▶ YOUR ANSWER[/]",
+                    border_style=self.theme.ORANGE,
+                    box=HEAVY,
+                    padding=(0, 2)
+                )
+            )
+            
+            # Footer
+            footer_text = Text()
+            footer_text.append("Type and press ", style=self.theme.TEXT_DIM)
+            footer_text.append("ENTER", style=f"bold {self.theme.ORANGE}")
+            footer_text.append(" to submit | ", style=self.theme.TEXT_DIM)
+            if question_number >= allow_skip_after:
+                footer_text.append("Ctrl+\\", style=f"bold {self.theme.ORANGE}")
+                footer_text.append(" = Enough info | ", style=self.theme.TEXT_DIM)
+            footer_text.append("Ctrl+C", style=f"bold {self.theme.ORANGE}")
+            footer_text.append(" = Cancel", style=self.theme.TEXT_DIM)
+            
+            layout["footer"].update(
+                self._create_footer("")
+            )
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Position cursor for input
+            print('\033[?25h', end='', flush=True)  # Show cursor
+            print(f'\033[{self.height - 8};{(self.width - 70) // 2 + 5}H', end='', flush=True)  # Position in box
+            
+            # Get input with readline support
+            try:
+                # Configure readline for better editing
+                readline.set_startup_hook(lambda: readline.insert_text(''))
+                answer = input()
+                
+                # If we got here normally, Ctrl+E was not pressed
+                return answer, False
+                
+            except EOFError:
+                # This happens when Ctrl+\ (our Ctrl+E substitute) is pressed
+                if ctrl_e_pressed and question_number >= allow_skip_after:
+                    return "", True  # Signal that we have enough
+                else:
+                    return "", False  # Just an empty answer
+                    
+            except KeyboardInterrupt:
+                raise
+                
+        finally:
+            # Restore signal handler
+            signal.signal(signal.SIGQUIT, old_handler)
+            print('\033[?25l', end='', flush=True)  # Hide cursor
+            readline.set_startup_hook(None)  # Clear readline hook
