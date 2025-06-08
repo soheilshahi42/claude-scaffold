@@ -301,6 +301,9 @@ Return JSON with:
                     "-p",  # Print mode (non-interactive)
                     full_prompt,
                 ]
+                
+                # Note: Claude Code CLI doesn't support max-tokens in print mode
+                # We rely on concise prompts to get reasonable response lengths
 
                 if attempt > 0:
                     # Exponential backoff: 2^attempt seconds (2s, 4s, 8s...)
@@ -498,8 +501,9 @@ Project: {project_context['project_name']}
 Description: {project_context['metadata']['description']}
 Language: {project_context['metadata']['language']}
 
-Provide a 1-2 sentence description that clearly explains the module's purpose
-and key responsibilities.
+Provide a clear, comprehensive description that explains the module's purpose,
+key responsibilities, and how it fits into the overall architecture.
+Include specific details about what this module handles.
 Return only the description text, no JSON."""
             )
 
@@ -508,7 +512,7 @@ Return only the description text, no JSON."""
                 name=f"Module: {module}",
                 prompt=prompt,
                 expect_json=False,
-                timeout=30,  # 30 second timeout for simple descriptions
+                timeout=90,  # 90 second timeout to allow for comprehensive descriptions
             )
 
         # Process all tasks

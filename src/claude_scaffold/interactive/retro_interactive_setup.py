@@ -443,7 +443,7 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                         [
                             f"📋 Total modules: {len(modules)}",
                             f"🔄 Processing up to 3 modules in parallel",
-                            f"⏱️ Estimated time: {len(modules) * 15 // 3}s - {len(modules) * 30 // 3}s",
+                            f"⏱️ Estimated time: {len(modules) * 30 // 3}s - {len(modules) * 60 // 3}s",
                             f"",
                             f"Initializing Claude API connections..."
                         ]

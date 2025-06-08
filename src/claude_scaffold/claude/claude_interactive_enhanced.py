@@ -546,12 +546,13 @@ Project: {project_data['project_name']}
 Type: {project_data['metadata']['project_type_name']}
 Original description: {project_data['metadata']['description']}
 
-Provide a 2-3 sentence enhanced description that:
-1. Clearly explains what the project does
-2. Mentions key features or benefits
-3. Indicates the target audience or use case
+Provide a comprehensive enhanced description that:
+1. Clearly explains what the project does and its main purpose
+2. Highlights key features, technologies, and benefits
+3. Identifies the target audience and use cases
+4. Mentions any unique aspects or innovations
 
-Return only the enhanced description text, no JSON."""
+Make it engaging and informative. Return only the enhanced description text, no JSON."""
 
         try:
             return self.processor._call_claude(prompt, expect_json=False).strip()
@@ -566,8 +567,11 @@ Return only the enhanced description text, no JSON."""
 
 Based on this project information, suggest the optimal module structure.
 Consider the project type, description, and language.
-Think about appropriate separation of concerns,
-    API design, and common features for this type of project.
+Think about appropriate separation of concerns, scalability,
+maintainability, and common patterns for this type of project.
+
+Include all necessary modules for a complete, production-ready application.
+Use lowercase with underscores (e.g., user_auth, api_gateway).
 
 Return a JSON array of module names that would be most appropriate."""
 
