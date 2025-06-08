@@ -466,16 +466,13 @@ class RetroUI:
             self.console.print()
         
         if not multiline:
-            # Single line input with Claude Code CLI-style box
+            # Single line input with better layout
             self._clear_screen()
             
-            # Create layout for input
+            # Create layout
             layout = Layout()
             layout.split_column(
                 Layout(name="header", size=9),
-                Layout(name="question", size=4),
-                Layout(name="spacer", size=2),
-                Layout(name="input", size=5),
                 Layout(name="content", ratio=1),
                 Layout(name="footer", size=3)
             )
@@ -485,43 +482,39 @@ class RetroUI:
                 self._create_header(title, subtitle)
             )
             
+            # Content - combine question and input in one panel
+            content_group = []
+            
             # Question
             question_text = Text()
-            question_text.append("? ", style=f"bold {self.theme.ORANGE}")
+            question_text.append("\n? ", style=f"bold {self.theme.ORANGE}")
             question_text.append(question, style=f"bold {self.theme.WHITE}")
-            layout["question"].update(
-                Align.center(
-                    Panel(
-                        Align.center(question_text),
-                        border_style=self.theme.ORANGE_DARK,
-                        box=MINIMAL,
-                        padding=(0, 2)
-                    )
-                )
-            )
+            question_text.append("\n\n")
+            content_group.append(Align.center(question_text))
             
-            # Claude Code CLI-style input box
-            from rich.box import ROUNDED
-            input_box = Panel(
-                "",
-                title="",
-                border_style=self.theme.ORANGE,
-                box=ROUNDED,
-                padding=(0, 1),
-                width=80,
-                height=3
-            )
+            # Input prompt
+            input_text = Text()
+            input_text.append("Type your answer below:\n\n", style=self.theme.TEXT_DIM)
+            content_group.append(Align.center(input_text))
             
-            layout["input"].update(
-                Align.center(input_box)
-            )
-            
-            # Default value hint
+            # Show default if present
             if default:
-                default_hint = Text(f"Default: {default}", style=self.theme.TEXT_DIM)
-                layout["content"].update(
-                    Align.center(default_hint, vertical="top")
-                )
+                default_text = Text()
+                default_text.append("Default: ", style=self.theme.TEXT_DIM)
+                default_text.append(default, style=self.theme.ORANGE_LIGHT)
+                default_text.append("\n\n", style="")
+                content_group.append(Align.center(default_text))
+            
+            content = Panel(
+                Align.center(Group(*content_group), vertical="middle"),
+                border_style=self.theme.ORANGE_DARK,
+                box=DOUBLE,
+                padding=(2, 4)
+            )
+            
+            layout["content"].update(
+                Align.center(content, vertical="middle")
+            )
             
             # Footer
             layout["footer"].update(
@@ -531,22 +524,10 @@ class RetroUI:
             # Print layout
             self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
-            # Position cursor inside the input box
-            # Move cursor to the input box position
-            term_width = self.width
-            box_width = 80
-            box_left = (term_width - box_width) // 2
-            input_row = 19  # Approximate row for input box
-            
-            # Move cursor to input box position
-            print(f'\033[{input_row};{box_left + 3}H', end='', flush=True)
+            # Get input at bottom
             print('\033[?25h', end='', flush=True)  # Show cursor
-            
-            # Get input with Claude Code CLI style prompt
-            answer = input("> ") or default
-            
-            # Hide cursor again
-            print('\033[?25l', end='', flush=True)
+            answer = input("\n> ") or default
+            print('\033[?25l', end='', flush=True)  # Hide cursor
         else:
             # Multiline input - first ask user which mode they prefer
             mode = self.ask_selection(
