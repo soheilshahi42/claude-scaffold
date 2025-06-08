@@ -774,11 +774,20 @@ class RetroUI:
             # Content - Options
             content_group = []
             
-            # Project description
+            # Project description (truncated if too long)
             desc_text = Text()
             desc_text.append("\n? ", style=f"bold {self.theme.ORANGE}")
             desc_text.append("Project: ", style=f"bold {self.theme.WHITE}")
-            desc_text.append(project_description, style=self.theme.ORANGE_LIGHT)
+            
+            # Take only first line and truncate if needed
+            first_line = project_description.split('\n')[0].strip()
+            max_desc_length = 80
+            if len(first_line) > max_desc_length:
+                truncated_desc = first_line[:max_desc_length-3] + "..."
+            else:
+                truncated_desc = first_line
+            
+            desc_text.append(truncated_desc, style=self.theme.ORANGE_LIGHT)
             desc_text.append("\n\n")
             content_group.append(Align.center(desc_text))
             
