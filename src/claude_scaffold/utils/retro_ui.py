@@ -466,15 +466,84 @@ class RetroUI:
             self.console.print()
         
         if not multiline:
-            # Single line input
-            input_prompt = Text()
-            input_prompt.append("▶ ", style=f"bold {self.theme.ORANGE}")
-            self.console.print(Align.center(input_prompt), end="")
+            # Single line input with Claude Code CLI-style box
+            self._clear_screen()
             
-            # Show cursor for input
-            print('\033[?25h', end='', flush=True)
+            # Create layout for input
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=9),
+                Layout(name="question", size=4),
+                Layout(name="spacer", size=2),
+                Layout(name="input", size=5),
+                Layout(name="content", ratio=1),
+                Layout(name="footer", size=3)
+            )
             
-            answer = input(f"") or default
+            # Header
+            layout["header"].update(
+                self._create_header(title, subtitle)
+            )
+            
+            # Question
+            question_text = Text()
+            question_text.append("? ", style=f"bold {self.theme.ORANGE}")
+            question_text.append(question, style=f"bold {self.theme.WHITE}")
+            layout["question"].update(
+                Align.center(
+                    Panel(
+                        Align.center(question_text),
+                        border_style=self.theme.ORANGE_DARK,
+                        box=MINIMAL,
+                        padding=(0, 2)
+                    )
+                )
+            )
+            
+            # Claude Code CLI-style input box
+            from rich.box import ROUNDED
+            input_box = Panel(
+                "",
+                title="",
+                border_style=self.theme.ORANGE,
+                box=ROUNDED,
+                padding=(0, 1),
+                width=80,
+                height=3
+            )
+            
+            layout["input"].update(
+                Align.center(input_box)
+            )
+            
+            # Default value hint
+            if default:
+                default_hint = Text(f"Default: {default}", style=self.theme.TEXT_DIM)
+                layout["content"].update(
+                    Align.center(default_hint, vertical="top")
+                )
+            
+            # Footer
+            layout["footer"].update(
+                self._create_footer(hint or "Type your answer and press ENTER")
+            )
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Position cursor inside the input box
+            # Move cursor to the input box position
+            term_width = self.width
+            box_width = 80
+            box_left = (term_width - box_width) // 2
+            input_row = 19  # Approximate row for input box
+            
+            # Move cursor to input box position
+            print(f'\033[{input_row};{box_left + 3}H', end='', flush=True)
+            print('\033[?25h', end='', flush=True)  # Show cursor
+            
+            # Get input with Claude Code CLI style prompt
+            answer = input("> ") or default
             
             # Hide cursor again
             print('\033[?25l', end='', flush=True)

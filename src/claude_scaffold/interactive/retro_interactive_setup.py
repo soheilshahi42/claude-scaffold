@@ -634,19 +634,23 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
             self.ui.stop_progress()
             
             if claude_rules:
-                # Show rules summary
-                rules_summary = "Claude recommends these project rules:\n\n"
-                for i, rule in enumerate(claude_rules[:5], 1):
-                    rules_summary += f"{i}. {rule}\n"
-                if len(claude_rules) > 5:
-                    rules_summary += f"\n...and {len(claude_rules) - 5} more rules"
+                # Show all rules in a paginated display
+                rules_display = {}
+                for i, rule in enumerate(claude_rules, 1):
+                    rules_display[f"Rule {i}"] = rule
+                
+                self.ui.show_paginated_results(
+                    "CLAUDE RULE SUGGESTIONS",
+                    rules_display,
+                    f"Claude recommends {len(claude_rules)} project rules"
+                )
                     
                 use_suggested = self.ui.ask_confirm(
-                    "CLAUDE RULES",
-                    rules_summary,
+                    "USE RULES",
+                    "Use Claude's recommended rules?",
                     default=True,
                     subtitle="AI Best Practices",
-                    hint="Accept Claude's recommended standards"
+                    hint="Review the rules above"
                 )
                 
                 if use_suggested:
@@ -677,13 +681,20 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
             ]["suggested_rules"]
             
             if suggested:
-                rules_summary = "Standard rules for your project type:\n\n"
-                for i, rule in enumerate(suggested[:5], 1):
-                    rules_summary += f"{i}. {rule}\n"
+                # Show all standard rules in a paginated display
+                rules_display = {}
+                for i, rule in enumerate(suggested, 1):
+                    rules_display[f"Rule {i}"] = rule
+                
+                self.ui.show_paginated_results(
+                    "STANDARD PROJECT RULES",
+                    rules_display,
+                    f"{len(suggested)} rules for your project type"
+                )
                     
                 use_suggested = self.ui.ask_confirm(
-                    "PROJECT RULES",
-                    rules_summary,
+                    "USE RULES",
+                    "Use these standard rules?",
                     default=True,
                     subtitle="Step 6 of 7"
                 )
@@ -726,17 +737,19 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
             self.ui.stop_progress()
             
             if claude_commands:
-                # Show commands
-                cmd_summary = "Claude suggests these commands:\n\n"
-                for cmd, value in list(claude_commands.items())[:5]:
-                    cmd_summary += f"• {cmd}: {value}\n"
+                # Show all commands in a paginated display
+                self.ui.show_paginated_results(
+                    "CLAUDE COMMAND SUGGESTIONS",
+                    claude_commands,
+                    f"Claude suggests {len(claude_commands)} build commands"
+                )
                     
                 use_commands = self.ui.ask_confirm(
-                    "BUILD COMMANDS",
-                    cmd_summary,
+                    "USE COMMANDS",
+                    "Use Claude's suggested commands?",
                     default=True,
                     subtitle="Step 7 of 7",
-                    hint="Accept Claude's build configuration"
+                    hint="Review the commands above"
                 )
                 
                 if use_commands:
