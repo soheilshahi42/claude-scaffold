@@ -817,7 +817,7 @@ class RetroUI:
         
         # Option 2: Enhance with Claude
         option2 = Panel(
-            f"[bold {self.theme.ORANGE}]2. ENHANCE WITH CLAUDE[/bold]\n\n"
+            f"[bold {self.theme.ORANGE}]2. ENHANCE WITH CLAUDE[/bold {self.theme.ORANGE}]\n\n"
             f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
             "Let Claude analyze and\n"
             "improve your project spec\n"
@@ -832,7 +832,7 @@ class RetroUI:
         
         # Option 3: Q&A Deep Dive
         option3 = Panel(
-            f"[bold {self.theme.ORANGE}]3. Q&A DEEP DIVE ✨[/bold]\n\n"
+            f"[bold {self.theme.ORANGE}]3. Q&A DEEP DIVE ✨[/bold {self.theme.ORANGE}]\n\n"
             f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
             "Interactive Q&A session\n"
             "with Claude (20-100 questions)\n"
