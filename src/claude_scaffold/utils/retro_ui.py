@@ -749,149 +749,138 @@ class RetroUI:
     
     def show_enhancement_options(self, project_description: str) -> str:
         """Show special enhancement options screen with rich UX."""
-        self._clear_screen()
+        import sys
+        import tty
+        import termios
         
-        # Create ASCII art header
-        header_art = """
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
-    ║     ▄████▄   ▄▄▄       ▄▄▄       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄       ║
-    ║    ▐█▌  ▐█▌  ███       ███       ███████████████       ║
-    ║    ▐█▌       ███       ███       ███                   ║
-    ║    ▐█▌       ███       ███       ███████████████       ║
-    ║    ▐█▌       ███       ███       ███                   ║
-    ║    ▐█▌  ▐█▌  ███▄▄▄▄▄▄▄███       ███                   ║
-    ║     ▀████▀   ▀▀▀▀▀▀▀▀▀▀▀▀▀       ▀▀▀                   ║
-    ║                                                           ║
-    ║           E N H A N C E M E N T   O P T I O N S          ║
-    ╚═══════════════════════════════════════════════════════════╝
-        """
-        
-        header = Panel(
-            Align.center(
-                Text(header_art, style=f"bold {self.theme.ORANGE}"),
-                vertical="middle"
-            ),
-            box=DOUBLE,
-            border_style=self.theme.ORANGE,
-            padding=(0, 0)
-        )
-        
-        # Project description panel
-        desc_panel = Panel(
-            Align.center(
-                Text(f"Project: {project_description}", style=self.theme.WHITE),
-                vertical="middle"
-            ),
-            border_style=self.theme.ORANGE_DARK,
-            box=MINIMAL,
-            padding=(1, 2),
-            title=f"[{self.theme.ORANGE}]▌ YOUR PROJECT ▐[/]",
-            title_align="center"
-        )
-        
-        # Create beautiful option cards
-        options_grid = Table(
-            show_header=False,
-            show_lines=True,
-            border_style=self.theme.ORANGE,
-            box=HEAVY,
-            expand=True,
-            padding=(1, 2)
-        )
-        
-        # Option 1: Continue without changes
-        option1 = Panel(
-            "[bold]1. CONTINUE AS IS[/bold]\n\n"
-            f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
-            "Use your original project\n"
-            "description without any\n"
-            "modifications or enhancements.\n\n"
-            f"[{self.theme.TEXT_DIM}]Best for: Simple projects\n"
-            f"with clear requirements[/{self.theme.TEXT_DIM}]",
-            border_style=self.theme.TEXT_DIM,
-            box=DOUBLE,
-            style=self.theme.WHITE,
-            height=12
-        )
-        
-        # Option 2: Enhance with Claude
-        option2 = Panel(
-            f"[bold {self.theme.ORANGE}]2. ENHANCE WITH CLAUDE[/bold {self.theme.ORANGE}]\n\n"
-            f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
-            "Let Claude analyze and\n"
-            "improve your project spec\n"
-            "with intelligent suggestions.\n\n"
-            f"[{self.theme.TEXT_DIM}]Best for: Getting professional\n"
-            f"structure and best practices[/{self.theme.TEXT_DIM}]",
-            border_style=self.theme.ORANGE,
-            box=DOUBLE,
-            style=self.theme.WHITE,
-            height=12
-        )
-        
-        # Option 3: Q&A Deep Dive
-        option3 = Panel(
-            f"[bold {self.theme.ORANGE}]3. Q&A DEEP DIVE ✨[/bold {self.theme.ORANGE}]\n\n"
-            f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
-            "Interactive Q&A session\n"
-            "with Claude (20-100 questions)\n"
-            "for comprehensive planning.\n\n"
-            f"[{self.theme.TEXT_DIM}]Best for: Complex projects\n"
-            f"needing detailed specs[/{self.theme.TEXT_DIM}]\n\n"
-            f"[{self.theme.ORANGE_LIGHT}]Press Ctrl+E when done[/{self.theme.ORANGE_LIGHT}]",
-            border_style=self.theme.ORANGE,
-            box=DOUBLE,
-            style=self.theme.WHITE,
-            height=12
-        )
-        
-        options_grid.add_column(justify="center", width=28)
-        options_grid.add_column(justify="center", width=28)
-        options_grid.add_column(justify="center", width=28)
-        options_grid.add_row(option1, option2, option3)
-        
-        # Instructions footer
-        instructions = Panel(
-            Align.center(
-                Text(
-                    "Enter your choice (1-3) to proceed",
-                    style=self.theme.TEXT_DIM
-                )
-            ),
-            box=MINIMAL,
-            border_style=self.theme.TEXT_DIM,
-            padding=(0, 2)
-        )
-        
-        # Create layout
-        layout = Layout()
-        layout.split_column(
-            Layout(header, size=13),
-            Layout(desc_panel, size=5),
-            Layout(options_grid, size=14),
-            Layout(instructions, size=3)
-        )
-        
-        self.console.print(layout)
-        
-        # Get user choice with visual prompt
-        print('\033[?25h', end='', flush=True)  # Show cursor
-        from rich.prompt import Prompt
+        selected = 2  # Default to option 2 (Enhance with Claude)
         
         while True:
+            self._clear_screen()
+            
+            # Create layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=9),
+                Layout(name="content", ratio=1),
+                Layout(name="footer", size=3)
+            )
+            
+            # Header
+            layout["header"].update(
+                self._create_header("ENHANCEMENT OPTIONS", "Choose how to proceed with your project")
+            )
+            
+            # Content - Options
+            content_group = []
+            
+            # Project description
+            desc_text = Text()
+            desc_text.append("\n? ", style=f"bold {self.theme.ORANGE}")
+            desc_text.append("Project: ", style=f"bold {self.theme.WHITE}")
+            desc_text.append(project_description, style=self.theme.ORANGE_LIGHT)
+            desc_text.append("\n\n")
+            content_group.append(Align.center(desc_text))
+            
+            # Options
+            options = [
+                {
+                    "num": "1",
+                    "title": "CONTINUE AS IS",
+                    "desc": "Use your original description\nwithout any modifications",
+                    "hint": "Simple projects with clear requirements"
+                },
+                {
+                    "num": "2", 
+                    "title": "ENHANCE WITH CLAUDE",
+                    "desc": "Let Claude analyze and improve\nyour project specification",
+                    "hint": "Get professional structure & best practices"
+                },
+                {
+                    "num": "3",
+                    "title": "Q&A DEEP DIVE ✨",
+                    "desc": "Interactive Q&A session with Claude\n(20-100 questions) for detailed planning",
+                    "hint": "Complex projects needing detailed specs"
+                }
+            ]
+            
+            # Show options with selection
+            for i, opt in enumerate(options, 1):
+                option_text = Text()
+                
+                if i == selected:
+                    option_text.append("\n  ► ", style=f"bold {self.theme.ORANGE}")
+                    option_text.append(f"{opt['num']}. {opt['title']}", style=f"bold {self.theme.WHITE}")
+                    option_text.append("\n     ", style="")
+                    option_text.append(opt['desc'].replace('\n', '\n     '), style=self.theme.ORANGE_LIGHT)
+                    option_text.append("\n     ", style="")
+                    option_text.append(f"[{opt['hint']}]", style=self.theme.TEXT_DIM)
+                else:
+                    option_text.append("\n    ", style="")
+                    option_text.append(f"{opt['num']}. {opt['title']}", style=self.theme.TEXT_DIM)
+                    option_text.append("\n     ", style="")
+                    option_text.append(opt['desc'].replace('\n', '\n     '), style=self.theme.GRAY)
+                
+                content_group.append(Align.center(option_text))
+            
+            # Special note for Q&A mode
+            content_group.append(Text("\n"))
+            note_text = Text()
+            note_text.append("Note: ", style=f"bold {self.theme.ORANGE}")
+            note_text.append("Q&A mode allows you to press ", style=self.theme.TEXT_DIM)
+            note_text.append("Ctrl+E", style=f"bold {self.theme.ORANGE}")
+            note_text.append(" when you have enough information", style=self.theme.TEXT_DIM)
+            content_group.append(Align.center(note_text))
+            
+            # Instructions
+            content_group.append(Text("\n"))
+            instructions = Text()
+            instructions.append("↑↓ ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Navigate   ", style=self.theme.TEXT_DIM)
+            instructions.append("ENTER ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Select   ", style=self.theme.TEXT_DIM)
+            instructions.append("1-3 ", style=f"bold {self.theme.ORANGE}")
+            instructions.append("Quick Select", style=self.theme.TEXT_DIM)
+            content_group.append(Align.center(instructions))
+            
+            content = Panel(
+                Align.center(Group(*content_group), vertical="middle"),
+                border_style=self.theme.ORANGE_DARK,
+                box=DOUBLE,
+                padding=(2, 4)
+            )
+            
+            layout["content"].update(
+                Align.center(content, vertical="middle")
+            )
+            
+            # Footer
+            layout["footer"].update(self._create_footer("Select your enhancement option"))
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Get input
+            old_settings = termios.tcgetattr(sys.stdin)
             try:
-                choice = Prompt.ask(
-                    f"\n[{self.theme.ORANGE}]▶[/{self.theme.ORANGE}]",
-                    console=self.console,
-                    choices=["1", "2", "3"],
-                    default="2"
-                )
-                print('\033[?25l', end='', flush=True)  # Hide cursor
-                return choice
-            except KeyboardInterrupt:
-                print('\033[?25l', end='', flush=True)  # Hide cursor
-                return "1"  # Default to continue as is
+                tty.setraw(sys.stdin.fileno())
+                key = sys.stdin.read(1)
+                
+                if key == '\r' or key == '\n':  # Enter
+                    return str(selected)
+                elif key in ['1', '2', '3']:  # Direct number selection
+                    return key
+                elif key == '\x1b':  # Escape sequence
+                    next_keys = sys.stdin.read(2)
+                    if next_keys == '[A':  # Up arrow
+                        selected = max(1, selected - 1)
+                    elif next_keys == '[B':  # Down arrow
+                        selected = min(3, selected + 1)
+                elif key == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt()
+                    
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         
     def ask_confirm(
         self,
