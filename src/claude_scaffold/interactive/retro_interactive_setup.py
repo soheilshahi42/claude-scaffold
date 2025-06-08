@@ -425,30 +425,98 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                     else:
                         refined_modules = claude_modules
                     
-                    # NOW generate descriptions for the final module list
-                    self.ui.show_progress(
-                        "GENERATING DESCRIPTIONS",
-                        "Creating module descriptions...",
-                        "AI-powered documentation"
-                    )
-                    
+                    # Generate descriptions for the final module list
                     modules = [
                         {"name": m, "description": f"{m.title()} module"}
                         for m in refined_modules
                     ]
                     
-                    # Get descriptions from Claude
-                    if hasattr(self.claude_setup, 'processor'):
-                        module_names = [m["name"] for m in modules]
-                        descriptions = self.claude_setup.processor.generate_module_descriptions_batch(
-                            module_names, project_data
+                    # Always generate descriptions - this is important for project quality
+                    import time
+                    start_time = time.time()
+                    
+                    # Show initial progress
+                    self.ui.show_progress(
+                        "GENERATING DESCRIPTIONS",
+                        f"Starting generation for {len(modules)} modules...",
+                        "Using 3 concurrent Claude instances",
+                        [
+                            f"📋 Total modules: {len(modules)}",
+                            f"🔄 Processing up to 3 modules in parallel",
+                            f"⏱️ Estimated time: {len(modules) * 15 // 3}s - {len(modules) * 30 // 3}s",
+                            f"",
+                            f"Initializing Claude API connections..."
+                        ]
+                    )
+                    
+                    try:
+                        # Get descriptions from Claude
+                        if hasattr(self.claude_setup, 'processor'):
+                            module_names = [m["name"] for m in modules]
+                            
+                            # Log start of generation
+                            self.logger.info(f"Starting module description generation for {len(module_names)} modules with 3 concurrent threads")
+                            
+                            # Update progress before starting
+                            self.ui.show_progress(
+                                "GENERATING DESCRIPTIONS",
+                                f"Processing {len(modules)} modules...",
+                                "3 concurrent Claude instances active",
+                                [
+                                    f"🚀 Starting batch processing...",
+                                    f"",
+                                    f"📊 Progress: {'░' * 20} 0%",
+                                    f"⏱️ Time elapsed: 0m 0s",
+                                    f"📝 Modules in queue: {len(modules)}"
+                                ]
+                            )
+                            
+                            # Call the batch processor
+                            descriptions = self.claude_setup.processor.generate_module_descriptions_batch(
+                                module_names, project_data
+                            )
+                            
+                            # Final timing and stats
+                            total_elapsed = int(time.time() - start_time)
+                            mins, secs = divmod(total_elapsed, 60)
+                            success_count = len(descriptions)
+                            
+                            # Show completion
+                            self.ui.show_progress(
+                                "DESCRIPTIONS COMPLETE",
+                                f"Generated {success_count}/{len(modules)} descriptions",
+                                f"Total time: {mins}m {secs}s",
+                                [
+                                    f"✅ Successfully processed: {success_count} modules",
+                                    f"❌ Failed: {len(modules) - success_count} modules",
+                                    f"⏱️ Average time per module: {total_elapsed // max(1, success_count)}s",
+                                    f"",
+                                    f"Finalizing module configuration..."
+                                ]
+                            )
+                            
+                            # Brief pause to show completion
+                            time.sleep(2)
+                            
+                            self.logger.info(f"Generated {success_count} module descriptions in {mins}m {secs}s")
+                            
+                            for module in modules:
+                                if module["name"] in descriptions:
+                                    module["description"] = descriptions[module["name"]]
+                                    
+                    except Exception as e:
+                        self.logger.error("Failed to generate module descriptions", e)
+                        # Don't give up - basic descriptions are better than none
+                        self.ui.show_results(
+                            "GENERATION ERROR",
+                            {
+                                "Error": str(e),
+                                "Action": "Continuing with basic descriptions"
+                            },
+                            "Module descriptions could not be generated"
                         )
-                        
-                        for module in modules:
-                            if module["name"] in descriptions:
-                                module["description"] = descriptions[module["name"]]
-                                
-                    self.ui.stop_progress()
+                    finally:
+                        self.ui.stop_progress()
                     
                     # Show the final modules with descriptions
                     self.ui.show_paginated_results(

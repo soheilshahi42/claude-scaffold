@@ -482,9 +482,9 @@ Return JSON with:
         """
         self.logger.info(f"Generating descriptions for {len(modules)} modules concurrently")
 
-        # Create task queue
+        # Create task queue with exactly 3 workers
         task_queue = ClaudeTaskQueue(
-            max_workers=min(3, len(modules)), debug_mode=self.logger.debug_mode
+            max_workers=3, debug_mode=self.logger.debug_mode
         )
 
         # Add tasks for each module
@@ -508,7 +508,7 @@ Return only the description text, no JSON."""
                 name=f"Module: {module}",
                 prompt=prompt,
                 expect_json=False,
-                timeout=60,  # Shorter timeout for simple descriptions
+                timeout=30,  # 30 second timeout for simple descriptions
             )
 
         # Process all tasks
