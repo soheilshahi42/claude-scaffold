@@ -501,10 +501,8 @@ Project: {project_context['project_name']}
 Description: {project_context['metadata']['description']}
 Language: {project_context['metadata']['language']}
 
-Provide a clear, comprehensive description that explains the module's purpose,
-key responsibilities, and how it fits into the overall architecture.
-Include specific details about what this module handles.
-Return only the description text, no JSON."""
+Provide a 1-2 sentence description that clearly explains the module's purpose
+and key responsibilities."""
             )
 
             task_queue.add_task(
