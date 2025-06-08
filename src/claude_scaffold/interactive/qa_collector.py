@@ -77,6 +77,12 @@ class QACollector:
         # Keep asking questions until we have enough or reach the limit
         while question_count < self.MAX_QUESTIONS and not self.enough_signal_received:
             
+            # Show progress while generating the next question
+            if question_count > 0:  # Don't show progress for the first question
+                self.ui.show_qa_progress(
+                    f"Generating question {question_count + 1} based on your previous answers..."
+                )
+            
             # Generate the next question based on all previous Q&A
             question = self._generate_contextual_question(question_count)
             if not question:
@@ -96,9 +102,12 @@ class QACollector:
             # Check if we have minimum questions
             if question_count >= self.MIN_QUESTIONS and self.enough_signal_received:
                 break
-            
-            # Don't show progress between questions - it can get stuck
-            # The question generation itself provides feedback through Claude's processing
+        
+        # Show progress while compiling the specification
+        if self.answers:
+            self.ui.show_qa_progress(
+                f"Compiling {len(self.answers)} Q&A responses into comprehensive specification..."
+            )
         
         # Compile the Q&A into a comprehensive project specification
         return self._compile_project_spec()

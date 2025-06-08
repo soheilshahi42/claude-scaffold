@@ -1572,12 +1572,16 @@ class RetroUI:
         old_handler = signal.signal(signal.SIGQUIT, handle_ctrl_e)
         
         try:
-            # Create layout
+            # Create layout that fills the entire screen
             layout = Layout()
+            # Calculate sizes to fill screen
+            question_area_size = max(8, (self.height - 20) // 2)
+            input_area_size = max(10, self.height - 9 - question_area_size - 3)
+            
             layout.split_column(
                 Layout(name="header", size=9),
-                Layout(name="question", size=6),
-                Layout(name="input_area", size=8),
+                Layout(name="question", size=question_area_size),
+                Layout(name="input_area", size=input_area_size),
                 Layout(name="footer", size=3)
             )
             
@@ -1598,10 +1602,13 @@ class RetroUI:
             question_group.append(Align.center(cat_text))
             question_group.append(Text())
             
-            # Question text
+            # Question text - wrap long questions
             q_text = Text()
             q_text.append("? ", style=f"bold {self.theme.ORANGE}")
-            q_text.append(question, style=f"bold {self.theme.WHITE}")
+            # Wrap question text if too long
+            import textwrap
+            wrapped_question = textwrap.fill(question, width=min(100, self.width - 20))
+            q_text.append(wrapped_question, style=f"bold {self.theme.WHITE}")
             question_group.append(Align.center(q_text))
             
             layout["question"].update(
@@ -1609,7 +1616,8 @@ class RetroUI:
                     Align.center(Group(*question_group), vertical="middle"),
                     border_style=self.theme.ORANGE_DARK,
                     box=DOUBLE,
-                    padding=(1, 4)
+                    padding=(1, 4),
+                    expand=True
                 )
             )
             
@@ -1631,14 +1639,16 @@ class RetroUI:
             input_text.append("📝 ", style=f"bold {self.theme.ORANGE}")
             input_text.append("Type your answer below:", style=self.theme.WHITE)
             input_group.append(Align.center(input_text))
+            input_group.append(Text())
             
-            # Input box visualization
+            # Input box visualization with centered placement
+            box_width = min(70, self.width - 10)
             box_lines = []
-            box_lines.append(Text("╭" + "─" * 70 + "╮", style=self.theme.ORANGE))
-            box_lines.append(Text("│" + " " * 70 + "│", style=self.theme.ORANGE))
-            box_lines.append(Text("│  > _" + " " * 63 + "│", style=self.theme.ORANGE))
-            box_lines.append(Text("│" + " " * 70 + "│", style=self.theme.ORANGE))
-            box_lines.append(Text("╰" + "─" * 70 + "╯", style=self.theme.ORANGE))
+            box_lines.append(Text("╭" + "─" * box_width + "╮", style=self.theme.ORANGE))
+            box_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
+            box_lines.append(Text("│  > " + " " * (box_width - 4) + "│", style=self.theme.ORANGE))
+            box_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
+            box_lines.append(Text("╰" + "─" * box_width + "╯", style=self.theme.ORANGE))
             
             for line in box_lines:
                 input_group.append(Align.center(line))
@@ -1649,7 +1659,8 @@ class RetroUI:
                     title=f"[{self.theme.ORANGE}]▶ YOUR ANSWER[/]",
                     border_style=self.theme.ORANGE,
                     box=HEAVY,
-                    padding=(0, 2)
+                    padding=(1, 2),
+                    expand=True
                 )
             )
             
@@ -1668,17 +1679,28 @@ class RetroUI:
                 self._create_footer("")
             )
             
-            # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            # Print layout fullscreen
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
             
-            # Position cursor for input
+            # Calculate correct cursor position
+            # Find where the input box is on screen
+            # Header (9) + question area + some of input area to get to the input line
+            input_line_position = 9 + question_area_size + (6 if question_number >= allow_skip_after else 4)
+            # Adjust for box position within input area
+            cursor_y = min(input_line_position + 3, self.height - 5)
+            cursor_x = (self.width - box_width) // 2 + 5
+            
+            # Position cursor for input inside the box
             print('\033[?25h', end='', flush=True)  # Show cursor
-            print(f'\033[{self.height - 8};{(self.width - 70) // 2 + 5}H', end='', flush=True)  # Position in box
+            print(f'\033[{cursor_y};{cursor_x}H', end='', flush=True)  # Position in box
             
             # Get input with readline support
             try:
                 # Configure readline for better editing
                 readline.set_startup_hook(lambda: readline.insert_text(''))
+                # Use a raw input that stays at cursor position
+                import sys
+                sys.stdout.flush()
                 answer = input()
                 
                 # If we got here normally, Ctrl+E was not pressed
@@ -1699,3 +1721,65 @@ class RetroUI:
             signal.signal(signal.SIGQUIT, old_handler)
             print('\033[?25l', end='', flush=True)  # Hide cursor
             readline.set_startup_hook(None)  # Clear readline hook
+    
+    def show_qa_progress(self, message: str = "Generating next question..."):
+        """Show a progress screen while generating Q&A questions."""
+        self._clear_screen()
+        
+        # Create layout
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header", size=9),
+            Layout(name="content", ratio=1),
+            Layout(name="footer", size=3)
+        )
+        
+        # Header
+        layout["header"].update(
+            self._create_header("Q&A SESSION", "Claude is thinking...")
+        )
+        
+        # Progress content
+        progress_group = []
+        
+        # Message
+        msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
+        progress_group.append(Align.center(msg_text))
+        
+        # Animated Claude thinking
+        claude_art = Text()
+        claude_art.append("\n     🤖\n", style=f"bold {self.theme.ORANGE}")
+        claude_art.append("    /│\\\n", style=self.theme.ORANGE_LIGHT)
+        claude_art.append("   / │ \\\n", style=self.theme.ORANGE_LIGHT)
+        progress_group.append(Align.center(claude_art))
+        
+        # Loading animation
+        loading_text = Text()
+        loading_text.append("\n◆ ◇ ◆ ◇ ◆ ◇ ◆\n", style=f"bold {self.theme.ORANGE}")
+        progress_group.append(Align.center(loading_text))
+        
+        # Status
+        status_text = Text()
+        status_text.append("\nAnalyzing previous answers...\n", style=self.theme.TEXT_DIM)
+        status_text.append("Formulating contextual question...\n", style=self.theme.TEXT_DIM)
+        progress_group.append(Align.center(status_text))
+        
+        content = Panel(
+            Align.center(Group(*progress_group), vertical="middle"),
+            title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
+            border_style=self.theme.ORANGE,
+            box=HEAVY,
+            padding=(2, 4)
+        )
+        
+        layout["content"].update(
+            Align.center(content, vertical="middle")
+        )
+        
+        # Footer
+        layout["footer"].update(
+            self._create_footer("Please wait...")
+        )
+        
+        # Print layout
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
