@@ -72,28 +72,16 @@ class QACollector:
         # Store project description for use in follow-up questions
         self.project_description = project_description
         
-        # Show a brief progress message
-        self.ui.show_progress(
-            "Starting Q&A Session",
-            "Preparing detailed questions about your project",
-            "Press Ctrl+E when you have enough information"
-        )
-        
-        # Generate initial questions based on project description
-        initial_questions = self._generate_initial_questions(project_description)
-        
         question_count = 0
         
         # Keep asking questions until we have enough or reach the limit
         while question_count < self.MAX_QUESTIONS and not self.enough_signal_received:
-            # Get next question
-            if question_count < len(initial_questions):
-                question = initial_questions[question_count]
-            else:
-                # Generate follow-up questions based on previous answers
-                question = self._generate_next_question()
-                if not question:
-                    break
+            
+            # Generate the next question based on all previous Q&A
+            question = self._generate_contextual_question(question_count)
+            if not question:
+                # If we can't generate more questions, we're done
+                break
             
             # Ask the question
             answer = self._ask_question(question, question_count + 1)
@@ -101,13 +89,112 @@ class QACollector:
                 self.questions_asked.append(question)
                 self.answers.append(answer)
                 question_count += 1
+            else:
+                # Empty answer means user wants to skip
+                continue
             
             # Check if we have minimum questions
             if question_count >= self.MIN_QUESTIONS and self.enough_signal_received:
                 break
+            
+            # Don't show progress between questions - it can get stuck
+            # The question generation itself provides feedback through Claude's processing
         
         # Compile the Q&A into a comprehensive project specification
         return self._compile_project_spec()
+    
+    def _generate_contextual_question(self, question_number: int) -> Optional[Question]:
+        """Generate a single contextual question based on all previous Q&A."""
+        if not self.claude_processor:
+            # Fallback to default questions if no Claude
+            default_questions = self._get_default_questions(self.project_description)
+            if question_number < len(default_questions):
+                return default_questions[question_number]
+            return None
+        
+        # Build the context from all previous Q&A
+        qa_context = ""
+        if self.answers:
+            qa_context = "\n\nPrevious Q&A:\n"
+            for i, answer in enumerate(self.answers, 1):
+                qa_context += f"\nQ{i}: {answer.question.text}\n"
+                qa_context += f"A{i}: {answer.response}\n"
+        
+        # Create a comprehensive prompt for question generation
+        prompt = f"""You are conducting a detailed discovery session for a software project. Your goal is to understand ALL aspects needed to develop this project successfully.
+
+Project Description: "{self.project_description}"
+{qa_context}
+
+Based on the project description and any previous Q&A above, generate the NEXT SINGLE most important question to ask.
+
+Consider these aspects that need to be covered throughout the session:
+- Technical stack (languages, frameworks, databases, tools)
+- Architecture and system design
+- Core features and functionality
+- User interface and user experience
+- Authentication and authorization
+- Data models and relationships
+- API design and endpoints
+- Third-party integrations
+- Performance and scalability requirements
+- Security considerations
+- Deployment and hosting
+- Development timeline and constraints
+- Testing strategy
+- Error handling and logging
+- Documentation needs
+- Future extensibility
+
+Questions asked so far: {question_number}
+
+Generate exactly ONE question that:
+1. Builds on previous answers (if any)
+2. Explores an aspect not yet covered
+3. Is specific and actionable
+4. Helps clarify technical decisions
+
+Format: CATEGORY: question text
+
+Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, INTEGRATIONS"""
+        
+        try:
+            response = self.claude_processor.process_with_claude(prompt, "contextual_question_generation")
+            
+            # Parse the single question from response
+            for line in response.strip().split('\n'):
+                if ':' in line and any(cat in line.upper() for cat in ['TECHNICAL', 'FEATURES', 'ARCHITECTURE', 'DEPLOYMENT', 'USERS', 'CONSTRAINTS', 'INTEGRATIONS']):
+                    parts = line.split(':', 1)
+                    if len(parts) == 2:
+                        category = parts[0].strip().upper()
+                        question_text = parts[1].strip()
+                        
+                        category_map = {
+                            'TECHNICAL': QuestionCategory.TECHNICAL,
+                            'FEATURES': QuestionCategory.FEATURES,
+                            'ARCHITECTURE': QuestionCategory.ARCHITECTURE,
+                            'DEPLOYMENT': QuestionCategory.DEPLOYMENT,
+                            'USERS': QuestionCategory.USERS,
+                            'CONSTRAINTS': QuestionCategory.CONSTRAINTS,
+                            'INTEGRATIONS': QuestionCategory.INTEGRATIONS,
+                        }
+                        
+                        return Question(
+                            text=question_text,
+                            category=category_map.get(category, QuestionCategory.FEATURES),
+                            importance="high" if question_number < 10 else "medium",
+                            context=f"Question {question_number + 1}"
+                        )
+            
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate contextual question: {e}")
+            # Fallback to default questions
+            default_questions = self._get_default_questions(self.project_description)
+            if question_number < len(default_questions):
+                return default_questions[question_number]
+            return None
     
     def _generate_initial_questions(self, project_description: str) -> List[Question]:
         """Generate initial questions based on project description."""

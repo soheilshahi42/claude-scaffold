@@ -1167,8 +1167,11 @@ class RetroUI:
                 self.live_display.stop()
             except:
                 pass
-        # Clear screen after stopping progress
+        # Always clear screen and reset console state
         self._clear_screen()
+        # Ensure console is in a good state
+        self.console.clear()
+        print('\033[?25h', end='', flush=True)  # Show cursor
     
     def ask_feedback(
         self,
