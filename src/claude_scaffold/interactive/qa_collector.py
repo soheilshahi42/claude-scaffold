@@ -156,7 +156,7 @@ Format: CATEGORY: question text
 Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, INTEGRATIONS"""
         
         try:
-            response = self.claude_processor.process_with_claude(prompt, "contextual_question_generation")
+            response = self.claude_processor._call_claude(prompt, expect_json=False)
             
             # Parse the single question from response
             for line in response.strip().split('\n'):
