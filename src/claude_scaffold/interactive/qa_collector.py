@@ -5,12 +5,33 @@ from dataclasses import dataclass
 from enum import Enum
 import signal
 import sys
+import os
+from contextlib import contextmanager
 
 from ..utils.retro_ui import RetroUI, RetroTheme
 from ..claude.claude_processor import ClaudeProcessor
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+@contextmanager
+def suppress_output():
+    """Temporarily suppress stdout/stderr to prevent logs from showing."""
+    # Save the original stdout/stderr
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+    
+    # Redirect to devnull
+    with open(os.devnull, 'w') as devnull:
+        sys.stdout = devnull
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            # Restore original stdout/stderr
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
 
 class QuestionCategory(Enum):
@@ -78,7 +99,11 @@ class QACollector:
         while question_count < self.MAX_QUESTIONS and not self.enough_signal_received:
             
             # Show progress while generating the next question
-            if question_count > 0:  # Don't show progress for the first question
+            if question_count == 0:
+                self.ui.show_qa_progress(
+                    "Starting Q&A session... Analyzing your project description..."
+                )
+            else:
                 self.ui.show_qa_progress(
                     f"Generating question {question_count + 1} based on your previous answers..."
                 )
@@ -165,7 +190,9 @@ Format: CATEGORY: question text
 Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, INTEGRATIONS"""
         
         try:
-            response = self.claude_processor._call_claude(prompt, expect_json=False)
+            # Suppress output during Claude call to prevent logs from showing
+            with suppress_output():
+                response = self.claude_processor._call_claude(prompt, expect_json=False)
             
             # Parse the single question from response
             for line in response.strip().split('\n'):
@@ -276,10 +303,11 @@ Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, I
             
             try:
                 # Use Claude's dedicated compilation method
-                compiled_spec = self.claude_processor.compile_qa_into_spec(
-                    self.project_description,
-                    qa_session
-                )
+                with suppress_output():
+                    compiled_spec = self.claude_processor.compile_qa_into_spec(
+                        self.project_description,
+                        qa_session
+                    )
                 spec["compiled_requirements"]["claude_spec"] = compiled_spec
                 
                 # Also create a structured version for easier access

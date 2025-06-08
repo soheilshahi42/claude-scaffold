@@ -1722,64 +1722,180 @@ class RetroUI:
             print('\033[?25l', end='', flush=True)  # Hide cursor
             readline.set_startup_hook(None)  # Clear readline hook
     
-    def show_qa_progress(self, message: str = "Generating next question..."):
-        """Show a progress screen while generating Q&A questions."""
+    def show_qa_progress(self, message: str = "Generating next question...", duration: float = 0):
+        """Show a progress screen while generating Q&A questions.
+        
+        Args:
+            message: The message to display
+            duration: If > 0, show animated progress for this many seconds
+        """
+        import threading
+        import time
+        from rich.live import Live
+        
         self._clear_screen()
         
-        # Create layout
-        layout = Layout()
-        layout.split_column(
-            Layout(name="header", size=9),
-            Layout(name="content", ratio=1),
-            Layout(name="footer", size=3)
-        )
-        
-        # Header
-        layout["header"].update(
-            self._create_header("Q&A SESSION", "Claude is thinking...")
-        )
-        
-        # Progress content
-        progress_group = []
-        
-        # Message
-        msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
-        progress_group.append(Align.center(msg_text))
-        
-        # Animated Claude thinking
-        claude_art = Text()
-        claude_art.append("\n     🤖\n", style=f"bold {self.theme.ORANGE}")
-        claude_art.append("    /│\\\n", style=self.theme.ORANGE_LIGHT)
-        claude_art.append("   / │ \\\n", style=self.theme.ORANGE_LIGHT)
-        progress_group.append(Align.center(claude_art))
-        
-        # Loading animation
-        loading_text = Text()
-        loading_text.append("\n◆ ◇ ◆ ◇ ◆ ◇ ◆\n", style=f"bold {self.theme.ORANGE}")
-        progress_group.append(Align.center(loading_text))
-        
-        # Status
-        status_text = Text()
-        status_text.append("\nAnalyzing previous answers...\n", style=self.theme.TEXT_DIM)
-        status_text.append("Formulating contextual question...\n", style=self.theme.TEXT_DIM)
-        progress_group.append(Align.center(status_text))
-        
-        content = Panel(
-            Align.center(Group(*progress_group), vertical="middle"),
-            title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
-            border_style=self.theme.ORANGE,
-            box=HEAVY,
-            padding=(2, 4)
-        )
-        
-        layout["content"].update(
-            Align.center(content, vertical="middle")
-        )
-        
-        # Footer
-        layout["footer"].update(
-            self._create_footer("Please wait...")
-        )
-        
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
+        if duration > 0:
+            # Use animated progress with Live display
+            self.loading_active = True
+            frame_index = 0
+            
+            loading_frames = ["◆ ◇ ◆ ◇ ◆ ◇ ◆", "◇ ◆ ◇ ◆ ◇ ◆ ◇", "◆ ◇ ◆ ◇ ◆ ◇ ◆", "◇ ◆ ◇ ◆ ◇ ◆ ◇"]
+            robot_frames = ["🤖", "🤖", "🤖", "🤖"]
+            
+            def generate_frame():
+                nonlocal frame_index
+                
+                # Create layout
+                layout = Layout()
+                layout.split_column(
+                    Layout(name="header", size=9),
+                    Layout(name="content", ratio=1),
+                    Layout(name="footer", size=3)
+                )
+                
+                # Header
+                layout["header"].update(
+                    self._create_header("Q&A SESSION", "Claude is thinking...")
+                )
+                
+                # Progress content
+                progress_group = []
+                
+                # Message
+                msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
+                progress_group.append(Align.center(msg_text))
+                
+                # Animated Claude thinking
+                claude_art = Text()
+                claude_art.append(f"\n     {robot_frames[frame_index % len(robot_frames)]}\n", style=f"bold {self.theme.ORANGE}")
+                claude_art.append("    /│\\\n", style=self.theme.ORANGE_LIGHT)
+                claude_art.append("   / │ \\\n", style=self.theme.ORANGE_LIGHT)
+                progress_group.append(Align.center(claude_art))
+                
+                # Loading animation
+                loading_text = Text()
+                loading_text.append(f"\n{loading_frames[frame_index % len(loading_frames)]}\n", style=f"bold {self.theme.ORANGE}")
+                progress_group.append(Align.center(loading_text))
+                
+                # Status
+                status_text = Text()
+                status_text.append("\nAnalyzing previous answers...\n", style=self.theme.TEXT_DIM)
+                status_text.append("Formulating contextual question...\n", style=self.theme.TEXT_DIM)
+                progress_group.append(Align.center(status_text))
+                
+                content = Panel(
+                    Align.center(Group(*progress_group), vertical="middle"),
+                    title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
+                    border_style=self.theme.ORANGE,
+                    box=HEAVY,
+                    padding=(2, 4)
+                )
+                
+                layout["content"].update(
+                    Align.center(content, vertical="middle")
+                )
+                
+                # Footer
+                layout["footer"].update(
+                    self._create_footer("Please wait...")
+                )
+                
+                frame_index += 1
+                return layout
+            
+            # Use Live display
+            self.live_display = Live(
+                generate_frame(),
+                console=self.console,
+                refresh_per_second=4,
+                transient=False,
+                screen=True
+            )
+            
+            def animate():
+                with self.live_display:
+                    end_time = time.time() + duration
+                    while self.loading_active and time.time() < end_time:
+                        self.live_display.update(generate_frame())
+                        time.sleep(0.25)
+            
+            # Start animation in background
+            self.animation_thread = threading.Thread(target=animate, daemon=True)
+            self.animation_thread.start()
+            
+        else:
+            # Just show static progress (will be immediately replaced)
+            # Create layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=9),
+                Layout(name="content", ratio=1),
+                Layout(name="footer", size=3)
+            )
+            
+            # Header
+            layout["header"].update(
+                self._create_header("Q&A SESSION", "Claude is thinking...")
+            )
+            
+            # Progress content
+            progress_group = []
+            
+            # Message
+            msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
+            progress_group.append(Align.center(msg_text))
+            
+            # Animated Claude thinking
+            claude_art = Text()
+            claude_art.append("\n     🤖\n", style=f"bold {self.theme.ORANGE}")
+            claude_art.append("    /│\\\n", style=self.theme.ORANGE_LIGHT)
+            claude_art.append("   / │ \\\n", style=self.theme.ORANGE_LIGHT)
+            progress_group.append(Align.center(claude_art))
+            
+            # Loading animation
+            loading_text = Text()
+            loading_text.append("\n◆ ◇ ◆ ◇ ◆ ◇ ◆\n", style=f"bold {self.theme.ORANGE}")
+            progress_group.append(Align.center(loading_text))
+            
+            # Status
+            status_text = Text()
+            status_text.append("\nAnalyzing previous answers...\n", style=self.theme.TEXT_DIM)
+            status_text.append("Formulating contextual question...\n", style=self.theme.TEXT_DIM)
+            progress_group.append(Align.center(status_text))
+            
+            content = Panel(
+                Align.center(Group(*progress_group), vertical="middle"),
+                title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
+                border_style=self.theme.ORANGE,
+                box=HEAVY,
+                padding=(2, 4)
+            )
+            
+            layout["content"].update(
+                Align.center(content, vertical="middle")
+            )
+            
+            # Footer
+            layout["footer"].update(
+                self._create_footer("Please wait...")
+            )
+            
+            # Print layout with alternate screen to hide logs
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
+            # Force screen buffer switch to hide any subsequent logs
+            print('\033[?1049h', end='', flush=True)  # Switch to alternate screen buffer
+    
+    def stop_qa_progress(self):
+        """Stop the Q&A progress animation if running."""
+        if hasattr(self, 'loading_active'):
+            self.loading_active = False
+        if hasattr(self, 'animation_thread'):
+            self.animation_thread.join(timeout=0.5)
+        if hasattr(self, 'live_display'):
+            try:
+                self.live_display.stop()
+            except:
+                pass
+        # Return to main screen buffer
+        print('\033[?1049l', end='', flush=True)  # Return to main screen buffer
