@@ -1548,35 +1548,54 @@ class RetroUI:
         allow_skip_after: int = 20,
         subtitle: str = ""
     ) -> Tuple[str, bool]:
-        """Special input method for Q&A with Ctrl+E support and beautiful input box.
+        """Q&A input with dynamic resizing text box that wraps and grows/shrinks.
         
         Returns:
-            Tuple of (answer, enough_signal) where enough_signal is True if user pressed Ctrl+E
+            Tuple of (answer, enough_signal) where enough_signal is True if user pressed Ctrl+\
         """
-        import readline
         import signal
+        import termios
+        import tty
+        import textwrap
+        import sys
+        from rich.live import Live
         
-        self._clear_screen()
+        # Track if Ctrl+\ was pressed
+        ctrl_backslash_pressed = False
         
-        # Track if Ctrl+E was pressed
-        ctrl_e_pressed = False
+        def handle_ctrl_backslash(signum, frame):
+            nonlocal ctrl_backslash_pressed
+            ctrl_backslash_pressed = True
         
-        def handle_ctrl_e(signum, frame):
-            nonlocal ctrl_e_pressed
-            ctrl_e_pressed = True
-            # Raise EOFError to exit readline
-            raise EOFError()
+        # Set up Ctrl+\ handler
+        old_handler = signal.signal(signal.SIGQUIT, handle_ctrl_backslash)
         
-        # Set up Ctrl+E handler (using SIGQUIT which is Ctrl+\)
-        # We'll instruct users to use Ctrl+\ as Ctrl+E alternative
-        old_handler = signal.signal(signal.SIGQUIT, handle_ctrl_e)
+        # Initialize text buffer
+        text_buffer = []
+        cursor_pos = 0
+        box_width = min(70, self.width - 20)
+        inner_width = box_width - 4  # Account for borders and padding
         
-        try:
-            # Create layout that fills the entire screen
+        def wrap_text(text: str) -> List[str]:
+            """Wrap text to fit inside box."""
+            if not text:
+                return [""]
+            return textwrap.wrap(text, width=inner_width) or [""]
+        
+        def generate_layout(wrapped_lines: List[str], cursor_line: int, cursor_col: int):
+            """Generate the full screen layout with dynamic box height."""
+            # Calculate box height based on content
+            min_box_height = 3
+            max_box_height = 10
+            content_height = max(1, len(wrapped_lines))
+            box_height = min(max_box_height, max(min_box_height, content_height + 2))
+            
+            # Create layout
             layout = Layout()
-            # Calculate sizes to fill screen
-            question_area_size = max(8, (self.height - 20) // 2)
-            input_area_size = max(10, self.height - 9 - question_area_size - 3)
+            
+            # Calculate dynamic sizes
+            question_area_size = max(8, (self.height - 20 - box_height) // 2)
+            input_area_size = self.height - 9 - question_area_size - 3
             
             layout.split_column(
                 Layout(name="header", size=9),
@@ -1592,8 +1611,6 @@ class RetroUI:
             
             # Question panel
             question_group = []
-            
-            # Category and number
             cat_text = Text()
             cat_text.append(f"Category: ", style=self.theme.TEXT_DIM)
             cat_text.append(category.upper(), style=f"bold {self.theme.ORANGE}")
@@ -1602,13 +1619,10 @@ class RetroUI:
             question_group.append(Align.center(cat_text))
             question_group.append(Text())
             
-            # Question text - wrap long questions
             q_text = Text()
             q_text.append("? ", style=f"bold {self.theme.ORANGE}")
-            # Wrap question text if too long
-            import textwrap
-            wrapped_question = textwrap.fill(question, width=min(100, self.width - 20))
-            q_text.append(wrapped_question, style=f"bold {self.theme.WHITE}")
+            wrapped_q = textwrap.fill(question, width=min(100, self.width - 20))
+            q_text.append(wrapped_q, style=f"bold {self.theme.WHITE}")
             question_group.append(Align.center(q_text))
             
             layout["question"].update(
@@ -1621,10 +1635,9 @@ class RetroUI:
                 )
             )
             
-            # Input area with instructions
+            # Input area
             input_group = []
             
-            # Show skip hint if past minimum questions
             if question_number >= allow_skip_after:
                 skip_text = Text()
                 skip_text.append("💡 ", style=f"bold {self.theme.ORANGE}")
@@ -1634,24 +1647,61 @@ class RetroUI:
                 input_group.append(Align.center(skip_text))
                 input_group.append(Text())
             
-            # Input prompt
             input_text = Text()
             input_text.append("📝 ", style=f"bold {self.theme.ORANGE}")
             input_text.append("Type your answer below:", style=self.theme.WHITE)
             input_group.append(Align.center(input_text))
             input_group.append(Text())
             
-            # Input box visualization with centered placement
-            box_width = min(70, self.width - 10)
+            # Dynamic input box
             box_lines = []
+            
+            # Top border
             box_lines.append(Text("╭" + "─" * box_width + "╮", style=self.theme.ORANGE))
-            box_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
-            box_lines.append(Text("│  > " + " " * (box_width - 4) + "│", style=self.theme.ORANGE))
-            box_lines.append(Text("│" + " " * box_width + "│", style=self.theme.ORANGE))
+            
+            # Content lines with text
+            visible_start = max(0, cursor_line - (box_height - 3))
+            visible_end = min(len(wrapped_lines), visible_start + (box_height - 2))
+            
+            for i in range(box_height - 2):
+                line_idx = visible_start + i
+                if line_idx < len(wrapped_lines):
+                    line_text = wrapped_lines[line_idx]
+                    # Show cursor on current line
+                    if line_idx == cursor_line:
+                        if cursor_col < len(line_text):
+                            display_line = line_text[:cursor_col] + "█" + line_text[cursor_col:]
+                        else:
+                            display_line = line_text + "█"
+                    else:
+                        display_line = line_text
+                    
+                    # Pad line to box width
+                    padding_needed = box_width - len(display_line) - 2
+                    display_text = f"│ {display_line}{' ' * padding_needed} │"
+                else:
+                    # Empty line
+                    if line_idx == cursor_line:
+                        display_text = f"│ █{' ' * (box_width - 2)} │"
+                    else:
+                        display_text = "│" + " " * (box_width + 2) + "│"
+                
+                box_lines.append(Text(display_text, style=self.theme.ORANGE))
+            
+            # Bottom border
             box_lines.append(Text("╰" + "─" * box_width + "╯", style=self.theme.ORANGE))
             
             for line in box_lines:
                 input_group.append(Align.center(line))
+            
+            # Add scroll indicators if needed
+            if visible_start > 0:
+                scroll_up = Text("▲ More above ▲", style=self.theme.TEXT_DIM)
+                input_group.insert(len(input_group) - len(box_lines) - 1, Align.center(scroll_up))
+            
+            if visible_end < len(wrapped_lines):
+                scroll_down = Text("▼ More below ▼", style=self.theme.TEXT_DIM)
+                input_group.append(Align.center(scroll_down))
             
             layout["input_area"].update(
                 Panel(
@@ -1675,52 +1725,107 @@ class RetroUI:
             footer_text.append("Ctrl+C", style=f"bold {self.theme.ORANGE}")
             footer_text.append(" = Cancel", style=self.theme.TEXT_DIM)
             
-            layout["footer"].update(
-                self._create_footer("")
-            )
+            layout["footer"].update(self._create_footer(""))
             
-            # Print layout fullscreen
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
+            return layout
+        
+        # Hide cursor during rendering
+        print('\033[?25l', end='', flush=True)
+        
+        try:
+            # Get terminal settings
+            old_settings = termios.tcgetattr(sys.stdin)
+            tty.setraw(sys.stdin.fileno())
             
-            # Calculate correct cursor position
-            # Find where the input box is on screen
-            # Header (9) + question area + some of input area to get to the input line
-            input_line_position = 9 + question_area_size + (6 if question_number >= allow_skip_after else 4)
-            # Adjust for box position within input area
-            cursor_y = min(input_line_position + 3, self.height - 5)
-            cursor_x = (self.width - box_width) // 2 + 5
+            # Initial render
+            text = ""
+            wrapped_lines = wrap_text(text)
+            cursor_line = 0
+            cursor_col = 0
             
-            # Position cursor for input inside the box
-            print('\033[?25h', end='', flush=True)  # Show cursor
-            print(f'\033[{cursor_y};{cursor_x}H', end='', flush=True)  # Position in box
-            
-            # Get input with readline support
-            try:
-                # Configure readline for better editing
-                readline.set_startup_hook(lambda: readline.insert_text(''))
-                # Use a raw input that stays at cursor position
-                import sys
-                sys.stdout.flush()
-                answer = input()
+            with Live(
+                generate_layout(wrapped_lines, cursor_line, cursor_col),
+                console=self.console,
+                refresh_per_second=30,
+                transient=False,
+                screen=True
+            ) as live:
                 
-                # If we got here normally, Ctrl+E was not pressed
-                return answer, False
-                
-            except EOFError:
-                # This happens when Ctrl+\ (our Ctrl+E substitute) is pressed
-                if ctrl_e_pressed and question_number >= allow_skip_after:
-                    return "", True  # Signal that we have enough
-                else:
-                    return "", False  # Just an empty answer
+                while True:
+                    # Read single character
+                    char = sys.stdin.read(1)
                     
-            except KeyboardInterrupt:
-                raise
-                
+                    if char == '\r' or char == '\n':  # Enter - submit
+                        return text, False
+                    
+                    elif char == '\x1b':  # Escape sequence
+                        next_chars = sys.stdin.read(2)
+                        if next_chars == '[D':  # Left arrow
+                            if cursor_pos > 0:
+                                cursor_pos -= 1
+                        elif next_chars == '[C':  # Right arrow
+                            if cursor_pos < len(text):
+                                cursor_pos += 1
+                        elif next_chars == '[A':  # Up arrow
+                            # Move up a line
+                            if cursor_line > 0:
+                                cursor_line -= 1
+                                # Adjust cursor position
+                                line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
+                                cursor_pos = min(line_start + cursor_col, len(text))
+                        elif next_chars == '[B':  # Down arrow
+                            # Move down a line
+                            if cursor_line < len(wrapped_lines) - 1:
+                                cursor_line += 1
+                                # Adjust cursor position
+                                line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
+                                cursor_pos = min(line_start + cursor_col, len(text))
+                    
+                    elif char == '\x7f' or char == '\x08':  # Backspace
+                        if cursor_pos > 0:
+                            text = text[:cursor_pos-1] + text[cursor_pos:]
+                            cursor_pos -= 1
+                    
+                    elif char == '\x1c':  # Ctrl+\ 
+                        if ctrl_backslash_pressed and question_number >= allow_skip_after:
+                            return "", True
+                    
+                    elif char == '\x03':  # Ctrl+C
+                        raise KeyboardInterrupt()
+                    
+                    elif 32 <= ord(char) <= 126:  # Printable characters
+                        text = text[:cursor_pos] + char + text[cursor_pos:]
+                        cursor_pos += 1
+                    
+                    # Re-wrap text and update cursor position
+                    wrapped_lines = wrap_text(text)
+                    
+                    # Calculate cursor line and column from cursor position
+                    remaining_pos = cursor_pos
+                    cursor_line = 0
+                    cursor_col = 0
+                    
+                    for i, line in enumerate(wrapped_lines):
+                        if remaining_pos <= len(line):
+                            cursor_line = i
+                            cursor_col = remaining_pos
+                            break
+                        remaining_pos -= len(line)
+                        # Account for implicit newline between wrapped lines
+                        if remaining_pos > 0:
+                            remaining_pos -= 1
+                    
+                    # Update display
+                    live.update(generate_layout(wrapped_lines, cursor_line, cursor_col))
+                    
+        except KeyboardInterrupt:
+            raise
+            
         finally:
-            # Restore signal handler
+            # Restore terminal settings
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
             signal.signal(signal.SIGQUIT, old_handler)
-            print('\033[?25l', end='', flush=True)  # Hide cursor
-            readline.set_startup_hook(None)  # Clear readline hook
+            print('\033[?25h', end='', flush=True)  # Show cursor
     
     def show_qa_progress(self, message: str = "Generating next question...", duration: float = 0):
         """Show a progress screen while generating Q&A questions.
