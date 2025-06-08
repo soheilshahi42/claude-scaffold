@@ -389,7 +389,7 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                 for i, module in enumerate(claude_modules, 1):
                     module_display[f"Module {i}"] = module
                 
-                self.ui.show_results(
+                self.ui.show_paginated_results(
                     "CLAUDE MODULE SUGGESTIONS",
                     module_display,
                     f"Claude suggests {len(claude_modules)} modules for your project"
@@ -451,7 +451,7 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                     self.ui.stop_progress()
                     
                     # Show the final modules with descriptions
-                    self.ui.show_results(
+                    self.ui.show_paginated_results(
                         "FINAL MODULES",
                         {f"Module {i+1}": f"{m['name']} - {m['description']}" 
                          for i, m in enumerate(modules)},
@@ -533,7 +533,7 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
             self.ui.stop_progress()
             
             if suggested_tasks:
-                # Show all tasks in a results page
+                # Show all tasks in a paginated results page
                 task_display = {}
                 for i, task in enumerate(suggested_tasks, 1):
                     priority_icon = icons.get_priority_icon(task.get("priority", "medium"))
@@ -541,11 +541,10 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                     task_value = f"[{task['module']}] {task['title']}"
                     task_display[task_key] = task_value
                 
-                self.ui.show_results(
+                self.ui.show_paginated_results(
                     "GENERATED TASKS",
                     task_display,
-                    f"Claude suggests {len(suggested_tasks)} tasks",
-                    ["Accept all tasks", "Select specific tasks", "Skip tasks"]
+                    f"Claude suggests {len(suggested_tasks)} tasks"
                 )
                 
                 # Ask user what to do

@@ -1122,6 +1122,136 @@ class RetroUI:
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
             
         return None
+    
+    def show_paginated_results(
+        self,
+        title: str,
+        results: Dict[str, Any],
+        subtitle: str = "",
+        items_per_page: int = 8
+    ) -> None:
+        """Show results with pagination for large datasets."""
+        import sys
+        import tty
+        import termios
+        
+        items = list(results.items())
+        total_items = len(items)
+        total_pages = (total_items + items_per_page - 1) // items_per_page
+        current_page = 0
+        
+        while True:
+            self._clear_screen()
+            
+            # Create layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=9),
+                Layout(name="content", ratio=1),
+                Layout(name="footer", size=3)
+            )
+            
+            # Header
+            page_subtitle = f"{subtitle} - Page {current_page + 1} of {total_pages}"
+            layout["header"].update(
+                self._create_header(title, page_subtitle)
+            )
+            
+            # Get items for current page
+            start_idx = current_page * items_per_page
+            end_idx = min(start_idx + items_per_page, total_items)
+            page_items = items[start_idx:end_idx]
+            
+            # Results table for current page
+            table = Table(
+                show_header=True,
+                header_style=f"bold {self.theme.ORANGE}",
+                border_style=self.theme.ORANGE_DARK,
+                box=HEAVY,
+                padding=(0, 1)
+            )
+            
+            table.add_column("Property", style=self.theme.TEXT_DIM, width=12)
+            table.add_column("Value", style=self.theme.WHITE)
+            
+            for key, value in page_items:
+                # Truncate very long values for better display
+                value_str = str(value)
+                if len(value_str) > 200:
+                    value_str = value_str[:197] + "..."
+                table.add_row(key, value_str)
+            
+            # Navigation info
+            nav_text = Text()
+            nav_text.append(f"\n\nShowing items {start_idx + 1}-{end_idx} of {total_items}", 
+                           style=self.theme.TEXT_DIM)
+            
+            if total_pages > 1:
+                nav_text.append("\n\n")
+                if current_page > 0:
+                    nav_text.append("◀ PREV ", style=f"bold {self.theme.ORANGE}")
+                else:
+                    nav_text.append("◀ PREV ", style=self.theme.GRAY)
+                    
+                nav_text.append("| ", style=self.theme.TEXT_DIM)
+                
+                if current_page < total_pages - 1:
+                    nav_text.append("NEXT ▶", style=f"bold {self.theme.ORANGE}")
+                else:
+                    nav_text.append("NEXT ▶", style=self.theme.GRAY)
+                    
+                nav_text.append(" | ", style=self.theme.TEXT_DIM)
+                nav_text.append("ENTER ", style=f"bold {self.theme.ORANGE}")
+                nav_text.append("Continue", style=self.theme.WHITE)
+            else:
+                nav_text.append("\n\nPress ")
+                nav_text.append("ENTER ", style=f"bold {self.theme.ORANGE}")
+                nav_text.append("to continue", style=self.theme.WHITE)
+            
+            content = Group(
+                Align.center(table),
+                Align.center(nav_text)
+            )
+            
+            layout["content"].update(
+                Align.center(
+                    self._create_content_panel(content, "RESULTS"),
+                    vertical="middle"
+                )
+            )
+            
+            # Footer
+            if total_pages > 1:
+                footer_hint = "◀ ▶ Navigate pages | ENTER Continue"
+            else:
+                footer_hint = "Press ENTER to continue"
+                
+            layout["footer"].update(
+                self._create_footer(footer_hint)
+            )
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Get input
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                key = sys.stdin.read(1)
+                
+                if key == '\r' or key == '\n':  # Enter - continue
+                    break
+                elif key == '\x1b':  # Arrow keys
+                    next_keys = sys.stdin.read(2)
+                    if next_keys == '[D' and current_page > 0:  # Left arrow - previous page
+                        current_page -= 1
+                    elif next_keys == '[C' and current_page < total_pages - 1:  # Right arrow - next page
+                        current_page += 1
+                elif key == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt()
+                    
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         
     def show_completion(
         self,
