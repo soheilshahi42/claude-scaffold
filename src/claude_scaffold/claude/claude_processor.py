@@ -661,3 +661,135 @@ Return improved task details as JSON with the same structure."""
                                     print(f"{icons.WARNING} Refinement failed: {e}")
 
         return task_details
+    
+    def generate_project_questions(self, project_description: str, existing_qa: List[Dict] = None) -> List[Dict[str, str]]:
+        """Generate intelligent questions about the project.
+        
+        This method analyzes previous Q&A exchanges to generate contextual follow-up questions,
+        ensuring a coherent conversation flow that builds upon already gathered information.
+        """
+        if existing_qa:
+            # Generate follow-up questions based on existing Q&A history
+            qa_context = "\n".join([f"Q: {qa['question']}\nA: {qa['answer']}" for qa in existing_qa[-10:]])  # Use last 10 Q&As for context
+            prompt = f"""
+Based on this project description: "{project_description}"
+
+And the conversation history from our Q&A session:
+{qa_context}
+
+Analyze what we've learned so far and generate 5 detailed follow-up questions that:
+1. Build upon the previous answers
+2. Explore areas that need more clarification
+3. Dig deeper into technical decisions mentioned
+4. Address any gaps or inconsistencies
+5. Help complete the project specification
+
+Focus on uncovering important details that haven't been fully addressed yet.
+Consider the context of previous questions to avoid repetition.
+
+Format each question exactly as:
+CATEGORY: question text
+
+Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, INTEGRATIONS
+"""
+        else:
+            # Generate initial questions for first round
+            prompt = f"""
+Given this project description: "{project_description}"
+
+Generate exactly 25 detailed questions to understand the project better.
+These should be initial discovery questions that help establish:
+- Technical requirements (languages, frameworks, databases)
+- Features and functionality
+- Target users and use cases
+- Deployment and hosting
+- Integrations and APIs
+- Performance and scalability needs
+- Security requirements
+- Development constraints
+
+Make questions specific and actionable, not generic.
+
+Format each question exactly as:
+CATEGORY: question text
+
+Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, INTEGRATIONS
+"""
+        
+        response = self._call_claude(prompt, expect_json=False, progress_callback=None)
+        
+        # Parse questions from response
+        questions = []
+        for line in response.strip().split('\n'):
+            if ':' in line and any(cat in line.upper() for cat in ['TECHNICAL', 'FEATURES', 'ARCHITECTURE', 'DEPLOYMENT', 'USERS', 'CONSTRAINTS', 'INTEGRATIONS']):
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    category = parts[0].strip().upper()
+                    question = parts[1].strip()
+                    # Only add if it's a valid category and question
+                    if category in ['TECHNICAL', 'FEATURES', 'ARCHITECTURE', 'DEPLOYMENT', 'USERS', 'CONSTRAINTS', 'INTEGRATIONS'] and question:
+                        questions.append({
+                            'category': category,
+                            'question': question
+                        })
+        
+        return questions
+    
+    def compile_qa_into_spec(self, project_description: str, qa_session: List[Dict]) -> str:
+        """Compile Q&A session into comprehensive project specification.
+        
+        Takes the full conversation history and creates a coherent technical specification
+        that incorporates all the details gathered through the Q&A process.
+        """
+        # Create a structured Q&A text with categories
+        qa_by_category = {}
+        for qa in qa_session:
+            category = qa.get('category', 'GENERAL')
+            if category not in qa_by_category:
+                qa_by_category[category] = []
+            qa_by_category[category].append(f"Q: {qa['question']}\nA: {qa['answer']}")
+        
+        # Format Q&A by category for better context
+        categorized_qa = []
+        for category, items in qa_by_category.items():
+            categorized_qa.append(f"\n## {category}\n")
+            categorized_qa.extend(items)
+        
+        qa_text = "\n\n".join(categorized_qa)
+        
+        prompt = f"""
+Based on this initial project description: "{project_description}"
+
+And this comprehensive Q&A session that explored the project in detail:
+{qa_text}
+
+Create a detailed technical specification that synthesizes all the information gathered.
+The specification should be coherent and well-structured, incorporating insights from the entire conversation.
+
+Include the following sections:
+
+1. **Project Overview**: Clear, enhanced summary based on all Q&A insights
+2. **Technical Stack**: Complete list of technologies, languages, frameworks, and tools discussed
+3. **Core Features**: Comprehensive feature list with descriptions from Q&A
+4. **Architecture Overview**: System design incorporating architectural decisions discussed
+5. **Data Model**: Database schema and data flow based on requirements gathered
+6. **API Design**: Endpoints, authentication, and integration points mentioned
+7. **User Interface**: UI/UX requirements and design principles discussed
+8. **Deployment Strategy**: Hosting, CI/CD, and infrastructure based on Q&A
+9. **Security Considerations**: All security aspects mentioned in the conversation
+10. **Performance Requirements**: Load expectations and optimization needs discussed
+11. **Integration Requirements**: Third-party services and APIs from Q&A
+12. **Development Constraints**: Timeline, budget, and limitations mentioned
+13. **Testing Strategy**: Testing approach based on project requirements
+14. **Future Considerations**: Scalability and future features discussed
+
+Make sure to:
+- Reference specific answers from the Q&A when relevant
+- Resolve any contradictions by using the most recent answers
+- Fill in reasonable defaults for standard practices if not explicitly discussed
+- Create a cohesive document that reads well as a complete specification
+
+Format as a professional technical specification document.
+"""
+        
+        return self._call_claude(prompt, expect_json=False, timeout=300)  # Longer timeout for comprehensive spec

@@ -746,6 +746,152 @@ class RetroUI:
                 print('\033[?25l', end='', flush=True)
         
         return answer
+    
+    def show_enhancement_options(self, project_description: str) -> str:
+        """Show special enhancement options screen with rich UX."""
+        self._clear_screen()
+        
+        # Create ASCII art header
+        header_art = """
+    ╔═══════════════════════════════════════════════════════════╗
+    ║                                                           ║
+    ║     ▄████▄   ▄▄▄       ▄▄▄       ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄       ║
+    ║    ▐█▌  ▐█▌  ███       ███       ███████████████       ║
+    ║    ▐█▌       ███       ███       ███                   ║
+    ║    ▐█▌       ███       ███       ███████████████       ║
+    ║    ▐█▌       ███       ███       ███                   ║
+    ║    ▐█▌  ▐█▌  ███▄▄▄▄▄▄▄███       ███                   ║
+    ║     ▀████▀   ▀▀▀▀▀▀▀▀▀▀▀▀▀       ▀▀▀                   ║
+    ║                                                           ║
+    ║           E N H A N C E M E N T   O P T I O N S          ║
+    ╚═══════════════════════════════════════════════════════════╝
+        """
+        
+        header = Panel(
+            Align.center(
+                Text(header_art, style=f"bold {self.theme.ORANGE}"),
+                vertical="middle"
+            ),
+            box=DOUBLE,
+            border_style=self.theme.ORANGE,
+            padding=(0, 0)
+        )
+        
+        # Project description panel
+        desc_panel = Panel(
+            Align.center(
+                Text(f"Project: {project_description}", style=self.theme.WHITE),
+                vertical="middle"
+            ),
+            border_style=self.theme.ORANGE_DARK,
+            box=MINIMAL,
+            padding=(1, 2),
+            title=f"[{self.theme.ORANGE}]▌ YOUR PROJECT ▐[/]",
+            title_align="center"
+        )
+        
+        # Create beautiful option cards
+        options_grid = Table(
+            show_header=False,
+            show_lines=True,
+            border_style=self.theme.ORANGE,
+            box=HEAVY,
+            expand=True,
+            padding=(1, 2)
+        )
+        
+        # Option 1: Continue without changes
+        option1 = Panel(
+            "[bold]1. CONTINUE AS IS[/bold]\n\n"
+            f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
+            "Use your original project\n"
+            "description without any\n"
+            "modifications or enhancements.\n\n"
+            f"[{self.theme.TEXT_DIM}]Best for: Simple projects\n"
+            f"with clear requirements[/{self.theme.TEXT_DIM}]",
+            border_style=self.theme.TEXT_DIM,
+            box=DOUBLE,
+            style=self.theme.WHITE,
+            height=12
+        )
+        
+        # Option 2: Enhance with Claude
+        option2 = Panel(
+            f"[bold {self.theme.ORANGE}]2. ENHANCE WITH CLAUDE[/bold]\n\n"
+            f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
+            "Let Claude analyze and\n"
+            "improve your project spec\n"
+            "with intelligent suggestions.\n\n"
+            f"[{self.theme.TEXT_DIM}]Best for: Getting professional\n"
+            f"structure and best practices[/{self.theme.TEXT_DIM}]",
+            border_style=self.theme.ORANGE,
+            box=DOUBLE,
+            style=self.theme.WHITE,
+            height=12
+        )
+        
+        # Option 3: Q&A Deep Dive
+        option3 = Panel(
+            f"[bold {self.theme.ORANGE}]3. Q&A DEEP DIVE ✨[/bold]\n\n"
+            f"[{self.theme.ORANGE_DARK}]━━━━━━━━━━━━━━━━━━━━━━━━[/{self.theme.ORANGE_DARK}]\n\n"
+            "Interactive Q&A session\n"
+            "with Claude (20-100 questions)\n"
+            "for comprehensive planning.\n\n"
+            f"[{self.theme.TEXT_DIM}]Best for: Complex projects\n"
+            f"needing detailed specs[/{self.theme.TEXT_DIM}]\n\n"
+            f"[{self.theme.ORANGE_LIGHT}]Press Ctrl+E when done[/{self.theme.ORANGE_LIGHT}]",
+            border_style=self.theme.ORANGE,
+            box=DOUBLE,
+            style=self.theme.WHITE,
+            height=12
+        )
+        
+        options_grid.add_column(justify="center", width=28)
+        options_grid.add_column(justify="center", width=28)
+        options_grid.add_column(justify="center", width=28)
+        options_grid.add_row(option1, option2, option3)
+        
+        # Instructions footer
+        instructions = Panel(
+            Align.center(
+                Text(
+                    "Enter your choice (1-3) to proceed",
+                    style=self.theme.TEXT_DIM
+                )
+            ),
+            box=MINIMAL,
+            border_style=self.theme.TEXT_DIM,
+            padding=(0, 2)
+        )
+        
+        # Create layout
+        layout = Layout()
+        layout.split_column(
+            Layout(header, size=13),
+            Layout(desc_panel, size=5),
+            Layout(options_grid, size=14),
+            Layout(instructions, size=3)
+        )
+        
+        self.console.print(layout)
+        
+        # Get user choice with visual prompt
+        print('\033[?25h', end='', flush=True)  # Show cursor
+        from rich.prompt import Prompt
+        
+        while True:
+            try:
+                choice = Prompt.ask(
+                    f"\n[{self.theme.ORANGE}]▶[/{self.theme.ORANGE}]",
+                    console=self.console,
+                    choices=["1", "2", "3"],
+                    default="2"
+                )
+                print('\033[?25l', end='', flush=True)  # Hide cursor
+                return choice
+            except KeyboardInterrupt:
+                print('\033[?25l', end='', flush=True)  # Hide cursor
+                return "1"  # Default to continue as is
         
     def ask_confirm(
         self,

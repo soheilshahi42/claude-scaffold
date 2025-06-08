@@ -9,6 +9,7 @@ from ..config.project_config import ProjectConfig
 from ..utils.icons import icons
 from ..utils.retro_ui import RetroUI
 from ..utils.logger import get_logger
+from .qa_collector import QACollector
 
 
 class RetroInteractiveSetup:
@@ -253,21 +254,6 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
         
     def _collect_description(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
         """Collect project description with retro UI."""
-        # Show progress while Claude thinks (if enabled)
-        if self.use_claude:
-            self.ui.show_progress(
-                "AI ENHANCEMENT",
-                "Claude is analyzing your project type...",
-                "Preparing intelligent suggestions",
-                [
-                    "Understanding project requirements",
-                    "Generating contextual suggestions",
-                    "Optimizing configuration"
-                ]
-            )
-            time.sleep(0.5)  # Brief pause
-            self.ui.stop_progress()
-            
         description = self.ui.ask_text(
             "PROJECT DESCRIPTION",
             "Brief project description:",
@@ -279,63 +265,121 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
         
         project_data["metadata"]["description"] = description
         
-        # Claude enhancement
+        # Show enhancement options if Claude is enabled
         if self.use_claude and self.claude_setup:
-            self.ui.show_progress(
-                "ENHANCING DESCRIPTION",
-                "Claude is enhancing your description...",
-                "AI-powered optimization"
-            )
+            enhancement_choice = self.ui.show_enhancement_options(description)
             
-            # Get enhanced description
-            try:
-                self.logger.debug("Calling Claude to enhance description")
-                enhanced_desc = self.claude_setup._enhance_description(project_data)
-                self.logger.info("Description enhanced successfully", {
-                    "original_length": len(description),
-                    "enhanced_length": len(enhanced_desc) if enhanced_desc else 0
-                })
-            except Exception as e:
-                enhanced_desc = None
-                self.logger.error("Failed to enhance description", e, {
-                    "project_data": project_data
-                })
-                print(f"\nError enhancing description: {e}")
-            finally:
-                self.ui.stop_progress()
-            
-            if enhanced_desc and enhanced_desc != description:
-                # Show Claude's suggestion
-                use_enhanced = self.ui.ask_confirm(
-                    "CLAUDE SUGGESTION",
-                    f"Use Claude's enhanced description?\n\n{enhanced_desc}",
-                    default=True,
-                    subtitle="AI Enhancement",
-                    hint="Claude has improved your description"
+            if enhancement_choice == "1":
+                # Continue without changes
+                self.logger.info("User chose to continue without enhancement")
+                pass
+                
+            elif enhancement_choice == "2":
+                # Enhance with Claude
+                self.ui.show_progress(
+                    "ENHANCING DESCRIPTION",
+                    "Claude is enhancing your description...",
+                    "AI-powered optimization"
                 )
                 
-                if use_enhanced:
-                    project_data["metadata"]["description"] = enhanced_desc
-                    
-                    # Ask if they want to refine further
-                    want_refine = self.ui.ask_confirm(
-                        "REFINE FURTHER?",
-                        "Would you like to refine this description further?",
-                        default=False,
-                        subtitle="Optional refinement",
-                        hint="You can provide feedback to improve the description"
+                # Get enhanced description
+                try:
+                    self.logger.debug("Calling Claude to enhance description")
+                    enhanced_desc = self.claude_setup._enhance_description(project_data)
+                    self.logger.info("Description enhanced successfully", {
+                        "original_length": len(description),
+                        "enhanced_length": len(enhanced_desc) if enhanced_desc else 0
+                    })
+                except Exception as e:
+                    enhanced_desc = None
+                    self.logger.error("Failed to enhance description", e, {
+                        "project_data": project_data
+                    })
+                    print(f"\nError enhancing description: {e}")
+                finally:
+                    self.ui.stop_progress()
+                
+                if enhanced_desc and enhanced_desc != description:
+                    # Show Claude's suggestion
+                    use_enhanced = self.ui.ask_confirm(
+                        "CLAUDE SUGGESTION",
+                        f"Use Claude's enhanced description?\n\n{enhanced_desc}",
+                        default=True,
+                        subtitle="AI Enhancement",
+                        hint="Claude has improved your description"
                     )
                     
-                    if want_refine:
-                        # Allow iterative refinement
-                        refined_desc = self._refine_with_retro_ui(
-                            enhanced_desc,
-                            "REFINE DESCRIPTION",
-                            "AI-powered refinement",
-                            value_type="text",
-                            max_iterations=100
+                    if use_enhanced:
+                        project_data["metadata"]["description"] = enhanced_desc
+                        
+                        # Ask if they want to refine further
+                        want_refine = self.ui.ask_confirm(
+                            "REFINE FURTHER?",
+                            "Would you like to refine this description further?",
+                            default=False,
+                            subtitle="Optional refinement",
+                            hint="You can provide feedback to improve the description"
                         )
-                        project_data["metadata"]["description"] = refined_desc
+                        
+                        if want_refine:
+                            # Allow iterative refinement
+                            refined_desc = self._refine_with_retro_ui(
+                                enhanced_desc,
+                                "REFINE DESCRIPTION",
+                                "AI-powered refinement",
+                                value_type="text",
+                                max_iterations=3
+                            )
+                            project_data["metadata"]["description"] = refined_desc
+                            
+            elif enhancement_choice == "3":
+                # Q&A Deep Dive
+                self.logger.info("User chose Q&A deep dive mode")
+                
+                # Create QA collector with Claude processor
+                qa_collector = QACollector(
+                    ui=self.ui,
+                    claude_processor=self.claude_setup.processor if hasattr(self.claude_setup, 'processor') else None
+                )
+                
+                # Collect detailed project information through Q&A
+                qa_results = qa_collector.collect_project_details(description)
+                
+                # Store Q&A results in metadata
+                project_data["metadata"]["qa_session"] = qa_results
+                
+                # If we have a compiled spec, update the description
+                if qa_results.get("compiled_requirements", {}).get("claude_spec"):
+                    # Extract the enhanced description from the spec
+                    spec_text = qa_results["compiled_requirements"]["claude_spec"]
+                    
+                    # Show the compiled spec
+                    self.ui.show_paginated_results(
+                        "COMPILED SPECIFICATION",
+                        {"Full Specification": spec_text},
+                        "Generated from Q&A session",
+                        items_per_page=1
+                    )
+                    
+                    # Ask if they want to use this enhanced spec
+                    use_qa_spec = self.ui.ask_confirm(
+                        "USE Q&A SPECIFICATION",
+                        "Use the specification generated from Q&A?",
+                        default=True,
+                        subtitle="Enhanced project understanding",
+                        hint="This includes all details from the Q&A session"
+                    )
+                    
+                    if use_qa_spec:
+                        # Update the description to be more comprehensive
+                        project_data["metadata"]["description"] = f"{description} - Enhanced through Q&A session"
+                        project_data["metadata"]["detailed_specification"] = spec_text
+                        project_data["metadata"]["qa_enhanced"] = True
+                        
+                        self.logger.info("Project enhanced through Q&A session", {
+                            "questions_asked": qa_results["qa_summary"]["total_questions"],
+                            "categories": qa_results["qa_summary"]["categories"]
+                        })
                     
         return project_data
         
