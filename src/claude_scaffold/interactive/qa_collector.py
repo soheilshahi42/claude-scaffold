@@ -72,10 +72,11 @@ class QACollector:
         # Store project description for use in follow-up questions
         self.project_description = project_description
         
+        # Show a brief progress message
         self.ui.show_progress(
             "Starting Q&A Session",
-            f"I'll ask you detailed questions about your project: {project_description}\n"
-            "Press Ctrl+E at any time when you feel we have enough information."
+            "Preparing detailed questions about your project",
+            "Press Ctrl+E when you have enough information"
         )
         
         # Generate initial questions based on project description
@@ -312,7 +313,8 @@ class QACollector:
         response = self.ui.ask_text(
             title,
             question_text + hint,
-            allow_empty=True
+            default="",
+            subtitle=f"Question {question_number}"
         )
         
         if response:

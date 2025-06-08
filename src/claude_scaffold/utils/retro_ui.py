@@ -1063,8 +1063,19 @@ class RetroUI:
             # Progress content
             progress_group = []
             
+            # Truncate long messages to prevent overflow
+            display_message = message
+            if '\n' in message:
+                # For multiline messages, take only the first line
+                display_message = message.split('\n')[0].strip()
+            
+            # Further truncate if still too long
+            max_msg_length = 60
+            if len(display_message) > max_msg_length:
+                display_message = display_message[:max_msg_length-3] + "..."
+            
             # Message
-            msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
+            msg_text = Text(f"\n{display_message}\n", style=f"bold {self.theme.WHITE}")
             progress_group.append(Align.center(msg_text))
             
             # Loading bar
@@ -1085,15 +1096,20 @@ class RetroUI:
             # Items if provided
             if items:
                 progress_group.append(Text("\n"))
-                for i, item in enumerate(items):
+                # Limit items shown to prevent overflow
+                visible_items = items[-5:] if len(items) > 5 else items
+                for i, item in enumerate(visible_items):
                     item_text = Text()
+                    # Truncate long items
+                    display_item = item[:50] + "..." if len(item) > 50 else item
+                    
                     # Animate current item (last one)
-                    if i == len(items) - 1:
+                    if i == len(visible_items) - 1:
                         item_text.append(f"{spinner_frames[spinner_index]} ", style=f"bold {self.theme.ORANGE}")
-                        item_text.append(item, style=f"bold {self.theme.WHITE}")
+                        item_text.append(display_item, style=f"bold {self.theme.WHITE}")
                     else:
                         item_text.append("✓ ", style=f"bold {self.theme.GREEN}")
-                        item_text.append(item, style=self.theme.TEXT_DIM)
+                        item_text.append(display_item, style=self.theme.TEXT_DIM)
                     progress_group.append(Align.center(item_text))
             
             content = Panel(
