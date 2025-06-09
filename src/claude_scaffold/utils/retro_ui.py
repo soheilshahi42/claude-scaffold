@@ -1733,6 +1733,9 @@ class RetroUI:
         print('\033[?25l', end='', flush=True)
         
         try:
+            # Clear screen first
+            self._clear_screen()
+            
             # Get terminal settings
             old_settings = termios.tcgetattr(sys.stdin)
             tty.setraw(sys.stdin.fileno())
@@ -1743,12 +1746,18 @@ class RetroUI:
             cursor_line = 0
             cursor_col = 0
             
+            # Show initial layout
+            initial_layout = generate_layout(wrapped_lines, cursor_line, cursor_col)
+            self.console.print(initial_layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
+            
             with Live(
-                generate_layout(wrapped_lines, cursor_line, cursor_col),
+                initial_layout,
                 console=self.console,
-                refresh_per_second=30,
+                refresh_per_second=4,  # Much lower refresh rate
                 transient=False,
-                screen=True
+                screen=False,  # Don't use alternate screen
+                redirect_stdout=False,
+                redirect_stderr=False
             ) as live:
                 
                 while True:
@@ -1815,8 +1824,9 @@ class RetroUI:
                         if remaining_pos > 0:
                             remaining_pos -= 1
                     
-                    # Update display
-                    live.update(generate_layout(wrapped_lines, cursor_line, cursor_col))
+                    # Update display only when needed
+                    if char:  # Only update if we processed a character
+                        live.update(generate_layout(wrapped_lines, cursor_line, cursor_col), refresh=True)
                     
         except KeyboardInterrupt:
             raise
@@ -1838,10 +1848,69 @@ class RetroUI:
         import time
         from rich.live import Live
         
+        # Clear screen and immediately show static progress
         self._clear_screen()
         
+        # Create static progress layout
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header", size=9),
+            Layout(name="content", ratio=1),
+            Layout(name="footer", size=3)
+        )
+        
+        # Header
+        layout["header"].update(
+            self._create_header("Q&A SESSION", "Claude is thinking...")
+        )
+        
+        # Progress content
+        progress_group = []
+        
+        # Message
+        msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
+        progress_group.append(Align.center(msg_text))
+        
+        # Static Claude art
+        claude_art = Text()
+        claude_art.append("\n     🤖\n", style=f"bold {self.theme.ORANGE}")
+        claude_art.append("    /│\\\n", style=self.theme.ORANGE_LIGHT)
+        claude_art.append("   / │ \\\n", style=self.theme.ORANGE_LIGHT)
+        progress_group.append(Align.center(claude_art))
+        
+        # Loading animation
+        loading_text = Text()
+        loading_text.append("\n◆ ◇ ◆ ◇ ◆ ◇ ◆\n", style=f"bold {self.theme.ORANGE}")
+        progress_group.append(Align.center(loading_text))
+        
+        # Status
+        status_text = Text()
+        status_text.append("\nAnalyzing previous answers...\n", style=self.theme.TEXT_DIM)
+        status_text.append("Formulating contextual question...\n", style=self.theme.TEXT_DIM)
+        progress_group.append(Align.center(status_text))
+        
+        content = Panel(
+            Align.center(Group(*progress_group), vertical="middle"),
+            title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
+            border_style=self.theme.ORANGE,
+            box=HEAVY,
+            padding=(2, 4)
+        )
+        
+        layout["content"].update(
+            Align.center(content, vertical="middle")
+        )
+        
+        # Footer
+        layout["footer"].update(
+            self._create_footer("Please wait...")
+        )
+        
+        # Show the static progress immediately
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
+        
+        # Only animate if duration > 0
         if duration > 0:
-            # Use animated progress with Live display
             self.loading_active = True
             frame_index = 0
             
@@ -1851,20 +1920,7 @@ class RetroUI:
             def generate_frame():
                 nonlocal frame_index
                 
-                # Create layout
-                layout = Layout()
-                layout.split_column(
-                    Layout(name="header", size=9),
-                    Layout(name="content", ratio=1),
-                    Layout(name="footer", size=3)
-                )
-                
-                # Header
-                layout["header"].update(
-                    self._create_header("Q&A SESSION", "Claude is thinking...")
-                )
-                
-                # Progress content
+                # Reuse the same layout structure but update animations
                 progress_group = []
                 
                 # Message
@@ -1901,95 +1957,21 @@ class RetroUI:
                     Align.center(content, vertical="middle")
                 )
                 
-                # Footer
-                layout["footer"].update(
-                    self._create_footer("Please wait...")
-                )
-                
                 frame_index += 1
                 return layout
             
-            # Use Live display
-            self.live_display = Live(
-                generate_frame(),
-                console=self.console,
-                refresh_per_second=4,
-                transient=False,
-                screen=True
-            )
-            
+            # Animate with lower refresh rate
             def animate():
-                with self.live_display:
-                    end_time = time.time() + duration
-                    while self.loading_active and time.time() < end_time:
-                        self.live_display.update(generate_frame())
-                        time.sleep(0.25)
+                end_time = time.time() + duration
+                while self.loading_active and time.time() < end_time:
+                    # Move cursor to home and update
+                    print('\033[H', end='', flush=True)
+                    self.console.print(generate_frame(), style=f"on {self.theme.BACKGROUND}", height=self.height)
+                    time.sleep(0.5)  # Lower refresh rate
             
             # Start animation in background
             self.animation_thread = threading.Thread(target=animate, daemon=True)
             self.animation_thread.start()
-            
-        else:
-            # Just show static progress (will be immediately replaced)
-            # Create layout
-            layout = Layout()
-            layout.split_column(
-                Layout(name="header", size=9),
-                Layout(name="content", ratio=1),
-                Layout(name="footer", size=3)
-            )
-            
-            # Header
-            layout["header"].update(
-                self._create_header("Q&A SESSION", "Claude is thinking...")
-            )
-            
-            # Progress content
-            progress_group = []
-            
-            # Message
-            msg_text = Text(f"\n{message}\n", style=f"bold {self.theme.WHITE}")
-            progress_group.append(Align.center(msg_text))
-            
-            # Animated Claude thinking
-            claude_art = Text()
-            claude_art.append("\n     🤖\n", style=f"bold {self.theme.ORANGE}")
-            claude_art.append("    /│\\\n", style=self.theme.ORANGE_LIGHT)
-            claude_art.append("   / │ \\\n", style=self.theme.ORANGE_LIGHT)
-            progress_group.append(Align.center(claude_art))
-            
-            # Loading animation
-            loading_text = Text()
-            loading_text.append("\n◆ ◇ ◆ ◇ ◆ ◇ ◆\n", style=f"bold {self.theme.ORANGE}")
-            progress_group.append(Align.center(loading_text))
-            
-            # Status
-            status_text = Text()
-            status_text.append("\nAnalyzing previous answers...\n", style=self.theme.TEXT_DIM)
-            status_text.append("Formulating contextual question...\n", style=self.theme.TEXT_DIM)
-            progress_group.append(Align.center(status_text))
-            
-            content = Panel(
-                Align.center(Group(*progress_group), vertical="middle"),
-                title=f"[{self.theme.ORANGE}]◆ PROCESSING ◆[/]",
-                border_style=self.theme.ORANGE,
-                box=HEAVY,
-                padding=(2, 4)
-            )
-            
-            layout["content"].update(
-                Align.center(content, vertical="middle")
-            )
-            
-            # Footer
-            layout["footer"].update(
-                self._create_footer("Please wait...")
-            )
-            
-            # Print layout with alternate screen to hide logs
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
-            # Force screen buffer switch to hide any subsequent logs
-            print('\033[?1049h', end='', flush=True)  # Switch to alternate screen buffer
     
     def stop_qa_progress(self):
         """Stop the Q&A progress animation if running."""
@@ -1997,10 +1979,5 @@ class RetroUI:
             self.loading_active = False
         if hasattr(self, 'animation_thread'):
             self.animation_thread.join(timeout=0.5)
-        if hasattr(self, 'live_display'):
-            try:
-                self.live_display.stop()
-            except:
-                pass
-        # Return to main screen buffer
-        print('\033[?1049l', end='', flush=True)  # Return to main screen buffer
+        # Clear screen to prepare for next display
+        self._clear_screen()

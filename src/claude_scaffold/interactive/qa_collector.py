@@ -110,6 +110,10 @@ class QACollector:
             
             # Generate the next question based on all previous Q&A
             question = self._generate_contextual_question(question_count)
+            
+            # Stop progress display before showing Q&A input
+            self.ui.stop_qa_progress()
+            
             if not question:
                 # If we can't generate more questions, we're done
                 break
