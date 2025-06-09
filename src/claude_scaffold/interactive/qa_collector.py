@@ -120,17 +120,27 @@ class QACollector:
             
             # Ask the question
             answer = self._ask_question(question, question_count + 1)
+            
+            # Check if user signaled enough (Ctrl+\)
+            if self.enough_signal_received:
+                if question_count >= self.MIN_QUESTIONS:
+                    break
+                else:
+                    # Reset the flag if minimum not met
+                    self.enough_signal_received = False
+                    self.ui.show_message(
+                        f"Please answer at least {self.MIN_QUESTIONS} question(s). You've answered {question_count} so far.",
+                        style="warning"
+                    )
+                    continue
+            
             if answer:
                 self.questions_asked.append(question)
                 self.answers.append(answer)
                 question_count += 1
             else:
-                # Empty answer means user wants to skip
+                # Empty answer means user wants to skip this question
                 continue
-            
-            # Check if we have minimum questions
-            if question_count >= self.MIN_QUESTIONS and self.enough_signal_received:
-                break
         
         # Show progress while compiling the specification
         if self.answers:
@@ -259,6 +269,8 @@ Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, I
         if enough_signal:
             self.enough_signal_received = True
             logger.info(f"User signaled 'enough' at question {question_number}")
+            # Return None to break the loop immediately
+            return None
         
         if response:
             return Answer(

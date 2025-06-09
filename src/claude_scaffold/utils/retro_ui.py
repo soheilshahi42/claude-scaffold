@@ -1636,7 +1636,9 @@ class RetroUI:
                 skip_text = Text()
                 skip_text.append("💡 ", style=f"bold {self.theme.ORANGE}")
                 skip_text.append("Feeling we have enough info? Press ", style=self.theme.TEXT_DIM)
-                skip_text.append("Ctrl+\\", style=f"bold {self.theme.ORANGE}")
+                skip_text.append("Ctrl+D", style=f"bold {self.theme.ORANGE}")
+                skip_text.append(" or ", style=self.theme.TEXT_DIM)
+                skip_text.append("ESC ESC", style=f"bold {self.theme.ORANGE}")
                 skip_text.append(" to finish Q&A", style=self.theme.TEXT_DIM)
                 input_group.append(Align.center(skip_text))
                 input_group.append(Text())
@@ -1668,7 +1670,7 @@ class RetroUI:
             footer_text.append("ENTER", style=f"bold {self.theme.ORANGE}")
             footer_text.append(" to submit | ", style=self.theme.TEXT_DIM)
             if question_number >= allow_skip_after:
-                footer_text.append("Ctrl+\\", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("Ctrl+D", style=f"bold {self.theme.ORANGE}")
                 footer_text.append(" = Enough info | ", style=self.theme.TEXT_DIM)
             footer_text.append("Ctrl+C", style=f"bold {self.theme.ORANGE}")
             footer_text.append(" = Cancel", style=self.theme.TEXT_DIM)
@@ -1786,11 +1788,18 @@ class RetroUI:
                             # Adjust cursor position
                             line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
                             cursor_pos = min(line_start + cursor_col, len(text))
+                    elif next_chars == '\x1b':  # ESC ESC - double escape to skip
+                        if question_number >= allow_skip_after:
+                            return "", True
                 
                 elif char == '\x7f' or char == '\x08':  # Backspace
                     if cursor_pos > 0:
                         text = text[:cursor_pos-1] + text[cursor_pos:]
                         cursor_pos -= 1
+                
+                elif char == '\x04':  # Ctrl+D - alternative skip key
+                    if question_number >= allow_skip_after:
+                        return "", True
                 
                 elif char == '\x1c':  # Ctrl+\ 
                     if question_number >= allow_skip_after:
