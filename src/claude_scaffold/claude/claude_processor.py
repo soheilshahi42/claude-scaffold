@@ -7,6 +7,19 @@ from typing import Any, Callable, Dict, List, Optional
 from ..utils.logger import get_logger
 from ..utils.progress import progress_indicator
 from .claude_task_queue import ClaudeTaskQueue
+from .prompts import (
+    PROJECT_SETUP_ENHANCEMENT_PROMPT,
+    TASK_DETAILS_GENERATION_PROMPT,
+    MODULE_DOCUMENTATION_ENHANCEMENT_PROMPT,
+    MODULE_DOCUMENTATION_REFINEMENT_PROMPT,
+    GLOBAL_RULES_GENERATION_PROMPT,
+    PROJECT_CONFIGURATION_VALIDATION_PROMPT,
+    MODULE_DESCRIPTION_BATCH_PROMPT,
+    TASK_DETAILS_BATCH_PROMPT,
+    PROJECT_QUESTIONS_INITIAL_PROMPT,
+    PROJECT_QUESTIONS_CONTEXTUAL_PROMPT,
+    QA_COMPILATION_TO_SPEC_PROMPT
+)
 
 
 class ClaudeProcessor:
@@ -22,44 +35,13 @@ class ClaudeProcessor:
         """Process project setup through Claude to generate intelligent configuration."""
 
         with progress_indicator.claude_thinking("Analyzing your project requirements") as progress:
-            project_type = initial_data["metadata"]["project_type_name"]
-            prompt = f"""You are helping set up a new {project_type} project.
-
-Project Information:
-- Name: {initial_data['project_name']}
-- Description: {initial_data['metadata']['description']}
-- Type: {initial_data['metadata']['project_type_name']}
-- Language: {initial_data['metadata']['language']}
-
-Based on this information, provide a comprehensive project configuration including:
-
-1. Enhanced project description (2-3 sentences)
-2. Detailed module responsibilities for each module:
-{self._format_modules(initial_data['modules'])}
-
-3. Task implementation details for each task:
-{self._format_tasks(initial_data['tasks'])}
-
-4. Additional project-specific rules (3-5 rules beyond the provided ones)
-5. Architecture recommendations
-6. Testing strategy recommendations
-7. Security considerations
-8. Performance optimization guidelines
-
-Current Rules:
-{self._format_rules(initial_data['rules'])}
-
-Please return a JSON object with this enhanced configuration. Format:
-{{
-    "enhanced_description": "...",
-    "module_enhancements": {{"module_name": {{...}}, ...}},
-    "task_details": {{"task_title": {{...}}, ...}},
-    "additional_rules": [...],
-    "architecture_recommendations": {{...}},
-    "testing_strategy": {{...}},
-    "security_considerations": [...],
-    "performance_guidelines": [...]
-}}"""
+            # Prepare the configuration JSON for the prompt
+            config_json = json.dumps(initial_data, indent=2)
+            
+            # Use the imported prompt template
+            prompt = PROJECT_SETUP_ENHANCEMENT_PROMPT.format(
+                config_json=config_json
+            )
 
             progress.update_status("Preparing prompt", "Initialization")
             progress.set_prompt_size(len(prompt))
@@ -84,24 +66,13 @@ Please return a JSON object with this enhanced configuration. Format:
         with progress_indicator.claude_thinking(
             f"Generating details for task: {task_title}"
         ) as progress:
-            prompt = f"""Generate comprehensive task details for the following task:
-
-Task: {task_title}
-Module: {module_name}
-Project Type: {project_context['metadata']['project_type_name']}
-Project Description: {project_context['metadata']['description']}
-
-Please provide:
-1. Clear goal statement
-2. Key requirements (3-5 items)
-3. Recommended implementation approach
-4. Specific subtasks following TDD methodology (5-8 items)
-5. Acceptance criteria
-6. Potential challenges
-7. Research topics
-
-Return as JSON with keys: goal, requirements, approach, subtasks, acceptance_criteria,
-challenges, research_topics"""
+            # Use the imported prompt template
+            prompt = TASK_DETAILS_GENERATION_PROMPT.format(
+                task_name=task_title,
+                module_name=module_name,
+                project_type=project_context['metadata']['project_type_name'],
+                language=project_context['metadata']['language']
+            )
 
             progress.set_prompt_size(len(prompt))
             progress.update_status("Calling Claude API", "Processing")
@@ -118,24 +89,17 @@ challenges, research_topics"""
         with progress_indicator.claude_thinking(
             f"Enhancing documentation for module: {module['name']}"
         ) as progress:
-            prompt = f"""Generate comprehensive documentation for the following module:
-
-Module: {module['name']}
-Description: {module['description']}
-Project Type: {project_context['metadata']['project_type_name']}
-
-Please provide:
-1. Detailed responsibilities (paragraph format)
-2. Public API design suggestions
-3. Internal architecture recommendations
-4. Key dependencies with purposes
-5. Interaction patterns with other modules
-6. Error handling strategies
-7. Performance considerations
-8. Security considerations
-9. Usage examples
-
-Return as JSON."""
+            # Get list of other modules
+            other_modules = [m['name'] for m in project_context.get('modules', []) if m['name'] != module['name']]
+            
+            # Use the imported prompt template
+            prompt = MODULE_DOCUMENTATION_ENHANCEMENT_PROMPT.format(
+                module_name=module['name'],
+                description=module['description'],
+                project_type=project_context['metadata']['project_type_name'],
+                language=project_context['metadata']['language'],
+                other_modules=', '.join(other_modules) if other_modules else 'None'
+            )
 
             progress.set_prompt_size(len(prompt))
             progress.update_status("Calling Claude API", "Processing")
@@ -169,14 +133,11 @@ Return as JSON."""
                     if not feedback:
                         break
                         
-                    # Refine with feedback
-                    refine_prompt = f"""Refine this module documentation based on user feedback:
-
-Module: {module['name']}
-Current documentation: {json.dumps(documentation)}
-User feedback: {feedback}
-
-Return improved documentation as JSON."""
+                    # Refine with feedback using the imported prompt
+                    refine_prompt = MODULE_DOCUMENTATION_REFINEMENT_PROMPT.format(
+                        current_doc=json.dumps(documentation),
+                        feedback=feedback
+                    )
                     
                     try:
                         print(f"\n{icons.ROBOT} Refining documentation...")
@@ -204,25 +165,12 @@ Return improved documentation as JSON."""
         """Generate project-specific global rules using Claude."""
 
         with progress_indicator.claude_thinking("Generating project-specific rules") as progress:
-            project_type = project_data["metadata"]["project_type_name"]
-            prompt = f"""Generate 10-15 project-specific rules for a {project_type} project.
-
-Project: {project_data['project_name']}
-Description: {project_data['metadata']['description']}
-Language: {project_data['metadata']['language']}
-Modules: {', '.join(m['name'] for m in project_data['modules'])}
-
-Consider:
-- Best practices for {project_data['metadata']['project_type_name']} projects
-- {project_data['metadata']['language']} specific conventions
-- Security and performance requirements
-- Testing and documentation standards
-- Code organization and architecture
-
-Existing rules to complement (don't repeat these):
-{self._format_list(project_data['rules']['suggested'] + project_data['rules']['custom'])}
-
-Return as JSON array of rule strings."""
+            # Use the imported prompt template
+            prompt = GLOBAL_RULES_GENERATION_PROMPT.format(
+                config=json.dumps(project_data, indent=2),
+                language=project_data['metadata']['language'],
+                project_type=project_data['metadata']['project_type_name']
+            )
 
             progress.set_prompt_size(len(prompt))
             progress.update_status("Calling Claude API", "Processing")
@@ -235,25 +183,10 @@ Return as JSON array of rule strings."""
         """Validate and suggest improvements for project configuration."""
 
         with progress_indicator.claude_thinking("Validating project configuration") as progress:
-            prompt = f"""Review and validate this project configuration:
-
-{json.dumps(project_data, indent=2)}
-
-Please analyze:
-1. Are all modules necessary and well-defined?
-2. Are tasks properly distributed across modules?
-3. Are there any missing critical components?
-4. Are the rules comprehensive and consistent?
-5. Any architectural concerns?
-
-Return JSON with:
-{{
-    "is_valid": true/false,
-    "suggestions": [...],
-    "missing_components": [...],
-    "architectural_concerns": [...],
-    "overall_assessment": "..."
-}}"""
+            # Use the imported prompt template
+            prompt = PROJECT_CONFIGURATION_VALIDATION_PROMPT.format(
+                config_json=json.dumps(project_data, indent=2)
+            )
 
             progress.set_prompt_size(len(prompt))
             progress.update_status("Calling Claude API", "Processing")
@@ -757,39 +690,10 @@ Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, I
         
         qa_text = "\n\n".join(categorized_qa)
         
-        prompt = f"""
-Based on this initial project description: "{project_description}"
-
-And this comprehensive Q&A session that explored the project in detail:
-{qa_text}
-
-Create a detailed technical specification that synthesizes all the information gathered.
-The specification should be coherent and well-structured, incorporating insights from the entire conversation.
-
-Include the following sections:
-
-1. **Project Overview**: Clear, enhanced summary based on all Q&A insights
-2. **Technical Stack**: Complete list of technologies, languages, frameworks, and tools discussed
-3. **Core Features**: Comprehensive feature list with descriptions from Q&A
-4. **Architecture Overview**: System design incorporating architectural decisions discussed
-5. **Data Model**: Database schema and data flow based on requirements gathered
-6. **API Design**: Endpoints, authentication, and integration points mentioned
-7. **User Interface**: UI/UX requirements and design principles discussed
-8. **Deployment Strategy**: Hosting, CI/CD, and infrastructure based on Q&A
-9. **Security Considerations**: All security aspects mentioned in the conversation
-10. **Performance Requirements**: Load expectations and optimization needs discussed
-11. **Integration Requirements**: Third-party services and APIs from Q&A
-12. **Development Constraints**: Timeline, budget, and limitations mentioned
-13. **Testing Strategy**: Testing approach based on project requirements
-14. **Future Considerations**: Scalability and future features discussed
-
-Make sure to:
-- Reference specific answers from the Q&A when relevant
-- Resolve any contradictions by using the most recent answers
-- Fill in reasonable defaults for standard practices if not explicitly discussed
-- Create a cohesive document that reads well as a complete specification
-
-Format as a professional technical specification document.
-"""
+        # Use the imported prompt template
+        prompt = QA_COMPILATION_TO_SPEC_PROMPT.format(
+            project_description=project_description,
+            qa_text=qa_text
+        )
         
         return self._call_claude(prompt, expect_json=False, timeout=300)  # Longer timeout for comprehensive spec

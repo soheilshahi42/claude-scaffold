@@ -7,6 +7,7 @@ import questionary
 
 from ..utils.icons import icons
 from .claude_processor import ClaudeProcessor
+from .prompts import CONFIGURATION_REFINEMENT_PROMPT
 
 
 class ClaudeEnhancedSetup:
@@ -188,19 +189,14 @@ class ClaudeEnhancedSetup:
         """Refine configuration based on user feedback."""
         print(f"\n{icons.ROBOT} Claude is refining the configuration based on your feedback...")
 
-        # Create refinement prompt
-        prompt = f"""The user has requested the following improvements to the project configuration:
-
-"{refinement_request}"
-
-Current configuration summary:
-- Project: {data['project_name']}
-- Type: {data['metadata']['project_type_name']}
-- Modules: {', '.join(m['name'] for m in data['modules'])}
-- Tasks: {len(data['tasks'])} tasks defined
-
-Please provide specific enhancements addressing the user's feedback.
-Return as JSON with any updates to modules, tasks, rules, or other configuration."""
+        # Use the imported prompt template
+        prompt = CONFIGURATION_REFINEMENT_PROMPT.format(
+            refinement_request=refinement_request,
+            project_name=data['project_name'],
+            project_type=data['metadata']['project_type_name'],
+            modules=', '.join(m['name'] for m in data['modules']),
+            tasks_count=len(data['tasks'])
+        )
 
         try:
             response = self.processor._call_claude(prompt)
