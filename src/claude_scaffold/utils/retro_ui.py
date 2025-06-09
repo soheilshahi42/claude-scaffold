@@ -1384,15 +1384,25 @@ class RetroUI:
                 padding=(0, 1)
             )
             
-            table.add_column("Property", style=self.theme.TEXT_DIM, width=12)
-            table.add_column("Value", style=self.theme.WHITE)
+            # Dynamically adjust column widths based on content
+            max_key_length = max(len(str(key)) for key, _ in page_items) if page_items else 20
+            key_width = min(max_key_length + 2, 30)
+            
+            table.add_column("Property", style=self.theme.TEXT_DIM, width=key_width, no_wrap=True)
+            table.add_column("Value", style=self.theme.WHITE, overflow="fold", max_width=self.width - key_width - 20)
             
             for key, value in page_items:
-                # Truncate very long values for better display
                 value_str = str(value)
-                if len(value_str) > 200:
-                    value_str = value_str[:197] + "..."
-                table.add_row(key, value_str)
+                # For very long content, show a preview with option to expand
+                if len(value_str) > 500:
+                    # Show first 400 chars with indication there's more
+                    lines = value_str[:400].split('\n')
+                    preview = '\n'.join(lines[:10])  # Max 10 lines
+                    if len(value_str) > 400 or len(lines) > 10:
+                        preview += f"\n\n[... {len(value_str) - len(preview)} more characters ...]"
+                    table.add_row(key, preview)
+                else:
+                    table.add_row(key, value_str)
             
             # Navigation info
             nav_text = Text()
@@ -1840,6 +1850,74 @@ class RetroUI:
             # Restore terminal settings
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
             print('\033[?25h', end='', flush=True)  # Show cursor
+    
+    def show_specification_sections(self, title: str, sections: Dict[str, str], subtitle: str = "") -> None:
+        """Show specification sections in a more readable format."""
+        import textwrap
+        
+        self._clear_screen()
+        
+        # Create layout
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header", size=9),
+            Layout(name="content", ratio=1),
+            Layout(name="footer", size=3)
+        )
+        
+        # Header
+        layout["header"].update(
+            self._create_header(title, subtitle)
+        )
+        
+        # Content - show sections as formatted text
+        content_lines = []
+        
+        for section_title, section_content in sections.items():
+            # Section title
+            title_text = Text()
+            title_text.append(f"\n▶ {section_title.upper()}", style=f"bold {self.theme.ORANGE}")
+            content_lines.append(title_text)
+            content_lines.append(Text("─" * 60, style=self.theme.ORANGE_DARK))
+            
+            # Section content - wrap long lines
+            wrapped_content = textwrap.fill(section_content, width=80, break_long_words=False)
+            content_text = Text(wrapped_content, style=self.theme.WHITE)
+            content_lines.append(content_text)
+        
+        # Create scrollable view
+        content_group = Group(*content_lines)
+        
+        layout["content"].update(
+            Panel(
+                content_group,
+                title=f"[{self.theme.ORANGE}]▶ DETAILS[/]",
+                border_style=self.theme.ORANGE,
+                box=HEAVY,
+                padding=(1, 2),
+                expand=True
+            )
+        )
+        
+        # Footer
+        layout["footer"].update(
+            self._create_footer("Press ENTER to continue")
+        )
+        
+        # Print layout
+        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+        
+        # Wait for Enter
+        import sys, tty, termios
+        old_settings = termios.tcgetattr(sys.stdin)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            while True:
+                key = sys.stdin.read(1)
+                if key == '\r' or key == '\n':
+                    break
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
     
     def show_qa_progress(self, message: str = "Generating next question...", duration: float = 0):
         """Show a progress screen while generating Q&A questions.

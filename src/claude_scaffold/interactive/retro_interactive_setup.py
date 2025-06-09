@@ -144,6 +144,43 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                 return refined_value
         
         return refined_value
+    
+    def _parse_specification(self, spec_text: str) -> Dict[str, str]:
+        """Parse the specification text into sections for better display."""
+        import re
+        
+        sections = {}
+        
+        # Split by markdown headers (##)
+        section_pattern = r'##\s+(.+?)(?=##|\Z)'
+        matches = re.findall(section_pattern, spec_text, re.DOTALL)
+        
+        if matches:
+            for match in matches:
+                lines = match.strip().split('\n', 1)
+                if len(lines) >= 2:
+                    section_title = lines[0].strip()
+                    section_content = lines[1].strip()
+                    sections[section_title] = section_content
+                elif lines:
+                    # Handle sections with just a title
+                    section_title = lines[0].strip()
+                    sections[section_title] = "No content provided"
+        else:
+            # Fallback: try to split by numbered sections
+            num_pattern = r'(\d+\.\s*\*\*[^*]+\*\*:?)(.+?)(?=\d+\.\s*\*\*|\Z)'
+            num_matches = re.findall(num_pattern, spec_text, re.DOTALL)
+            
+            if num_matches:
+                for title, content in num_matches:
+                    # Clean up the title
+                    title = re.sub(r'^\d+\.\s*\*\*|\*\*:?$', '', title).strip()
+                    sections[title] = content.strip()
+            else:
+                # Last fallback: show the whole text
+                sections["Full Specification"] = spec_text
+        
+        return sections
             
     def run(self, project_name: str) -> Dict[str, Any]:
         """Run the retro interactive setup."""
@@ -353,13 +390,25 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                     # Extract the enhanced description from the spec
                     spec_text = qa_results["compiled_requirements"]["claude_spec"]
                     
-                    # Show the compiled spec
-                    self.ui.show_paginated_results(
-                        "COMPILED SPECIFICATION",
-                        {"Full Specification": spec_text},
-                        "Generated from Q&A session",
-                        items_per_page=1
-                    )
+                    # Parse the specification into sections
+                    spec_sections = self._parse_specification(spec_text)
+                    
+                    # Show the compiled spec in a structured way
+                    if len(spec_sections) > 1:
+                        # Use the new specification display method for better formatting
+                        self.ui.show_specification_sections(
+                            "COMPILED SPECIFICATION",
+                            spec_sections,
+                            "Generated from Q&A session"
+                        )
+                    else:
+                        # Fallback to paginated results
+                        self.ui.show_paginated_results(
+                            "COMPILED SPECIFICATION",
+                            spec_sections,
+                            "Generated from Q&A session",
+                            items_per_page=1
+                        )
                     
                     # Ask if they want to use this enhanced spec
                     use_qa_spec = self.ui.ask_confirm(
