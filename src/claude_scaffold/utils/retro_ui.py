@@ -1558,7 +1558,6 @@ class RetroUI:
         import tty
         import textwrap
         import sys
-        from rich.live import Live
         
         # Track if Ctrl+\ was pressed
         ctrl_backslash_pressed = False
@@ -1571,10 +1570,14 @@ class RetroUI:
         old_handler = signal.signal(signal.SIGQUIT, handle_ctrl_backslash)
         
         # Initialize text buffer
-        text_buffer = []
+        text = ""
         cursor_pos = 0
         box_width = min(70, self.width - 20)
         inner_width = box_width - 4  # Account for borders and padding
+        
+        # Fixed box dimensions
+        min_box_height = 3
+        max_box_height = 10
         
         def wrap_text(text: str) -> List[str]:
             """Wrap text to fit inside box."""
@@ -1582,19 +1585,19 @@ class RetroUI:
                 return [""]
             return textwrap.wrap(text, width=inner_width) or [""]
         
-        def generate_layout(wrapped_lines: List[str], cursor_line: int, cursor_col: int):
-            """Generate the full screen layout with dynamic box height."""
-            # Calculate box height based on content
-            min_box_height = 3
-            max_box_height = 10
-            content_height = max(1, len(wrapped_lines))
-            box_height = min(max_box_height, max(min_box_height, content_height + 2))
+        # Hide cursor during rendering
+        print('\033[?25l', end='', flush=True)
+        
+        try:
+            # Clear screen first
+            self._clear_screen()
             
+            # Draw static layout first (header, question, footer)
             # Create layout
             layout = Layout()
             
             # Calculate dynamic sizes
-            question_area_size = max(8, (self.height - 20 - box_height) // 2)
+            question_area_size = max(8, (self.height - 20 - max_box_height) // 2)
             input_area_size = self.height - 9 - question_area_size - 3
             
             layout.split_column(
@@ -1635,7 +1638,7 @@ class RetroUI:
                 )
             )
             
-            # Input area
+            # Input area placeholder
             input_group = []
             
             if question_number >= allow_skip_after:
@@ -1653,55 +1656,9 @@ class RetroUI:
             input_group.append(Align.center(input_text))
             input_group.append(Text())
             
-            # Dynamic input box
-            box_lines = []
-            
-            # Top border
-            box_lines.append(Text("╭" + "─" * box_width + "╮", style=self.theme.ORANGE))
-            
-            # Content lines with text
-            visible_start = max(0, cursor_line - (box_height - 3))
-            visible_end = min(len(wrapped_lines), visible_start + (box_height - 2))
-            
-            for i in range(box_height - 2):
-                line_idx = visible_start + i
-                if line_idx < len(wrapped_lines):
-                    line_text = wrapped_lines[line_idx]
-                    # Show cursor on current line
-                    if line_idx == cursor_line:
-                        if cursor_col < len(line_text):
-                            display_line = line_text[:cursor_col] + "█" + line_text[cursor_col:]
-                        else:
-                            display_line = line_text + "█"
-                    else:
-                        display_line = line_text
-                    
-                    # Pad line to box width
-                    padding_needed = box_width - len(display_line) - 2
-                    display_text = f"│ {display_line}{' ' * padding_needed} │"
-                else:
-                    # Empty line
-                    if line_idx == cursor_line:
-                        display_text = f"│ █{' ' * (box_width - 2)} │"
-                    else:
-                        display_text = "│" + " " * (box_width + 2) + "│"
-                
-                box_lines.append(Text(display_text, style=self.theme.ORANGE))
-            
-            # Bottom border
-            box_lines.append(Text("╰" + "─" * box_width + "╯", style=self.theme.ORANGE))
-            
-            for line in box_lines:
-                input_group.append(Align.center(line))
-            
-            # Add scroll indicators if needed
-            if visible_start > 0:
-                scroll_up = Text("▲ More above ▲", style=self.theme.TEXT_DIM)
-                input_group.insert(len(input_group) - len(box_lines) - 1, Align.center(scroll_up))
-            
-            if visible_end < len(wrapped_lines):
-                scroll_down = Text("▼ More below ▼", style=self.theme.TEXT_DIM)
-                input_group.append(Align.center(scroll_down))
+            # Add placeholder for box
+            for _ in range(max_box_height):
+                input_group.append(Text())
             
             layout["input_area"].update(
                 Panel(
@@ -1727,107 +1684,155 @@ class RetroUI:
             
             layout["footer"].update(self._create_footer(""))
             
-            return layout
-        
-        # Hide cursor during rendering
-        print('\033[?25l', end='', flush=True)
-        
-        try:
-            # Clear screen first
-            self._clear_screen()
+            # Print static layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Calculate box position on screen
+            # Header (9) + question area + spacing in input panel
+            box_start_row = 9 + question_area_size + 5
+            if question_number >= allow_skip_after:
+                box_start_row += 2
+            
+            # Center the box horizontally
+            box_left_col = (self.width - box_width) // 2
             
             # Get terminal settings
             old_settings = termios.tcgetattr(sys.stdin)
             tty.setraw(sys.stdin.fileno())
             
             # Initial render
-            text = ""
             wrapped_lines = wrap_text(text)
             cursor_line = 0
             cursor_col = 0
             
-            # Show initial layout
-            initial_layout = generate_layout(wrapped_lines, cursor_line, cursor_col)
-            self.console.print(initial_layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
-            
-            with Live(
-                initial_layout,
-                console=self.console,
-                refresh_per_second=4,  # Much lower refresh rate
-                transient=False,
-                screen=False,  # Don't use alternate screen
-                redirect_stdout=False,
-                redirect_stderr=False
-            ) as live:
+            def render_box():
+                """Render just the input box at its position."""
+                # Calculate box height
+                content_height = max(1, len(wrapped_lines))
+                box_height = min(max_box_height, max(min_box_height, content_height + 2))
                 
-                while True:
-                    # Read single character
-                    char = sys.stdin.read(1)
+                # Save cursor position
+                print('\033[s', end='', flush=True)
+                
+                # Move to box position
+                print(f'\033[{box_start_row};{box_left_col}H', end='', flush=True)
+                
+                # Draw box
+                # Top border
+                print(f"\033[38;2;218;119;86m╭{'─' * box_width}╮\033[0m", flush=True)
+                
+                # Content lines
+                visible_start = max(0, cursor_line - (box_height - 3))
+                visible_end = min(len(wrapped_lines), visible_start + (box_height - 2))
+                
+                for i in range(box_height - 2):
+                    line_idx = visible_start + i
+                    print(f'\033[{box_start_row + i + 1};{box_left_col}H', end='', flush=True)
                     
-                    if char == '\r' or char == '\n':  # Enter - submit
-                        return text, False
-                    
-                    elif char == '\x1b':  # Escape sequence
-                        next_chars = sys.stdin.read(2)
-                        if next_chars == '[D':  # Left arrow
-                            if cursor_pos > 0:
-                                cursor_pos -= 1
-                        elif next_chars == '[C':  # Right arrow
-                            if cursor_pos < len(text):
-                                cursor_pos += 1
-                        elif next_chars == '[A':  # Up arrow
-                            # Move up a line
-                            if cursor_line > 0:
-                                cursor_line -= 1
-                                # Adjust cursor position
-                                line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
-                                cursor_pos = min(line_start + cursor_col, len(text))
-                        elif next_chars == '[B':  # Down arrow
-                            # Move down a line
-                            if cursor_line < len(wrapped_lines) - 1:
-                                cursor_line += 1
-                                # Adjust cursor position
-                                line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
-                                cursor_pos = min(line_start + cursor_col, len(text))
-                    
-                    elif char == '\x7f' or char == '\x08':  # Backspace
+                    if line_idx < len(wrapped_lines):
+                        line_text = wrapped_lines[line_idx]
+                        # Show cursor on current line
+                        if line_idx == cursor_line:
+                            if cursor_col < len(line_text):
+                                display_line = line_text[:cursor_col] + "█" + line_text[cursor_col:]
+                            else:
+                                display_line = line_text + "█"
+                        else:
+                            display_line = line_text
+                        
+                        # Pad line to box width
+                        padding_needed = box_width - len(display_line) - 2
+                        display_text = f"{display_line}{' ' * padding_needed}"
+                        print(f"\033[38;2;218;119;86m│ \033[0m{display_text}\033[38;2;218;119;86m │\033[0m", flush=True)
+                    else:
+                        # Empty line
+                        if line_idx == cursor_line:
+                            print(f"\033[38;2;218;119;86m│ \033[0m█{' ' * (box_width - 2)}\033[38;2;218;119;86m │\033[0m", flush=True)
+                        else:
+                            print(f"\033[38;2;218;119;86m│{' ' * (box_width + 2)}│\033[0m", flush=True)
+                
+                # Clear any extra lines below the box
+                for i in range(box_height - 2, max_box_height - 2):
+                    print(f'\033[{box_start_row + i + 1};{box_left_col}H', end='', flush=True)
+                    print(' ' * (box_width + 4), flush=True)
+                
+                # Bottom border
+                print(f'\033[{box_start_row + box_height - 1};{box_left_col}H', end='', flush=True)
+                print(f"\033[38;2;218;119;86m╰{'─' * box_width}╯\033[0m", flush=True)
+                
+                # Restore cursor position
+                print('\033[u', end='', flush=True)
+            
+            # Initial box render
+            render_box()
+            
+            while True:
+                # Read single character
+                char = sys.stdin.read(1)
+                
+                if char == '\r' or char == '\n':  # Enter - submit
+                    return text, False
+                
+                elif char == '\x1b':  # Escape sequence
+                    next_chars = sys.stdin.read(2)
+                    if next_chars == '[D':  # Left arrow
                         if cursor_pos > 0:
-                            text = text[:cursor_pos-1] + text[cursor_pos:]
                             cursor_pos -= 1
-                    
-                    elif char == '\x1c':  # Ctrl+\ 
-                        if ctrl_backslash_pressed and question_number >= allow_skip_after:
-                            return "", True
-                    
-                    elif char == '\x03':  # Ctrl+C
-                        raise KeyboardInterrupt()
-                    
-                    elif 32 <= ord(char) <= 126:  # Printable characters
-                        text = text[:cursor_pos] + char + text[cursor_pos:]
-                        cursor_pos += 1
-                    
-                    # Re-wrap text and update cursor position
-                    wrapped_lines = wrap_text(text)
-                    
-                    # Calculate cursor line and column from cursor position
-                    remaining_pos = cursor_pos
-                    cursor_line = 0
-                    cursor_col = 0
-                    
-                    for i, line in enumerate(wrapped_lines):
-                        if remaining_pos <= len(line):
-                            cursor_line = i
-                            cursor_col = remaining_pos
-                            break
-                        remaining_pos -= len(line)
-                        # Account for implicit newline between wrapped lines
-                        if remaining_pos > 0:
-                            remaining_pos -= 1
-                    
-                    # Update display only when needed
-                    if char:  # Only update if we processed a character
-                        live.update(generate_layout(wrapped_lines, cursor_line, cursor_col), refresh=True)
-                    
+                    elif next_chars == '[C':  # Right arrow
+                        if cursor_pos < len(text):
+                            cursor_pos += 1
+                    elif next_chars == '[A':  # Up arrow
+                        # Move up a line
+                        if cursor_line > 0:
+                            cursor_line -= 1
+                            # Adjust cursor position
+                            line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
+                            cursor_pos = min(line_start + cursor_col, len(text))
+                    elif next_chars == '[B':  # Down arrow
+                        # Move down a line
+                        if cursor_line < len(wrapped_lines) - 1:
+                            cursor_line += 1
+                            # Adjust cursor position
+                            line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
+                            cursor_pos = min(line_start + cursor_col, len(text))
+                
+                elif char == '\x7f' or char == '\x08':  # Backspace
+                    if cursor_pos > 0:
+                        text = text[:cursor_pos-1] + text[cursor_pos:]
+                        cursor_pos -= 1
+                
+                elif char == '\x1c':  # Ctrl+\ 
+                    if ctrl_backslash_pressed and question_number >= allow_skip_after:
+                        return "", True
+                
+                elif char == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt()
+                
+                elif 32 <= ord(char) <= 126:  # Printable characters
+                    text = text[:cursor_pos] + char + text[cursor_pos:]
+                    cursor_pos += 1
+                
+                # Re-wrap text and update cursor position
+                wrapped_lines = wrap_text(text)
+                
+                # Calculate cursor line and column from cursor position
+                remaining_pos = cursor_pos
+                cursor_line = 0
+                cursor_col = 0
+                
+                for i, line in enumerate(wrapped_lines):
+                    if remaining_pos <= len(line):
+                        cursor_line = i
+                        cursor_col = remaining_pos
+                        break
+                    remaining_pos -= len(line)
+                    # Account for implicit newline between wrapped lines
+                    if remaining_pos > 0:
+                        remaining_pos -= 1
+                
+                # Always re-render the box
+                render_box()
+                
         except KeyboardInterrupt:
             raise
             
