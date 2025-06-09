@@ -1393,16 +1393,7 @@ class RetroUI:
             
             for key, value in page_items:
                 value_str = str(value)
-                # For very long content, show a preview with option to expand
-                if len(value_str) > 500:
-                    # Show first 400 chars with indication there's more
-                    lines = value_str[:400].split('\n')
-                    preview = '\n'.join(lines[:10])  # Max 10 lines
-                    if len(value_str) > 400 or len(lines) > 10:
-                        preview += f"\n\n[... {len(value_str) - len(preview)} more characters ...]"
-                    table.add_row(key, preview)
-                else:
-                    table.add_row(key, value_str)
+                table.add_row(key, value_str)
             
             # Navigation info
             nav_text = Text()
@@ -1852,72 +1843,140 @@ class RetroUI:
             print('\033[?25h', end='', flush=True)  # Show cursor
     
     def show_specification_sections(self, title: str, sections: Dict[str, str], subtitle: str = "") -> None:
-        """Show specification sections in a more readable format."""
+        """Show specification sections with scrolling support."""
         import textwrap
+        import sys
+        import tty
+        import termios
         
-        self._clear_screen()
-        
-        # Create layout
-        layout = Layout()
-        layout.split_column(
-            Layout(name="header", size=9),
-            Layout(name="content", ratio=1),
-            Layout(name="footer", size=3)
-        )
-        
-        # Header
-        layout["header"].update(
-            self._create_header(title, subtitle)
-        )
-        
-        # Content - show sections as formatted text
-        content_lines = []
+        # Prepare all content lines
+        all_lines = []
         
         for section_title, section_content in sections.items():
-            # Section title
-            title_text = Text()
-            title_text.append(f"\n▶ {section_title.upper()}", style=f"bold {self.theme.ORANGE}")
-            content_lines.append(title_text)
-            content_lines.append(Text("─" * 60, style=self.theme.ORANGE_DARK))
+            # Add section title
+            all_lines.append("")  # Empty line before section
+            all_lines.append(f"▶ {section_title.upper()}")
+            all_lines.append("─" * 60)
+            all_lines.append("")  # Empty line after separator
             
-            # Section content - wrap long lines
-            wrapped_content = textwrap.fill(section_content, width=80, break_long_words=False)
-            content_text = Text(wrapped_content, style=self.theme.WHITE)
-            content_lines.append(content_text)
+            # Wrap and add content
+            wrapped_lines = textwrap.wrap(section_content, width=80, break_long_words=False)
+            all_lines.extend(wrapped_lines)
+            all_lines.append("")  # Empty line after section
         
-        # Create scrollable view
-        content_group = Group(*content_lines)
+        # Scrolling parameters
+        current_line = 0
+        content_height = self.height - 15  # Account for header and footer
         
-        layout["content"].update(
-            Panel(
-                content_group,
-                title=f"[{self.theme.ORANGE}]▶ DETAILS[/]",
-                border_style=self.theme.ORANGE,
-                box=HEAVY,
-                padding=(1, 2),
-                expand=True
+        while True:
+            self._clear_screen()
+            
+            # Create layout
+            layout = Layout()
+            layout.split_column(
+                Layout(name="header", size=9),
+                Layout(name="content", ratio=1),
+                Layout(name="footer", size=4)
             )
-        )
-        
-        # Footer
-        layout["footer"].update(
-            self._create_footer("Press ENTER to continue")
-        )
-        
-        # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
-        
-        # Wait for Enter
-        import sys, tty, termios
-        old_settings = termios.tcgetattr(sys.stdin)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            while True:
+            
+            # Header
+            layout["header"].update(
+                self._create_header(title, subtitle)
+            )
+            
+            # Get visible lines
+            visible_lines = all_lines[current_line:current_line + content_height]
+            
+            # Create content text
+            content_texts = []
+            for i, line in enumerate(visible_lines):
+                if line.startswith("▶ "):
+                    # Section title
+                    text = Text(line, style=f"bold {self.theme.ORANGE}")
+                elif line.startswith("─"):
+                    # Separator
+                    text = Text(line, style=self.theme.ORANGE_DARK)
+                else:
+                    # Regular content
+                    text = Text(line, style=self.theme.WHITE)
+                content_texts.append(text)
+            
+            # Fill remaining space with empty lines
+            for _ in range(content_height - len(visible_lines)):
+                content_texts.append(Text(""))
+            
+            content_group = Group(*content_texts)
+            
+            layout["content"].update(
+                Panel(
+                    content_group,
+                    title=f"[{self.theme.ORANGE}]▶ DETAILS[/]",
+                    border_style=self.theme.ORANGE,
+                    box=HEAVY,
+                    padding=(1, 2),
+                    expand=True
+                )
+            )
+            
+            # Footer with scroll indicators
+            footer_text = Text()
+            
+            # Scroll position indicator
+            if len(all_lines) > content_height:
+                scroll_percent = int((current_line / max(1, len(all_lines) - content_height)) * 100)
+                footer_text.append(f"Line {current_line + 1}-{min(current_line + content_height, len(all_lines))} of {len(all_lines)} ({scroll_percent}%)\n", 
+                                 style=self.theme.TEXT_DIM)
+            
+            # Navigation hints
+            if current_line > 0:
+                footer_text.append("↑ ", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("Scroll up  ", style=self.theme.TEXT_DIM)
+            
+            if current_line + content_height < len(all_lines):
+                footer_text.append("↓ ", style=f"bold {self.theme.ORANGE}")
+                footer_text.append("Scroll down  ", style=self.theme.TEXT_DIM)
+            
+            footer_text.append("ENTER ", style=f"bold {self.theme.ORANGE}")
+            footer_text.append("Continue  ", style=self.theme.TEXT_DIM)
+            
+            footer_text.append("PAGE UP/DOWN ", style=f"bold {self.theme.ORANGE}")
+            footer_text.append("Page scroll", style=self.theme.TEXT_DIM)
+            
+            layout["footer"].update(
+                Align.center(footer_text)
+            )
+            
+            # Print layout
+            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            
+            # Handle input
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setraw(sys.stdin.fileno())
                 key = sys.stdin.read(1)
-                if key == '\r' or key == '\n':
+                
+                if key == '\r' or key == '\n':  # Enter - exit
                     break
-        finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                elif key == '\x1b':  # Escape sequence
+                    next_keys = sys.stdin.read(2)
+                    if next_keys == '[A' and current_line > 0:  # Up arrow
+                        current_line -= 1
+                    elif next_keys == '[B' and current_line + content_height < len(all_lines):  # Down arrow
+                        current_line += 1
+                    elif next_keys == '[5':  # Page Up
+                        sys.stdin.read(1)  # consume ~
+                        current_line = max(0, current_line - content_height)
+                    elif next_keys == '[6':  # Page Down
+                        sys.stdin.read(1)  # consume ~
+                        current_line = min(len(all_lines) - content_height, current_line + content_height)
+                elif key == ' ':  # Spacebar - page down
+                    if current_line + content_height < len(all_lines):
+                        current_line = min(len(all_lines) - content_height, current_line + content_height)
+                elif key == 'b' or key == 'B':  # B - page up
+                    current_line = max(0, current_line - content_height)
+                    
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
     
     def show_qa_progress(self, message: str = "Generating next question...", duration: float = 0):
         """Show a progress screen while generating Q&A questions.
