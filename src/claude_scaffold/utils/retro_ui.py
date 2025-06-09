@@ -1553,21 +1553,12 @@ class RetroUI:
         Returns:
             Tuple of (answer, enough_signal) where enough_signal is True if user pressed Ctrl+\
         """
-        import signal
         import termios
         import tty
         import textwrap
         import sys
         
-        # Track if Ctrl+\ was pressed
-        ctrl_backslash_pressed = False
-        
-        def handle_ctrl_backslash(signum, frame):
-            nonlocal ctrl_backslash_pressed
-            ctrl_backslash_pressed = True
-        
-        # Set up Ctrl+\ handler
-        old_handler = signal.signal(signal.SIGQUIT, handle_ctrl_backslash)
+        # We'll handle Ctrl+\ directly as a character, no need for signal handler
         
         # Initialize text buffer
         text = ""
@@ -1802,7 +1793,7 @@ class RetroUI:
                         cursor_pos -= 1
                 
                 elif char == '\x1c':  # Ctrl+\ 
-                    if ctrl_backslash_pressed and question_number >= allow_skip_after:
+                    if question_number >= allow_skip_after:
                         return "", True
                 
                 elif char == '\x03':  # Ctrl+C
@@ -1839,7 +1830,6 @@ class RetroUI:
         finally:
             # Restore terminal settings
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-            signal.signal(signal.SIGQUIT, old_handler)
             print('\033[?25h', end='', flush=True)  # Show cursor
     
     def show_qa_progress(self, message: str = "Generating next question...", duration: float = 0):
