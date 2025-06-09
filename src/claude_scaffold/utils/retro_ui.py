@@ -1545,7 +1545,7 @@ class RetroUI:
         question: str,
         question_number: int,
         category: str,
-        allow_skip_after: int = 20,
+        allow_skip_after: int = 1,
         subtitle: str = ""
     ) -> Tuple[str, bool]:
         """Q&A input with dynamic resizing text box that wraps and grows/shrinks.

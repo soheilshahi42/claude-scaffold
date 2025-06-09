@@ -66,7 +66,7 @@ class Answer:
 class QACollector:
     """Collects detailed information about the project through Q&A."""
     
-    MIN_QUESTIONS = 20
+    MIN_QUESTIONS = 1
     MAX_QUESTIONS = 100
     
     def __init__(self, ui: RetroUI, claude_processor: Optional[ClaudeProcessor] = None):
