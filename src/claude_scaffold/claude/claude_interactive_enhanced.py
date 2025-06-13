@@ -10,6 +10,19 @@ from ..config.project_config import ProjectConfig
 from ..utils.icons import icons
 from ..utils.logger import get_logger
 from .claude_processor import ClaudeProcessor
+from .prompts import (
+    DESCRIPTION_ENHANCEMENT_PROMPT,
+    MODULE_SUGGESTIONS_PROMPT,
+    MODULE_DESCRIPTION_PROMPT,
+    TASK_SUGGESTIONS_PROMPT,
+    MODULE_ASSIGNMENT_PROMPT,
+    RULE_SUGGESTIONS_PROMPT,
+    TECHNICAL_CONSTRAINTS_PROMPT,
+    BUILD_COMMANDS_PROMPT,
+    TEXT_REFINEMENT_PROMPT,
+    LIST_REFINEMENT_PROMPT,
+    DICT_REFINEMENT_PROMPT
+)
 
 
 class EnhancedClaudeInteractiveSetup:
@@ -87,31 +100,22 @@ class EnhancedClaudeInteractiveSetup:
             if not feedback:
                 return refined_value
     
-            # Build refinement prompt
+            # Build refinement prompt using imported templates
             if value_type == "text":
-                prompt = f"""{refinement_prompt}
-
-Current version: {refined_value}
-
-User feedback: {feedback}
-
-Provide an improved version based on the feedback. Return only the improved text."""
+                prompt = TEXT_REFINEMENT_PROMPT.format(
+                    current_value=refined_value,
+                    feedback=feedback
+                )
             elif value_type == "list":
-                prompt = f"""{refinement_prompt}
-
-Current items: {json.dumps(refined_value)}
-
-User feedback: {feedback}
-
-Provide an improved list based on the feedback. Return a JSON array."""
+                prompt = LIST_REFINEMENT_PROMPT.format(
+                    current_items=json.dumps(refined_value),
+                    feedback=feedback
+                )
             elif value_type == "dict":
-                prompt = f"""{refinement_prompt}
-
-Current data: {json.dumps(refined_value)}
-
-User feedback: {feedback}
-
-Provide improved data based on the feedback. Return a JSON object."""
+                prompt = DICT_REFINEMENT_PROMPT.format(
+                    current_data=json.dumps(refined_value),
+                    feedback=feedback
+                )
     
             try:
                 print(f"\n{icons.ROBOT} Refining based on your feedback...")
@@ -540,19 +544,10 @@ Provide improved data based on the feedback. Return a JSON object."""
     # Claude enhancement methods with proper implementation
     def _enhance_description(self, project_data: Dict[str, Any]) -> str:
         """Get Claude to enhance the project description."""
-        prompt = f"""Enhance this project description to be more comprehensive and clear:
-
-Project: {project_data['project_name']}
-Type: {project_data['metadata']['project_type_name']}
-Original description: {project_data['metadata']['description']}
-
-Provide a comprehensive enhanced description that:
-1. Clearly explains what the project does and its main purpose
-2. Highlights key features, technologies, and benefits
-3. Identifies the target audience and use cases
-4. Mentions any unique aspects or innovations
-
-Make it engaging and informative. Return only the enhanced description text, no JSON."""
+        # Use the imported prompt template
+        prompt = DESCRIPTION_ENHANCEMENT_PROMPT.format(
+            description=project_data['metadata']['description']
+        )
 
         try:
             return self.processor._call_claude(prompt, expect_json=False).strip()
@@ -562,18 +557,12 @@ Make it engaging and informative. Return only the enhanced description text, no 
 
     def _get_claude_module_suggestions(self, project_data: Dict[str, Any]) -> List[str]:
         """Get Claude's module suggestions based on project info."""
-        context = self._build_context(project_data)
-        prompt = f"""{context}
-
-Based on this project information, suggest the optimal module structure.
-Consider the project type, description, and language.
-Think about appropriate separation of concerns, scalability,
-maintainability, and common patterns for this type of project.
-
-Include all necessary modules for a complete, production-ready application.
-Use lowercase with underscores (e.g., user_auth, api_gateway).
-
-Return a JSON array of module names that would be most appropriate."""
+        # Use the imported prompt template
+        prompt = MODULE_SUGGESTIONS_PROMPT.format(
+            project_type=project_data["metadata"]["project_type_name"],
+            description=project_data["metadata"]["description"],
+            language=project_data["metadata"]["language"]
+        )
 
         try:
             response = self.processor._call_claude(prompt)
@@ -586,13 +575,11 @@ Return a JSON array of module names that would be most appropriate."""
 
     def _get_module_description(self, module_name: str, project_data: Dict[str, Any]) -> str:
         """Get Claude to describe what a module should do."""
-        context = self._build_context(project_data)
-        prompt = f"""{context}
-
-For the module named "{module_name}",
-    provide a clear, concise description of its purpose and responsibilities.
-Consider the project context and how this module fits into the architecture.
-Return just the description text (one sentence)."""
+        # Use the imported prompt template
+        prompt = MODULE_DESCRIPTION_PROMPT.format(
+            module_name=module_name,
+            project_type=project_data["metadata"]["project_type_name"]
+        )
 
         try:
             return self.processor._call_claude(prompt, expect_json=False).strip()
@@ -609,21 +596,13 @@ Return just the description text (one sentence)."""
             },
         )
 
-        context = self._build_context(project_data)
-        prompt = f"""{context}
-
-Suggest 10-15 specific development tasks for this project.
-Consider the modules, project type, and description.
-Based on the project type and language, include appropriate tasks for all major components.
-Assign each task to the most appropriate module.
-Mix priorities to show what's most important.
-
-Return a JSON array of task objects:
-[
-    {{"title": "Set up Django REST framework", "module": "backend", "priority": "high"}},
-    {{"title": "Create React app with TypeScript", "module": "frontend", "priority": "high"}},
-    ...
-]"""
+        # Use the imported prompt template  
+        prompt = TASK_SUGGESTIONS_PROMPT.format(
+            project_type=project_data["metadata"]["project_type_name"],
+            description=project_data["metadata"]["description"],
+            language=project_data["metadata"]["language"],
+            modules=json.dumps([m["name"] for m in project_data.get("modules", [])])
+        )
 
         try:
             self.logger.debug("Calling Claude for task suggestions")
@@ -649,10 +628,11 @@ Return a JSON array of task objects:
     def _suggest_module_for_task(self, task_title: str, project_data: Dict[str, Any]) -> str:
         """Get Claude to suggest which module should handle a task."""
         modules = [m["name"] for m in project_data["modules"]]
-        prompt = f"""Given this task: "{task_title}"
-And these available modules: {', '.join(modules)}
-
-Which module should handle this task? Return just the module name."""
+        # Use the imported prompt template
+        prompt = MODULE_ASSIGNMENT_PROMPT.format(
+            task=task_title,
+            modules=', '.join(modules)
+        )
 
         try:
             suggestion = self.processor._call_claude(prompt, expect_json=False).strip()
@@ -665,16 +645,12 @@ Which module should handle this task? Return just the module name."""
 
     def _get_claude_rule_suggestions(self, project_data: Dict[str, Any]) -> List[str]:
         """Get Claude's project-specific rule suggestions."""
-        context = self._build_context(project_data)
-        prompt = f"""{context}
-
-Suggest 12-15 specific coding rules and best practices for this project.
-Consider the project type, language, modules, and tasks.
-Make them actionable and specific to this project's needs.
-Include rules for all major components based on the chosen technology stack.
-Consider security, performance, testing, and code organization.
-
-Return a JSON array of rule strings."""
+        # Use the imported prompt template
+        prompt = RULE_SUGGESTIONS_PROMPT.format(
+            project_type=project_data["metadata"]["project_type_name"],
+            language=project_data["metadata"]["language"],
+            description=project_data["metadata"]["description"]
+        )
 
         try:
             response = self.processor._call_claude(prompt)
@@ -685,15 +661,12 @@ Return a JSON array of rule strings."""
 
     def _get_claude_constraints(self, project_data: Dict[str, Any]) -> List[str]:
         """Get Claude's technical constraint suggestions."""
-        context = self._build_context(project_data)
-        prompt = f"""{context}
-
-What technical constraints should this project have?
-Consider dependencies, versions, deployment requirements, etc.
-Based on the project type and language,
-    think about appropriate runtime versions, database requirements, and deployment constraints.
-
-Return a JSON array of constraint strings."""
+        # Use the imported prompt template
+        prompt = TECHNICAL_CONSTRAINTS_PROMPT.format(
+            project_type=project_data["metadata"]["project_type_name"],
+            language=project_data["metadata"]["language"],
+            description=project_data["metadata"]["description"]
+        )
 
         try:
             response = self.processor._call_claude(prompt)
@@ -704,20 +677,11 @@ Return a JSON array of constraint strings."""
 
     def _get_claude_commands(self, project_data: Dict[str, Any]) -> Dict[str, str]:
         """Get Claude's build command suggestions."""
-        context = self._build_context(project_data)
-        prompt = f"""{context}
-
-Suggest appropriate commands for this project:
-- install: Install all dependencies
-- test: Run all tests
-- build: Build the project for production
-- dev: Start development servers
-- lint: Run linters
-
-Based on the project type and language, suggest commands that handle all project components.
-
-Return a JSON object with command names as keys and commands as values.
-Only include relevant commands for this project type."""
+        # Use the imported prompt template
+        prompt = BUILD_COMMANDS_PROMPT.format(
+            project_type=project_data["metadata"]["project_type_name"],
+            language=project_data["metadata"]["language"]
+        )
 
         try:
             response = self.processor._call_claude(prompt)

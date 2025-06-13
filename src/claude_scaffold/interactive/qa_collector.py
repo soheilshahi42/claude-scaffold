@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from ..utils.retro_ui import RetroUI, RetroTheme
 from ..claude.claude_processor import ClaudeProcessor
 from ..utils.logger import get_logger
+from .prompts import QA_COLLECTOR_QUESTION_PROMPT
 
 logger = get_logger(__name__)
 
@@ -165,43 +166,12 @@ class QACollector:
                 qa_context += f"\nQ{i}: {answer.question.text}\n"
                 qa_context += f"A{i}: {answer.response}\n"
         
-        # Create a comprehensive prompt for question generation
-        prompt = f"""You are conducting a detailed discovery session for a software project. Your goal is to understand ALL aspects needed to develop this project successfully.
-
-Project Description: "{self.project_description}"
-{qa_context}
-
-Based on the project description and any previous Q&A above, generate the NEXT SINGLE most important question to ask.
-
-Consider these aspects that need to be covered throughout the session:
-- Technical stack (languages, frameworks, databases, tools)
-- Architecture and system design
-- Core features and functionality
-- User interface and user experience
-- Authentication and authorization
-- Data models and relationships
-- API design and endpoints
-- Third-party integrations
-- Performance and scalability requirements
-- Security considerations
-- Deployment and hosting
-- Development timeline and constraints
-- Testing strategy
-- Error handling and logging
-- Documentation needs
-- Future extensibility
-
-Questions asked so far: {question_number}
-
-Generate exactly ONE question that:
-1. Builds on previous answers (if any)
-2. Explores an aspect not yet covered
-3. Is specific and actionable
-4. Helps clarify technical decisions
-
-Format: CATEGORY: question text
-
-Categories: TECHNICAL, FEATURES, ARCHITECTURE, DEPLOYMENT, USERS, CONSTRAINTS, INTEGRATIONS"""
+        # Use the imported prompt template
+        prompt = QA_COLLECTOR_QUESTION_PROMPT.format(
+            project_description=self.project_description,
+            qa_context=qa_context,
+            question_number=question_number
+        )
         
         try:
             # Suppress output during Claude call to prevent logs from showing
