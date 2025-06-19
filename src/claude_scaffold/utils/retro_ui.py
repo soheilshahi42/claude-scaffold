@@ -94,6 +94,77 @@ class RetroUI:
         self._clear_screen()
         # Restore cursor
         print('\033[?25h', end='', flush=True)
+    
+    def _wait_for_key(self) -> str:
+        """Cross-platform method to wait for a single key press."""
+        import sys
+        
+        if os.name == 'nt':  # Windows
+            import msvcrt
+            while True:
+                if msvcrt.kbhit():
+                    key = msvcrt.getch()
+                    if key in [b'\r', b'\n', b' ']:  # Enter or Space
+                        return '\n'
+                    return key.decode('utf-8', errors='ignore')
+        else:  # Unix/Linux/Mac
+            import tty, termios
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                key = sys.stdin.read(1)
+                return key
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+    
+    def _get_key(self) -> str:
+        """Get a single key press without blocking."""
+        import sys
+        
+        if os.name == 'nt':  # Windows
+            import msvcrt
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+                # Handle special keys
+                if key in [b'\xe0', b'\x00']:  # Special key prefix on Windows
+                    key = msvcrt.getch()
+                    if key == b'H':  # Up arrow
+                        return 'up'
+                    elif key == b'P':  # Down arrow
+                        return 'down'
+                    elif key == b'K':  # Left arrow
+                        return 'left'
+                    elif key == b'M':  # Right arrow
+                        return 'right'
+                elif key == b'\r':  # Enter
+                    return '\n'
+                return key.decode('utf-8', errors='ignore')
+            return ''
+        else:  # Unix/Linux/Mac
+            import tty, termios, select
+            old_settings = termios.tcgetattr(sys.stdin)
+            try:
+                tty.setraw(sys.stdin.fileno())
+                if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+                    key = sys.stdin.read(1)
+                    if key == '\x1b':  # ESC sequence
+                        if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+                            key = sys.stdin.read(1)
+                            if key == '[':
+                                if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+                                    key = sys.stdin.read(1)
+                                    if key == 'A':
+                                        return 'up'
+                                    elif key == 'B':
+                                        return 'down'
+                                    elif key == 'C':
+                                        return 'right'
+                                    elif key == 'D':
+                                        return 'left'
+                    return key
+                return ''
+            finally:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         
     def _get_terminal_size(self) -> Tuple[int, int]:
         """Get terminal dimensions."""
@@ -230,16 +301,7 @@ class RetroUI:
         print('\033[H', end='', flush=True)
         
         # Wait for Enter without showing cursor
-        import sys, tty, termios
-        old_settings = termios.tcgetattr(sys.stdin)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            while True:
-                key = sys.stdin.read(1)
-                if key == '\r' or key == '\n':
-                    break
-        finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        self._wait_for_key()
         
     def ask_selection(
         self, 
@@ -251,8 +313,6 @@ class RetroUI:
     ) -> Any:
         """Show a full-screen selection page with interactive selection."""
         import sys
-        import tty
-        import termios
         
         # Process choices
         if isinstance(choices[0], dict):
@@ -355,26 +415,18 @@ class RetroUI:
             self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
             # Get single keypress
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                key = sys.stdin.read(1)
-                
-                if key == '\r' or key == '\n':  # Enter
-                    return choice_items[selected_index][1]
-                elif key == '\x1b':  # Escape sequence
-                    next_keys = sys.stdin.read(2)
-                    if next_keys == '[A':  # Up arrow
-                        selected_index = max(0, selected_index - 1)
-                    elif next_keys == '[B':  # Down arrow
-                        selected_index = min(len(choice_items) - 1, selected_index + 1)
-                    elif next_keys == '':  # Just ESC
-                        return None
-                elif key == '\x03':  # Ctrl+C
-                    raise KeyboardInterrupt()
-                    
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            key = self._get_key()
+            
+            if key == '\n':  # Enter
+                return choice_items[selected_index][1]
+            elif key == 'up':  # Up arrow
+                selected_index = max(0, selected_index - 1)
+            elif key == 'down':  # Down arrow
+                selected_index = min(len(choice_items) - 1, selected_index + 1)
+            elif key == '\x1b':  # ESC
+                return None
+            elif key == '\x03':  # Ctrl+C
+                raise KeyboardInterrupt()
         
     def ask_text(
         self,
@@ -731,8 +783,6 @@ class RetroUI:
     def show_enhancement_options(self, project_description: str) -> str:
         """Show special enhancement options screen with rich UX."""
         import sys
-        import tty
-        import termios
         
         selected = 2  # Default to option 2 (Enhance with Claude)
         
@@ -882,8 +932,6 @@ class RetroUI:
     ) -> bool:
         """Show a full-screen confirmation page with interactive selection."""
         import sys
-        import tty
-        import termios
         
         selected = default  # True = Yes, False = No
         
@@ -1323,16 +1371,7 @@ class RetroUI:
                 pass
         else:
             # Wait for Enter without showing cursor
-            import sys, tty, termios
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                while True:
-                    key = sys.stdin.read(1)
-                    if key == '\r' or key == '\n':
-                        break
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            self._wait_for_key()
             
         return None
     
@@ -1345,8 +1384,6 @@ class RetroUI:
     ) -> None:
         """Show results with pagination for large datasets."""
         import sys
-        import tty
-        import termios
         
         items = list(results.items())
         total_items = len(items)
@@ -1529,16 +1566,7 @@ class RetroUI:
         self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
         
         # Wait for Enter without showing cursor
-        import sys, tty, termios
-        old_settings = termios.tcgetattr(sys.stdin)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            while True:
-                key = sys.stdin.read(1)
-                if key == '\r' or key == '\n':
-                    break
-        finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        self._wait_for_key()
     
     def ask_qa_input(
         self,
@@ -1554,8 +1582,7 @@ class RetroUI:
         Returns:
             Tuple of (answer, enough_signal) where enough_signal is True if user pressed Ctrl+\
         """
-        import termios
-        import tty
+        import sys
         import textwrap
         import sys
         
@@ -1846,8 +1873,6 @@ class RetroUI:
         """Show specification sections with scrolling support."""
         import textwrap
         import sys
-        import tty
-        import termios
         
         # Prepare all content lines
         all_lines = []

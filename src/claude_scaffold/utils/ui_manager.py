@@ -22,7 +22,6 @@ from rich.table import Table
 from rich.text import Text
 
 from .icons import Icons
-from .terminal_ui import EnhancedTerminalUI
 
 
 class UIManager:
@@ -30,7 +29,6 @@ class UIManager:
 
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
-        self.terminal_ui = EnhancedTerminalUI()
         self.operation_timings: Dict[str, float] = {}
         self.start_time = datetime.now()
 

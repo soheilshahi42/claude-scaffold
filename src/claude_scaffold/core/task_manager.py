@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from ..interactive.interactive_setup import InteractiveSetup
+from ..utils.config_manager import ConfigManager
 from ..templates.templates import ProjectTemplates
 from ..utils.formatters import Formatters
 from ..utils.icons import icons
@@ -11,7 +11,7 @@ class TaskManager:
     """Manages task operations for existing projects."""
 
     def __init__(self):
-        self.interactive_setup = InteractiveSetup()
+        self.config_manager = ConfigManager()
         self.templates = ProjectTemplates()
         self.formatters = Formatters()
 
@@ -24,7 +24,7 @@ class TaskManager:
     ) -> bool:
         """Add a new task to an existing project."""
         # Load existing configuration
-        config = self.interactive_setup.load_config(project_path)
+        config = self.config_manager.load_config(project_path)
 
         if not config:
             print(
@@ -145,7 +145,7 @@ class TaskManager:
         research_file.write_text(research_content)
 
         # Save updated configuration
-        self.interactive_setup.save_config(config, project_path)
+        self.config_manager.save_config(config, project_path)
 
         print(f"{icons.SUCCESS} Task '{task_title}' added to module '{module_name}'")
         print(

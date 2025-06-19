@@ -12,7 +12,6 @@ from ..claude.claude_interactive_enhanced import EnhancedClaudeInteractiveSetup
 from ..config.project_config import ProjectConfig
 from ..utils.icons import icons
 from ..utils.logger import get_logger
-from .interactive_collectors import InteractiveCollectors
 
 
 class InteractiveSetup:
@@ -20,7 +19,6 @@ class InteractiveSetup:
 
     def __init__(self, debug_mode: bool = False):
         self.project_config = ProjectConfig()
-        self.collectors = InteractiveCollectors(self.project_config)
         # Make properties available for backward compatibility
         self.project_types = self.project_config.project_types
         self.style_guides = self.project_config.style_guides
