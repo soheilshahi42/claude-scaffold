@@ -38,7 +38,6 @@ class RetroTheme:
     WHITE = "#ffffff"
     
     # Semantic colors
-    BACKGROUND = BLACK
     FOREGROUND = ORANGE
     ACCENT = ORANGE_LIGHT
     HIGHLIGHT = ORANGE_DARK
@@ -181,7 +180,7 @@ class RetroUI:
             border_style=self.theme.ORANGE,
             box=HEAVY,
             padding=(1, 2),
-            style=f"on {self.theme.BACKGROUND}"
+            style=""
         )
         
     def _create_content_panel(self, content: Any, title: str = "") -> Panel:
@@ -217,7 +216,7 @@ class RetroUI:
             Align.center(footer_text),
             border_style=self.theme.GRAY,
             box=HEAVY,
-            style=f"on {self.theme.BACKGROUND}"
+            style=""
         )
         
     def show_welcome_screen(self, project_name: str) -> None:
@@ -262,7 +261,7 @@ class RetroUI:
         # Footer
         layout["footer"].update(self._create_footer("Press Enter to start"))
         
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        self.console.print(layout, end="")
         # Move cursor to top-left to avoid any extra lines
         print('\033[H', end='', flush=True)
         
@@ -378,7 +377,7 @@ class RetroUI:
             layout["footer"].update(self._create_footer(hint or "Select an option"))
             
             # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            self.console.print(layout)
             
             # Get single keypress (blocking)
             key = self._get_key()
@@ -457,7 +456,7 @@ class RetroUI:
         layout["footer"].update(self._create_footer(hint or "Type your answer"))
         
         # Print layout without newline
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        self.console.print(layout, end="")
         
         # Clear screen again to prepare for centered input
         self._clear_screen()
@@ -544,7 +543,7 @@ class RetroUI:
             )
             
             # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            self.console.print(layout)
             
             # Get input at bottom
             print('\033[?25h', end='', flush=True)  # Show cursor
@@ -659,7 +658,7 @@ class RetroUI:
                 )
                 
                 # Print layout
-                self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+                self.console.print(layout)
                 
                 # Simple input collection
                 print(f"\n\033[38;2;218;119;86m{'─' * 80}\033[0m\n")
@@ -868,7 +867,7 @@ class RetroUI:
             layout["footer"].update(self._create_footer("Select your enhancement option"))
             
             # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            self.console.print(layout)
             
             # Get input
             key = getch()
@@ -960,7 +959,7 @@ class RetroUI:
             )
             
             # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            self.console.print(layout)
             
             # Get single keypress
             key = getch()
@@ -1238,7 +1237,7 @@ class RetroUI:
         )
         
         # Print layout
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        self.console.print(layout, end="")
         
         # Get feedback
         print('\033[?25h', end='', flush=True)  # Show cursor
@@ -1312,7 +1311,7 @@ class RetroUI:
         )
         
         # Print layout without newline
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        self.console.print(layout, end="")
         
         if actions:
             # Get action selection
@@ -1436,7 +1435,7 @@ class RetroUI:
             )
             
             # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            self.console.print(layout)
             
             # Get input
             key = getch()
@@ -1509,7 +1508,7 @@ class RetroUI:
         )
         
         # Print layout without newline
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", end="")
+        self.console.print(layout, end="")
         
         # Wait for Enter without showing cursor
         self._wait_for_key()
@@ -1652,7 +1651,7 @@ class RetroUI:
             layout["footer"].update(self._create_footer(""))
             
             # Print static layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            self.console.print(layout)
             
             # Calculate box position on screen
             # Header (9) + question area + spacing in input panel
@@ -1925,7 +1924,7 @@ class RetroUI:
             )
             
             # Print layout
-            self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
+            self.console.print(layout)
             
             # Handle input
             key = getch()
@@ -2014,7 +2013,7 @@ class RetroUI:
         )
         
         # Show the static progress immediately
-        self.console.print(layout, style=f"on {self.theme.BACKGROUND}", height=self.height)
+        self.console.print(layout, height=self.height)
         
         # Only animate if duration > 0
         if duration > 0:
@@ -2073,7 +2072,7 @@ class RetroUI:
                 while self.loading_active and time.time() < end_time:
                     # Move cursor to home and update
                     print('\033[H', end='', flush=True)
-                    self.console.print(generate_frame(), style=f"on {self.theme.BACKGROUND}", height=self.height)
+                    self.console.print(generate_frame(), height=self.height)
                     time.sleep(0.5)  # Lower refresh rate
             
             # Start animation in background
