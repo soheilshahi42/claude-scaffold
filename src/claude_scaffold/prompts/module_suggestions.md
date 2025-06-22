@@ -32,34 +32,13 @@ Design a comprehensive, hierarchical module structure following best practices f
 
 **REQUIRED OUTPUT FORMAT:**
 
-You MUST return a JSON object with this EXACT structure:
+Return a JSON object with a "project_name" field and a "modules" array. Each module must have:
+- "name": The module directory name
+- "type": Always set to "directory"
+- "description": What this module does
+- "modules": Array of sub-modules (for nested structure)
 
-```json
-{{
-  "project_name": "suggested-project-name",
-  "modules": [
-    {{
-      "name": "module-name",
-      "type": "directory",
-      "description": "What this module does",
-      "modules": [
-        {{
-          "name": "submodule-name",
-          "type": "directory",
-          "description": "What this submodule does",
-          "modules": [
-            {{
-              "name": "deep-module",
-              "type": "directory", 
-              "description": "Nested module description"
-            }}
-          ]
-        }}
-      ]
-    }}
-  ]
-}}
-```
+Create a deep hierarchical structure. For example, a module can contain sub-modules, which can contain their own sub-modules, creating paths like: src/domain/entities/user/value-objects.
 
 **IMPORTANT RULES:**
 1. Every module MUST have: name, type, and description fields
@@ -148,4 +127,4 @@ You MUST return a JSON object with this EXACT structure:
 - migrations/ (database migrations)
 - seeds/ (test data)
 
-Create a COMPLETE, HIERARCHICAL module structure. Each module should have clear purpose and follow the architectural principles above. Return ONLY the JSON object, no additional text.
+Create a COMPLETE, HIERARCHICAL module structure. Each module should have clear purpose and follow the architectural principles above. Return ONLY valid JSON, no additional text or markdown formatting.
