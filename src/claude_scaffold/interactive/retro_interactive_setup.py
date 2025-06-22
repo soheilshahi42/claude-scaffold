@@ -282,6 +282,9 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
             "Choose the type that best fits your project"
         )
         
+        if project_type is None:
+            raise KeyboardInterrupt("User cancelled project type selection")
+        
         project_data["metadata"]["project_type"] = project_type
         project_data["metadata"]["project_type_name"] = self.project_config.project_types[
             project_type

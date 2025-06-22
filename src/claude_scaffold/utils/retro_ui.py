@@ -416,7 +416,11 @@ class RetroUI:
             # Get single keypress (blocking)
             key = self._get_key()
             
+            # Debug logging
+            self.logger.debug(f"Key pressed: {repr(key)}, selected_index: {selected_index}")
+            
             if key == '\n':  # Enter
+                self.logger.debug(f"Returning: {choice_items[selected_index][1]}")
                 return choice_items[selected_index][1]
             elif key == 'up':  # Up arrow
                 selected_index = max(0, selected_index - 1)
