@@ -1,20 +1,3 @@
-# Rule Suggestions Prompt
-
-## Description
-
-This prompt establishes comprehensive coding standards and best practices for development teams. It generates 12-15 specific, enforceable rules covering code style, architecture, error handling, security, testing, performance, documentation, and development workflow.
-
-## Purpose
-
-- Create comprehensive coding standards
-- Ensure code quality and consistency
-- Establish enforceable best practices
-- Cover all aspects of development
-- Maintain language and project-specific relevance
-
-## Prompt Content
-
-```
 You are establishing coding standards and best practices for a development team.
 
 **PROJECT CONTEXT:**
@@ -117,4 +100,3 @@ Return a JSON array of 12-15 specific rule strings:
 - Overly restrictive rules that hinder productivity
 - Rules that conflict with {language} idioms
 - Generic rules that apply to any project
-```

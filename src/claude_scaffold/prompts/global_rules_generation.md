@@ -1,20 +1,3 @@
-# Global Rules Generation Prompt
-
-## Description
-
-This prompt generates comprehensive coding standards and best practices for a development team. It creates 12-15 specific, enforceable rules covering code structure, naming conventions, error handling, testing, security, performance, documentation, and development workflow.
-
-## Purpose
-
-- Establish consistent coding standards across the project
-- Ensure code quality and maintainability
-- Define security and performance best practices
-- Create enforceable development guidelines
-- Standardize team workflows and processes
-
-## Prompt Content
-
-```
 You are a senior technical lead establishing coding standards for a development team.
 
 **PROJECT CONTEXT:**
@@ -112,4 +95,3 @@ Example output format:
     "Every merge request requires 2 approvals and passing CI/CD pipeline with >80% coverage",
     ...
 ]
-```

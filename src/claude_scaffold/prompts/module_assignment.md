@@ -1,20 +1,3 @@
-# Module Assignment Prompt
-
-## Description
-
-This prompt determines the most appropriate module for a given task based on the task's domain, responsibility, and the available modules in the project. It ensures tasks are assigned to modules with high cohesion and proper separation of concerns.
-
-## Purpose
-
-- Assign tasks to appropriate modules
-- Maintain single responsibility principle
-- Ensure high module cohesion
-- Consider module dependencies
-- Follow common architectural patterns
-
-## Prompt Content
-
-```
 Determine the most appropriate module for a task.
 
 **TASK:** {task}
@@ -35,4 +18,3 @@ Determine the most appropriate module for a task.
 
 **OUTPUT:**
 Return ONLY the module name (no explanation, no quotes).
-```

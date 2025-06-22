@@ -1,20 +1,3 @@
-# List Refinement Prompt
-
-## Description
-
-This prompt refines lists based on user feedback. It analyzes feedback patterns to add, remove, or modify list items while maintaining quality principles and appropriate structure.
-
-## Purpose
-
-- Refine lists based on specific feedback
-- Add, remove, or modify items as needed
-- Maintain list quality and consistency
-- Ensure appropriate length and ordering
-- Return properly formatted JSON arrays
-
-## Prompt Content
-
-```
 You are refining a list based on user feedback.
 
 **CURRENT LIST:**
@@ -53,4 +36,3 @@ Return a JSON array with improved items:
 - Appropriate number of items
 - Directly addresses feedback
 - Maintains or improves quality
-```

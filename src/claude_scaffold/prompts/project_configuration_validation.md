@@ -1,20 +1,3 @@
-# Project Configuration Validation Prompt
-
-## Description
-
-This prompt validates and enhances project configurations by reviewing them for completeness and best practices. It analyzes the configuration structure, identifies missing sections, and provides specific improvements while ensuring architectural soundness.
-
-## Purpose
-
-- Validate project configurations for completeness
-- Identify missing or incomplete sections
-- Provide specific improvement suggestions
-- Assess architectural decisions and risks
-- Return enhanced configurations with improvements
-
-## Prompt Content
-
-```
 Review this project configuration for completeness and best practices:
 {config_json}
 
@@ -34,4 +17,3 @@ Focus on:
 - Security considerations
 
 Return a JSON object with your analysis and the enhanced configuration.
-```

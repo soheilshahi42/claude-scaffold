@@ -1,20 +1,3 @@
-# Task Details Generation Prompt
-
-## Description
-
-This prompt generates comprehensive implementation plans for individual development tasks. It creates detailed, actionable plans that developers can follow step-by-step, including TDD approach, acceptance criteria, and technical considerations.
-
-## Purpose
-
-- Create detailed implementation plans for each task
-- Ensure consistent TDD (Test-Driven Development) approach
-- Define clear acceptance criteria and dependencies
-- Identify technical challenges and solutions
-- Provide time estimates and complexity ratings
-
-## Prompt Content
-
-```
 You are a senior software engineer creating a detailed implementation plan.
 
 **TASK CONTEXT:**
@@ -140,4 +123,3 @@ Create a comprehensive, actionable implementation plan that a developer can foll
 - Include concrete examples, not generic statements
 - Ensure all subtasks are actionable and testable
 - Consider security implications for all features
-```

@@ -1,20 +1,3 @@
-# Text Refinement Prompt
-
-## Description
-
-This prompt refines text content based on specific user feedback. It analyzes the feedback type and improves the text while maintaining the original intent and appropriate constraints.
-
-## Purpose
-
-- Refine text based on user feedback
-- Address clarity, specificity, and verbosity issues
-- Maintain original intent and tone
-- Fix issues while improving overall quality
-- Return only the improved text
-
-## Prompt Content
-
-```
 You are refining text based on specific user feedback.
 
 **CURRENT TEXT:**
@@ -44,4 +27,3 @@ You are refining text based on specific user feedback.
 
 **OUTPUT:**
 Return ONLY the improved text (no explanation or commentary).
-```

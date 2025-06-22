@@ -1,20 +1,3 @@
-# Technical Constraints Prompt
-
-## Description
-
-This prompt identifies technical constraints and requirements for new projects. It analyzes the project type, language, and description to determine likely constraints related to runtime, dependencies, performance, security, infrastructure, integrations, development, and operations.
-
-## Purpose
-
-- Identify technical constraints early in project planning
-- Determine runtime and dependency requirements
-- Establish performance and security constraints
-- Define infrastructure and deployment needs
-- Set operational requirements and SLAs
-
-## Prompt Content
-
-```
 You are identifying technical constraints and requirements for a new project.
 
 **PROJECT DETAILS:**
@@ -131,4 +114,3 @@ Identify likely technical constraints, requirements, and considerations that wil
 - {language} ecosystem constraints
 - Common {language} deployment patterns
 - {language} performance characteristics
-```

@@ -1,20 +1,3 @@
-# Task Suggestions Prompt
-
-## Description
-
-This prompt creates comprehensive task lists for new projects, covering the entire project lifecycle from setup to deployment. It generates 12-18 specific, actionable development tasks organized by category and ordered by dependencies.
-
-## Purpose
-
-- Generate complete project task lists
-- Ensure comprehensive coverage of project needs
-- Order tasks by logical dependencies
-- Include all lifecycle phases
-- Maintain project-specific relevance
-
-## Prompt Content
-
-```
 You are a technical project manager creating a comprehensive task list for a new project.
 
 **PROJECT CONTEXT:**
@@ -115,4 +98,3 @@ Return a JSON array of 12-18 task names in logical order:
     "Add application monitoring with Sentry",
     "Create API documentation with Swagger"
 ]
-```

@@ -1,20 +1,3 @@
-# Module Documentation Enhancement Prompt
-
-## Description
-
-This prompt creates comprehensive module documentation that serves as the definitive guide for a module within the system. It generates detailed documentation covering architecture, API, dependencies, configuration, error handling, performance, security, testing, and usage examples.
-
-## Purpose
-
-- Create detailed, actionable documentation for each module
-- Define clear module boundaries and responsibilities
-- Document public APIs and integration points
-- Establish module-specific patterns and practices
-- Provide comprehensive usage examples and extension guides
-
-## Prompt Content
-
-```
 You are a technical architect creating comprehensive module documentation.
 
 **MODULE CONTEXT:**
@@ -171,4 +154,3 @@ Create detailed, actionable documentation that serves as the definitive guide fo
 ✓ Performance considerations are quantified
 ✓ Security measures are explicit
 ✓ Testing strategy is actionable
-```

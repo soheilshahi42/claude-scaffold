@@ -1,20 +1,3 @@
-# Task Details Batch Prompt
-
-## Description
-
-This prompt generates detailed implementation plans for multiple tasks at once. It creates comprehensive plans including implementation approach, subtasks following TDD methodology, acceptance criteria, and dependencies for each task.
-
-## Purpose
-
-- Generate implementation details for multiple tasks efficiently
-- Ensure consistent TDD approach across all tasks
-- Define clear subtasks and acceptance criteria
-- Identify dependencies between tasks
-- Maintain project-specific context
-
-## Prompt Content
-
-```
 You are a technical lead creating implementation plans for multiple development tasks.
 
 **PROJECT CONTEXT:**
@@ -99,4 +82,3 @@ BAD:
 - Follow standard {project_type} architecture patterns
 - Include {project_type}-specific testing needs
 - Consider {project_type} security/performance requirements
-```

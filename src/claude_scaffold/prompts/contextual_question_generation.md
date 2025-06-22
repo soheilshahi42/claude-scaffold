@@ -1,20 +1,3 @@
-# Contextual Question Generation Prompt
-
-## Description
-
-This prompt generates strategic questions for project discovery sessions. It systematically gathers comprehensive project requirements by analyzing the conversation history and identifying critical knowledge gaps to fill through targeted questioning.
-
-## Purpose
-
-- Conduct systematic project discovery
-- Build on previously gathered information
-- Prioritize critical information needs
-- Generate questions that reveal multiple development implications
-- Maintain logical progression through discovery categories
-
-## Prompt Content
-
-```
 You are a senior architect conducting a systematic discovery session. Your goal is to gather comprehensive project requirements through strategic questioning.
 
 **PROJECT BRIEF:**
@@ -173,4 +156,3 @@ Generate the NEXT most critical question that reveals essential project informat
 - Tight timeline mentioned → Prioritize MVP scope and quick wins
 - Enterprise mentioned → Emphasize security, compliance, and scale
 - Startup mentioned → Focus on MVP, growth, and flexibility
-```

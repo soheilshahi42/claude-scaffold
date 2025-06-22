@@ -1,20 +1,3 @@
-# Module Documentation Refinement Prompt
-
-## Description
-
-This prompt refines existing module documentation based on user feedback. It analyzes the current documentation and feedback to improve clarity, add missing information, and enhance the overall quality while maintaining the established structure.
-
-## Purpose
-
-- Refine module documentation based on specific user feedback
-- Address gaps or unclear sections in documentation
-- Improve technical accuracy and clarity
-- Add missing examples or implementation details
-- Maintain consistency with the documentation structure
-
-## Prompt Content
-
-```
 You are refining module documentation based on user feedback.
 
 **CURRENT DOCUMENTATION:**
@@ -80,4 +63,3 @@ Return the complete module documentation JSON with all sections, incorporating t
 - Complete, not partial
 - Clear, not ambiguous
 - Practical, not academic
-```

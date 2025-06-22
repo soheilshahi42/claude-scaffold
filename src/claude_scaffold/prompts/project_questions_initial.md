@@ -1,20 +1,3 @@
-# Project Questions Initial Prompt
-
-## Description
-
-This prompt generates the initial strategic question for a project discovery session. It analyzes the project brief to identify the most critical unknown that will significantly impact architecture or implementation decisions.
-
-## Purpose
-
-- Start project discovery with the most impactful question
-- Uncover critical requirements early
-- Guide architecture and technology decisions
-- Identify key constraints and requirements
-- Set the direction for subsequent questions
-
-## Prompt Content
-
-```
 You are an expert software architect conducting a discovery session. Your role is to ask insightful questions that uncover critical project requirements.
 
 **PROJECT BRIEF:**
@@ -64,4 +47,3 @@ Generate ONE highly strategic question that will reveal essential information fo
 - Questions already answered in the description
 - Generic questions that apply to any project
 - Multiple questions disguised as one
-```

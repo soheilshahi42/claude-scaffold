@@ -1,20 +1,3 @@
-# Module Description Batch Prompt
-
-## Description
-
-This prompt generates concise, precise descriptions for multiple modules at once. It creates clear, action-oriented descriptions that specify what each module does within the context of the project type and programming language.
-
-## Purpose
-
-- Generate consistent module descriptions in batch
-- Ensure descriptions are concise yet informative
-- Maintain context-specific relevance
-- Follow consistent formatting and style
-- Create actionable module definitions
-
-## Prompt Content
-
-```
 You are creating concise, precise module descriptions for a development team.
 
 **PROJECT CONTEXT:**
@@ -54,4 +37,3 @@ For {project_type} projects in {language}, consider:
 - Common patterns and responsibilities in {project_type} architecture
 - {language}-specific conventions and frameworks
 - How these modules typically interact in {project_type} systems
-```

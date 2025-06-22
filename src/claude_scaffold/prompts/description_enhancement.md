@@ -1,20 +1,3 @@
-# Description Enhancement Prompt
-
-## Description
-
-This prompt enhances project descriptions to be more professional, comprehensive, and compelling. It transforms basic descriptions into well-structured narratives that clearly communicate the project's value proposition, target audience, and key differentiators.
-
-## Purpose
-
-- Transform basic descriptions into professional narratives
-- Clearly communicate project value and scope
-- Identify target audience and use cases
-- Highlight key technical approaches
-- Create compelling project overviews
-
-## Prompt Content
-
-```
 You are enhancing a project description to be more professional and comprehensive.
 
 **CURRENT DESCRIPTION:**
@@ -55,4 +38,3 @@ Transform this into a compelling, professional project description that clearly 
 
 **OUTPUT:**
 Return ONLY the enhanced description text, no additional commentary.
-```

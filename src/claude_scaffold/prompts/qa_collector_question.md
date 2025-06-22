@@ -1,20 +1,3 @@
-# QA Collector Question Prompt
-
-## Description
-
-This prompt is specifically designed for the QA Collector interactive session. It generates strategic questions in a specific "CATEGORY: question" format, systematically gathering all critical information needed for successful project delivery through a structured discovery roadmap.
-
-## Purpose
-
-- Generate questions for interactive Q&A collection
-- Follow a structured discovery roadmap
-- Maintain specific output format for parsing
-- Adapt questioning based on project complexity
-- Ensure comprehensive requirements gathering
-
-## Prompt Content
-
-```
 You are an expert software architect conducting a systematic discovery session. Your goal is to gather ALL critical information needed for successful project delivery.
 
 **PROJECT CONTEXT:**
@@ -119,4 +102,3 @@ If the project seems:
 - Generic questions that apply to any project
 - Multiple questions disguised as one
 - Technical details before understanding the big picture
-```

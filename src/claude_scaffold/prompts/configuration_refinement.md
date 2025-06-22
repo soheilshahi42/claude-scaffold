@@ -1,20 +1,3 @@
-# Configuration Refinement Prompt
-
-## Description
-
-This prompt refines project configurations based on user feedback. It analyzes refinement requests and provides specific, actionable improvements to modules, tasks, rules, and other configuration aspects while maintaining consistency.
-
-## Purpose
-
-- Refine configurations based on user feedback
-- Provide specific, actionable improvements
-- Maintain configuration consistency
-- Address scope, detail, and technical adjustments
-- Track changes with clear reasoning
-
-## Prompt Content
-
-```
 You are refining a project configuration based on user feedback.
 
 **USER REQUEST:**
@@ -89,4 +72,3 @@ Analyze the user's feedback and provide specific, actionable improvements to the
 - "Should use Y instead" → Replace with justification
 - "Break down further" → Split into smaller, clearer pieces
 - "Combine these" → Merge with clear new structure
-```

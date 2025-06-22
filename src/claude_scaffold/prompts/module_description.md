@@ -1,20 +1,3 @@
-# Module Description Prompt
-
-## Description
-
-This prompt generates precise, concise descriptions for individual modules. It creates action-oriented descriptions that clearly state the module's primary responsibility within the project context.
-
-## Purpose
-
-- Generate clear, concise module descriptions
-- Ensure consistent description format
-- State primary responsibilities clearly
-- Maintain context-specific relevance
-- Follow character limits for readability
-
-## Prompt Content
-
-```
 Generate a precise module description.
 
 **MODULE:** {module_name}
@@ -33,4 +16,3 @@ Generate a precise module description.
 
 **OUTPUT:**
 Return ONLY the description text (no quotes, no formatting).
-```

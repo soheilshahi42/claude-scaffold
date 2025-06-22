@@ -1,20 +1,3 @@
-# Build Commands Prompt
-
-## Description
-
-This prompt generates standard build commands for projects based on their technology stack. It provides production-ready commands for installation, testing, building, development, linting, formatting, cleaning, and validation.
-
-## Purpose
-
-- Generate appropriate build commands for the tech stack
-- Ensure production-ready command configurations
-- Include all essential development workflow commands
-- Follow language-specific conventions
-- Support CI/CD pipeline integration
-
-## Prompt Content
-
-```
 You are a DevOps engineer setting up standard build commands for a project.
 
 **PROJECT DETAILS:**
@@ -110,4 +93,3 @@ For Python:
 - Ensure commands work across different OS platforms
 - Prefer lock files for reproducible builds
 - Include helpful flags for debugging
-```

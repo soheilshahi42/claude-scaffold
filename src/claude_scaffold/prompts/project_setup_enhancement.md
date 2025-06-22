@@ -1,19 +1,3 @@
-# Project Setup Enhancement Prompt
-
-## Description
-
-This prompt is used to enhance a basic project configuration into a comprehensive, production-ready setup. It takes a simple configuration JSON and expands it with detailed specifications for modules, tasks, coding standards, architecture, testing strategy, security framework, and performance guidelines.
-
-## Purpose
-
-- Transform basic project configurations into detailed, actionable specifications
-- Ensure all aspects of a production system are considered
-- Generate comprehensive documentation for development teams
-- Establish clear architectural patterns and best practices
-
-## Prompt Content
-
-```
 You are an expert software architect tasked with enhancing a project configuration.
 
 **INPUT CONFIGURATION:**
@@ -125,4 +109,3 @@ Return a complete, validated JSON configuration that includes ALL original field
 □ Performance targets are specific and measurable
 □ Testing strategy covers all test types
 □ JSON is valid and complete
-```

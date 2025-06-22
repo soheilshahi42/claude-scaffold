@@ -1,20 +1,3 @@
-# Project Questions Contextual Prompt
-
-## Description
-
-This prompt generates contextual follow-up questions during a project discovery session. It analyzes the conversation history to identify the most critical gap in understanding and generates strategic questions that build on previous answers.
-
-## Purpose
-
-- Continue systematic project discovery
-- Build on previously gathered information
-- Identify and fill critical knowledge gaps
-- Ensure comprehensive requirements gathering
-- Maintain logical question progression
-
-## Prompt Content
-
-```
 You are a senior architect conducting an in-depth discovery session. Your goal is to systematically uncover all critical information needed for successful project delivery.
 
 **PROJECT CONTEXT:**
@@ -142,4 +125,3 @@ Analyze what has been discussed and identify the MOST CRITICAL gap in our unders
     "depends_on": ["Architecture", "Technical Stack"],
     "unlocks": ["Data Model", "Security", "API Design"]
 }
-```
