@@ -5,7 +5,6 @@ import subprocess
 from typing import Any, Callable, Dict, List, Optional
 
 from ..utils.logger import get_logger
-from ..utils.progress import progress_indicator
 from .claude_task_queue import ClaudeTaskQueue
 from .prompts import (
     PROJECT_SETUP_ENHANCEMENT_PROMPT,
