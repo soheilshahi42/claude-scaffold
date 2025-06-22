@@ -20,6 +20,7 @@ from rich.live import Live
 
 from .icons import icons
 from .logger import get_logger
+from .getch import getch
 
 
 class RetroTheme:
@@ -119,51 +120,23 @@ class RetroUI:
     
     def _get_key(self) -> str:
         """Get a single key press (blocking)."""
-        import sys
+        key = getch()
         
-        if os.name == 'nt':  # Windows
-            import msvcrt
-            # Block until key is pressed
-            key = msvcrt.getch()
-            # Handle special keys
-            if key in [b'\xe0', b'\x00']:  # Special key prefix on Windows
-                key = msvcrt.getch()
-                if key == b'H':  # Up arrow
-                    return 'up'
-                elif key == b'P':  # Down arrow
-                    return 'down'
-                elif key == b'K':  # Left arrow
-                    return 'left'
-                elif key == b'M':  # Right arrow
-                    return 'right'
-            elif key == b'\r':  # Enter
-                return '\n'
-            return key.decode('utf-8', errors='ignore')
-        else:  # Unix/Linux/Mac
-            import tty, termios
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                key = sys.stdin.read(1)
-                if key == '\x1b':  # ESC sequence
-                    # Check if more characters are available for arrow keys
-                    import select
-                    if select.select([sys.stdin], [], [], 0.1) == ([sys.stdin], [], []):
-                        key = sys.stdin.read(1)
-                        if key == '[':
-                            key = sys.stdin.read(1)
-                            if key == 'A':
-                                return 'up'
-                            elif key == 'B':
-                                return 'down'
-                            elif key == 'C':
-                                return 'right'
-                            elif key == 'D':
-                                return 'left'
-                    return '\x1b'  # Just ESC
-                return key
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        # Map getch results to our expected format
+        if key == 'UP':
+            return 'up'
+        elif key == 'DOWN':
+            return 'down'
+        elif key == 'LEFT':
+            return 'left'
+        elif key == 'RIGHT':
+            return 'right'
+        elif key == 'ENTER':
+            return '\n'
+        elif key == 'ESC':
+            return '\x1b'
+        else:
+            return key
         
     def _get_terminal_size(self) -> Tuple[int, int]:
         """Get terminal dimensions."""
