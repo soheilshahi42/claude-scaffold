@@ -550,8 +550,38 @@ class EnhancedClaudeInteractiveSetup:
         )
 
         try:
-            return self.processor._call_claude(prompt, expect_json=False).strip()
+            # Log the enhancement attempt
+            self.logger.debug(
+                "Attempting to enhance description",
+                {
+                    "original_description": project_data['metadata']['description'],
+                    "prompt_length": len(prompt)
+                }
+            )
+            
+            enhanced = self.processor._call_claude(prompt, expect_json=False).strip()
+            
+            # Log successful enhancement
+            self.logger.debug(
+                "Description enhanced successfully",
+                {
+                    "enhanced_description": enhanced[:200] + "..." if len(enhanced) > 200 else enhanced,
+                    "enhanced_length": len(enhanced)
+                }
+            )
+            
+            return enhanced
         except Exception as e:
+            # Log detailed error information
+            self.logger.error(
+                "Failed to enhance description",
+                e,
+                {
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "original_description": project_data['metadata']['description']
+                }
+            )
             print(f"{icons.WARNING} Could not enhance description: {e}")
             return project_data["metadata"]["description"]
 

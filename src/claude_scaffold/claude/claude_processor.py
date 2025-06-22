@@ -208,6 +208,13 @@ class ClaudeProcessor:
         self.logger.debug(
             "Preparing Claude call", {"prompt_length": len(prompt), "timeout": timeout}
         )
+        
+        # Check if prompt is too long (Claude CLI might have limits)
+        if len(prompt) > 100000:  # 100K char limit
+            self.logger.warning(
+                "Prompt may be too long for Claude CLI",
+                {"prompt_length": len(prompt)}
+            )
 
         # Add system prompt for better JSON generation (only if expecting JSON)
         if expect_json:
@@ -233,6 +240,17 @@ class ClaudeProcessor:
                     "-p",  # Print mode (non-interactive)
                     full_prompt,
                 ]
+                
+                # Log the full command for debugging (with truncated prompt)
+                self.logger.debug(
+                    "Full Claude command",
+                    {
+                        "executable": self.claude_executable,
+                        "mode": "-p",
+                        "prompt_preview": full_prompt[:500] + "..." if len(full_prompt) > 500 else full_prompt,
+                        "full_prompt_length": len(full_prompt)
+                    }
+                )
                 
                 # Note: Claude Code CLI doesn't support max-tokens in print mode
                 # We rely on concise prompts to get reasonable response lengths
@@ -266,6 +284,18 @@ class ClaudeProcessor:
                     result.returncode == 0,
                 )
 
+                # Log detailed information about the response
+                self.logger.debug(
+                    "Claude command result",
+                    {
+                        "returncode": result.returncode,
+                        "stdout_length": len(result.stdout),
+                        "stderr_length": len(result.stderr),
+                        "stdout_preview": result.stdout[:200] if result.stdout else None,
+                        "stderr_preview": result.stderr[:200] if result.stderr else None,
+                    }
+                )
+
                 self.logger.log_claude_interaction(
                     prompt=prompt,
                     response=result.stdout,
@@ -275,10 +305,32 @@ class ClaudeProcessor:
 
                 if result.returncode != 0:
                     error = RuntimeError(f"Claude returned error: {result.stderr}")
-                    self.logger.error("Claude command failed", error)
+                    self.logger.error("Claude command failed", error, {
+                        "returncode": result.returncode,
+                        "stderr": result.stderr,
+                        "stdout": result.stdout
+                    })
                     raise error
 
                 response = result.stdout.strip()
+                
+                # Check for common error responses
+                if response.lower() in ["execution error", "error", ""]:
+                    # This is likely a Claude CLI error, not a valid response
+                    error_msg = f"Claude returned invalid response: '{response}'"
+                    if result.stderr:
+                        error_msg += f" (stderr: {result.stderr})"
+                    
+                    self.logger.error(
+                        "Claude returned error response",
+                        None,
+                        {
+                            "response": response,
+                            "stderr": result.stderr,
+                            "stdout_length": len(result.stdout)
+                        }
+                    )
+                    raise RuntimeError(error_msg)
 
                 # Try to clean the response if it contains markdown
                 if "```json" in response:
