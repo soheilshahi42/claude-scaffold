@@ -118,51 +118,50 @@ class RetroUI:
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
     
     def _get_key(self) -> str:
-        """Get a single key press without blocking."""
+        """Get a single key press (blocking)."""
         import sys
         
         if os.name == 'nt':  # Windows
             import msvcrt
-            if msvcrt.kbhit():
+            # Block until key is pressed
+            key = msvcrt.getch()
+            # Handle special keys
+            if key in [b'\xe0', b'\x00']:  # Special key prefix on Windows
                 key = msvcrt.getch()
-                # Handle special keys
-                if key in [b'\xe0', b'\x00']:  # Special key prefix on Windows
-                    key = msvcrt.getch()
-                    if key == b'H':  # Up arrow
-                        return 'up'
-                    elif key == b'P':  # Down arrow
-                        return 'down'
-                    elif key == b'K':  # Left arrow
-                        return 'left'
-                    elif key == b'M':  # Right arrow
-                        return 'right'
-                elif key == b'\r':  # Enter
-                    return '\n'
-                return key.decode('utf-8', errors='ignore')
-            return ''
+                if key == b'H':  # Up arrow
+                    return 'up'
+                elif key == b'P':  # Down arrow
+                    return 'down'
+                elif key == b'K':  # Left arrow
+                    return 'left'
+                elif key == b'M':  # Right arrow
+                    return 'right'
+            elif key == b'\r':  # Enter
+                return '\n'
+            return key.decode('utf-8', errors='ignore')
         else:  # Unix/Linux/Mac
-            import tty, termios, select
+            import tty, termios
             old_settings = termios.tcgetattr(sys.stdin)
             try:
                 tty.setraw(sys.stdin.fileno())
-                if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
-                    key = sys.stdin.read(1)
-                    if key == '\x1b':  # ESC sequence
-                        if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+                key = sys.stdin.read(1)
+                if key == '\x1b':  # ESC sequence
+                    # Check if more characters are available for arrow keys
+                    import select
+                    if select.select([sys.stdin], [], [], 0.1) == ([sys.stdin], [], []):
+                        key = sys.stdin.read(1)
+                        if key == '[':
                             key = sys.stdin.read(1)
-                            if key == '[':
-                                if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
-                                    key = sys.stdin.read(1)
-                                    if key == 'A':
-                                        return 'up'
-                                    elif key == 'B':
-                                        return 'down'
-                                    elif key == 'C':
-                                        return 'right'
-                                    elif key == 'D':
-                                        return 'left'
-                    return key
-                return ''
+                            if key == 'A':
+                                return 'up'
+                            elif key == 'B':
+                                return 'down'
+                            elif key == 'C':
+                                return 'right'
+                            elif key == 'D':
+                                return 'left'
+                    return '\x1b'  # Just ESC
+                return key
             finally:
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         
@@ -414,7 +413,7 @@ class RetroUI:
             # Print layout
             self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
-            # Get single keypress
+            # Get single keypress (blocking)
             key = self._get_key()
             
             if key == '\n':  # Enter
