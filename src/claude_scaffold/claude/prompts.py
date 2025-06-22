@@ -1183,7 +1183,7 @@ Transform this into a compelling, professional project description that clearly 
 **OUTPUT:**
 Return ONLY the enhanced description text, no additional commentary."""
 
-MODULE_SUGGESTIONS_PROMPT = """You are a software architect designing the module structure for a new project.
+MODULE_SUGGESTIONS_PROMPT = """You are a software architect designing the module structure for a new project using industry best practices from clean architecture, domain-driven design, and modern software engineering principles.
 
 **PROJECT CONTEXT:**
 - Type: {project_type}
@@ -1191,67 +1191,246 @@ MODULE_SUGGESTIONS_PROMPT = """You are a software architect designing the module
 - Description: {description}
 
 **YOUR TASK:**
-Design 6-10 well-architected modules that follow best practices and ensure maintainable, scalable code.
+Design a comprehensive, hierarchical module structure following best practices for maintainable, scalable code. Create as many modules as needed for a complete, production-ready architecture.
 
-**MODULE DESIGN PRINCIPLES:**
+**CORE ARCHITECTURAL PRINCIPLES:**
 
-1. **Single Responsibility**: Each module has ONE clear purpose
-2. **High Cohesion**: Related functionality stays together
-3. **Low Coupling**: Minimal dependencies between modules
-4. **Clear Boundaries**: Obvious what belongs in each module
-5. **Scalability**: Structure supports future growth
+1. **Feature-Based Organization (Vertical Slicing)**
+   - Group by features/domains first, technical layers second
+   - Keep files that change together close together (Common Closure Principle)
+   - Each feature should be self-contained with its own components, services, and tests
 
-**STANDARD PATTERNS BY PROJECT TYPE:**
+2. **Clean Architecture Layers**
+   - Separate core business logic from external concerns
+   - Dependencies point inward (external → application → domain)
+   - Domain layer has no external dependencies
 
-**Web API:**
-- Core: auth, database, api, models, services, utils
-- Optional: cache, queue, notifications, analytics
+3. **Separation of Concerns**
+   - Each module addresses a single, well-defined concern
+   - Clear boundaries between modules
+   - Minimal coupling between top-level directories
 
-**Web Application:**
-- Core: auth, database, models, views, controllers, frontend
-- Optional: api, admin, notifications, search
+4. **Domain-Driven Design**
+   - Organize around business domains and bounded contexts
+   - Rich domain models in core business logic
+   - Infrastructure concerns separated from domain
 
-**CLI Tool:**
-- Core: cli, core, config, utils
-- Optional: plugins, templates, cache
+**RECOMMENDED STRUCTURE PATTERNS:**
 
-**Data Pipeline:**
-- Core: ingestion, processing, storage, pipeline, models
-- Optional: monitoring, scheduling, notifications
+**Full-Stack Application (Monorepo):**
+```
+src/
+├── domain/                      # Core business logic (no external dependencies)
+│   ├── user/
+│   │   ├── entities/
+│   │   ├── values/
+│   │   └── services/
+│   ├── product/
+│   │   ├── entities/
+│   │   ├── values/
+│   │   └── rules/
+│   └── shared/
+│       ├── types/
+│       └── exceptions/
+├── application/                 # Use cases and application logic
+│   ├── user/
+│   │   ├── commands/           # State-changing operations
+│   │   ├── queries/            # Data retrieval
+│   │   └── handlers/
+│   ├── product/
+│   │   ├── commands/
+│   │   ├── queries/
+│   │   └── dto/
+│   └── shared/
+│       └── interfaces/
+├── infrastructure/              # External concerns
+│   ├── persistence/
+│   │   ├── repositories/
+│   │   ├── migrations/
+│   │   └── models/
+│   ├── messaging/
+│   │   ├── publishers/
+│   │   └── consumers/
+│   ├── external/
+│   │   ├── payment/
+│   │   └── email/
+│   └── web/
+│       ├── api/
+│       │   ├── rest/
+│       │   └── graphql/
+│       └── middleware/
+├── presentation/                # UI Layer
+│   ├── web/
+│   │   ├── pages/
+│   │   ├── features/
+│   │   │   ├── user/
+│   │   │   │   ├── components/
+│   │   │   │   ├── hooks/
+│   │   │   │   └── services/
+│   │   │   └── product/
+│   │   │       ├── components/
+│   │   │       └── services/
+│   │   ├── shared/
+│   │   │   ├── components/
+│   │   │   ├── layouts/
+│   │   │   └── utils/
+│   │   └── assets/
+│   └── mobile/
+│       └── [similar structure]
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+└── tools/
+    ├── scripts/
+    └── config/
+```
 
-**Microservice:**
-- Core: api, service, database, models, events
-- Optional: cache, metrics, health
+**Microservices Architecture:**
+```
+services/
+├── user-service/
+│   ├── src/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   ├── infrastructure/
+│   │   └── api/
+│   ├── tests/
+│   └── docs/
+├── product-service/
+│   └── [similar structure]
+├── order-service/
+│   └── [similar structure]
+├── notification-service/
+│   └── [similar structure]
+shared/
+├── contracts/           # Shared API contracts
+├── events/             # Event definitions
+├── errors/             # Common error types
+└── utils/              # Shared utilities
+infrastructure/
+├── api-gateway/
+├── service-discovery/
+├── monitoring/
+└── deployment/
+frontend/
+├── web/
+│   ├── features/
+│   ├── shared/
+│   └── core/
+└── mobile/
+    └── [similar structure]
+```
+
+**Enterprise/Clean Architecture:**
+```
+src/
+├── core/                       # Business logic layer
+│   ├── domain/
+│   │   ├── aggregates/
+│   │   ├── entities/
+│   │   ├── values/
+│   │   ├── events/
+│   │   └── specifications/
+│   ├── application/
+│   │   ├── interfaces/
+│   │   ├── use-cases/
+│   │   └── services/
+│   └── shared-kernel/
+├── adapters/                   # Interface adapters
+│   ├── primary/               # Driving adapters
+│   │   ├── web-api/
+│   │   ├── cli/
+│   │   └── message-queue/
+│   └── secondary/             # Driven adapters
+│       ├── persistence/
+│       ├── external-apis/
+│       └── file-storage/
+├── frameworks/                 # Frameworks & drivers
+│   ├── web/
+│   ├── database/
+│   └── messaging/
+└── cross-cutting/             # Cross-cutting concerns
+    ├── logging/
+    ├── security/
+    ├── monitoring/
+    └── caching/
+```
 
 **MODULE NAMING CONVENTIONS:**
-- Use lowercase with underscores: user_auth, data_models
-- Be specific but concise: "payment_processing" not "payments"
-- Avoid generic names: not "common", "misc", "helpers"
-- Use domain language: "inventory" not "items" for e-commerce
 
-**{language} SPECIFIC CONSIDERATIONS:**
-- Follow {language} community conventions
-- Consider {language} package/module system
-- Align with popular {language} frameworks
+1. **Path Format**: Use forward slashes (domain/user/entities)
+2. **Naming Style**: 
+   - {language} conventions (snake_case for Python, kebab-case for JS/TS)
+   - Descriptive names indicating purpose
+   - Avoid generic names (utils, helpers, common) without context
 
-**{project_type} SPECIFIC NEEDS:**
-- Include modules common to {project_type} architecture
-- Consider {project_type} specific patterns
-- Address {project_type} security/performance needs
+3. **Hierarchy Rules**:
+   - Layer/Concern → Domain/Feature → Technical Aspect
+   - Examples: 
+     - domain/user/entities
+     - application/auth/commands
+     - infrastructure/persistence/repositories
+
+**BEST PRACTICES TO FOLLOW:**
+
+1. **Keep Structure Reasonably Flat**
+   - Maximum 4-5 levels deep
+   - Too much nesting impedes navigation
+
+2. **Feature Cohesion**
+   - All files for a feature live together
+   - Includes components, services, tests, styles
+
+3. **Shared Code Organization**
+   - Truly shared code in dedicated shared/ directories
+   - Avoid premature abstraction
+   - Copy-paste is sometimes better than wrong abstraction
+
+4. **Test Proximity**
+   - Unit tests near the code they test
+   - Integration/E2E tests in separate test directories
+
+5. **Documentation**
+   - Each major module should have its own docs/
+   - API documentation near API definitions
+
+**{project_type} SPECIFIC CONSIDERATIONS:**
+- Apply patterns suitable for {project_type}
+- Consider scale and complexity of {project_type}
+- Include modules specific to {project_type} requirements
+
+**{language} SPECIFIC PATTERNS:**
+- Follow {language} community standards
+- Use {language} appropriate module systems
+- Consider {language} framework conventions
 
 **OUTPUT FORMAT:**
-Return a JSON array of 6-10 module names, ordered by importance/dependency:
+Return a JSON array of ALL module paths needed for a complete system:
 
-["core_module", "dependent_module", ...]
+[
+  "src/domain/user/entities",
+  "src/domain/user/values",
+  "src/domain/user/services",
+  "src/application/user/commands",
+  "src/application/user/queries",
+  "src/infrastructure/persistence/repositories",
+  ...
+]
 
-**EXAMPLE for E-commerce API (Python):**
-["database", "models", "auth", "products", "orders", "payments", "notifications", "analytics", "admin", "utils"]
+**IMPORTANT GUIDELINES:**
+- Include ALL modules for production readiness (typically 30-80+ paths)
+- Start with core domain modules, then application, then infrastructure
+- Consider team boundaries and deployment units
+- Include supporting modules: testing, documentation, deployment
+- Think about both current needs and 6-month growth
 
 **AVOID:**
-- Overly generic names (utils, helpers, common)
-- Too many modules (keep it focused)
-- Platform-specific names unless necessary
-- Mixing concerns in one module"""
+- Over-engineering for simple CRUD apps
+- Flat structure when hierarchy would clarify relationships  
+- Deep nesting beyond 5 levels
+- Mixing different architectural patterns inconsistently
+- Technology-specific names in domain layer"""
 
 MODULE_DESCRIPTION_PROMPT = """Generate a precise module description.
 
