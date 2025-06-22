@@ -1003,6 +1003,37 @@ class RetroUI:
         self.console.clear()
         print('\033[?25h', end='', flush=True)  # Show cursor
     
+    def _display_module_tree(self, modules: List[Dict], content_group: List, prefix: str = "", max_items: int = 10) -> int:
+        """Display hierarchical module structure."""
+        count = 0
+        for module in modules:
+            if count >= max_items:
+                remaining = len(modules) - count
+                content_group.append(Text(f"{prefix}... and {remaining} more modules", style=self.theme.TEXT_DIM))
+                break
+                
+            # Display module name and type
+            module_text = f"{prefix}• {module.get('name', 'unnamed')}"
+            if module.get('type'):
+                module_text += f" ({module.get('type')})"
+            if module.get('description'):
+                module_text += f" - {module.get('description')[:40]}..."
+            
+            content_group.append(Text(module_text, style=self.theme.ORANGE_LIGHT))
+            count += 1
+            
+            # Display sub-modules if they exist
+            if module.get('modules'):
+                sub_count = self._display_module_tree(
+                    module['modules'], 
+                    content_group, 
+                    prefix + "  ",
+                    max_items - count
+                )
+                count += sub_count
+                
+        return count
+    
     def ask_feedback(
         self,
         title: str,
@@ -1041,10 +1072,24 @@ class RetroUI:
             if len(lines) > 10:
                 content_group.append(Text(f"  ... and {len(lines) - 10} more lines", style=self.theme.TEXT_DIM))
         elif value_type == "list":
-            for i, item in enumerate(current_value[:5], 1):
-                content_group.append(Text(f"  {i}. {str(item)[:80]}", style=self.theme.ORANGE_LIGHT))
-            if len(current_value) > 5:
-                content_group.append(Text(f"  ... and {len(current_value) - 5} more items", style=self.theme.TEXT_DIM))
+            # Handle both simple lists and hierarchical module structures
+            if isinstance(current_value, dict):
+                # This is a hierarchical module structure
+                if "modules" in current_value:
+                    # Show the module tree
+                    self._display_module_tree(current_value["modules"], content_group, prefix="  ")
+                else:
+                    # Just a dict, show items
+                    for i, (key, value) in enumerate(list(current_value.items())[:5], 1):
+                        content_group.append(Text(f"  {i}. {key}: {str(value)[:60]}", style=self.theme.ORANGE_LIGHT))
+                    if len(current_value) > 5:
+                        content_group.append(Text(f"  ... and {len(current_value) - 5} more items", style=self.theme.TEXT_DIM))
+            else:
+                # Simple list
+                for i, item in enumerate(current_value[:5], 1):
+                    content_group.append(Text(f"  {i}. {str(item)[:80]}", style=self.theme.ORANGE_LIGHT))
+                if len(current_value) > 5:
+                    content_group.append(Text(f"  ... and {len(current_value) - 5} more items", style=self.theme.TEXT_DIM))
         elif value_type == "dict":
             for i, (key, value) in enumerate(list(current_value.items())[:5], 1):
                 content_group.append(Text(f"  {i}. {key}: {str(value)[:60]}", style=self.theme.ORANGE_LIGHT))

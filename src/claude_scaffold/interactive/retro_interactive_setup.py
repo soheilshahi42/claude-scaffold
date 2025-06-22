@@ -34,6 +34,25 @@ class RetroInteractiveSetup:
         else:
             self.claude_setup = None
     
+    def _extract_module_names(self, modules: List[Dict], prefix: str = "") -> List[str]:
+        """Extract all module names from a hierarchical module structure."""
+        names = []
+        for module in modules:
+            if isinstance(module, dict):
+                name = module.get('name', '')
+                if name:
+                    # Add prefix for nested modules to show hierarchy
+                    full_name = f"{prefix}/{name}" if prefix else name
+                    names.append(full_name)
+                    
+                    # Recursively extract sub-modules
+                    if 'modules' in module and isinstance(module['modules'], list):
+                        sub_names = self._extract_module_names(module['modules'], full_name)
+                        names.extend(sub_names)
+            elif isinstance(module, str):
+                names.append(module)
+        return names
+    
     def _refine_with_retro_ui(
         self,
         current_value: Any,
@@ -479,11 +498,35 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
             claude_modules = self.claude_setup._get_claude_module_suggestions(project_data)
             self.ui.stop_progress()
             
+            # Extract module names from hierarchical structure if needed
+            if isinstance(claude_modules, dict) and "modules" in claude_modules:
+                # This is a hierarchical structure, extract all module names
+                module_names = self._extract_module_names(claude_modules["modules"])
+                # Keep the full structure for display
+                claude_modules_full = claude_modules
+                claude_modules = module_names
+            elif isinstance(claude_modules, list) and claude_modules and isinstance(claude_modules[0], dict):
+                # List of module dicts, extract names
+                module_names = self._extract_module_names(claude_modules)
+                claude_modules_full = {"modules": claude_modules}
+                claude_modules = module_names
+            else:
+                # Simple list of strings, use as is
+                claude_modules_full = None
+            
             if claude_modules:
                 # First show ALL modules in a results page so user can see everything
                 module_display = {}
-                for i, module in enumerate(claude_modules, 1):
-                    module_display[f"Module {i}"] = module
+                
+                # If we have the full hierarchical structure, show it differently
+                if claude_modules_full:
+                    for i, module in enumerate(claude_modules, 1):
+                        # Show hierarchical path
+                        module_display[f"Module {i}"] = module
+                else:
+                    # Simple list display
+                    for i, module in enumerate(claude_modules, 1):
+                        module_display[f"Module {i}"] = module
                 
                 self.ui.show_paginated_results(
                     "CLAUDE MODULE SUGGESTIONS",
@@ -511,13 +554,23 @@ Provide an improved dictionary based on the feedback. Return a JSON object."""
                     
                     # Apply refinement if requested
                     if want_refine:
-                        refined_modules = self._refine_with_retro_ui(
-                            claude_modules,
+                        # Use the full structure for refinement if available
+                        refine_data = claude_modules_full if claude_modules_full else claude_modules
+                        refined_result = self._refine_with_retro_ui(
+                            refine_data,
                             "REFINE MODULES",
                             "Module refinement",
                             value_type="list",
                             max_iterations=100
                         )
+                        
+                        # Extract module names from refined result
+                        if isinstance(refined_result, dict) and "modules" in refined_result:
+                            refined_modules = self._extract_module_names(refined_result["modules"])
+                        elif isinstance(refined_result, list) and refined_result and isinstance(refined_result[0], dict):
+                            refined_modules = self._extract_module_names(refined_result)
+                        else:
+                            refined_modules = refined_result
                     else:
                         refined_modules = claude_modules
                     
