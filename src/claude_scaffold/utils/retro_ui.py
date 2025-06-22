@@ -1408,8 +1408,13 @@ class RetroUI:
             # Create layout
             layout = Layout()
             
-            # Calculate dynamic sizes
-            question_area_size = max(8, (self.height - 20 - max_box_height) // 2)
+            # Calculate dynamic sizes - give more space to question if needed
+            # Count lines needed for the question
+            question_width = min(140, self.width - 20)  # Account for panel borders and padding
+            question_lines_needed = len(textwrap.wrap(question, width=question_width))
+            
+            # Make question area big enough to hold all lines plus padding
+            question_area_size = max(10, question_lines_needed + 6)  # +6 for category line, spacing, and padding
             input_area_size = self.height - 9 - question_area_size - 3
             
             layout.split_column(
@@ -1435,10 +1440,10 @@ class RetroUI:
             question_group.append(Text())
             
             # Split question into multiple lines if needed
-            question_lines = textwrap.wrap(question, width=min(120, self.width - 30))
+            wrapped_question_lines = textwrap.wrap(question, width=question_width)
             
             # Add question mark to first line
-            for i, line in enumerate(question_lines):
+            for i, line in enumerate(wrapped_question_lines):
                 q_text = Text()
                 if i == 0:
                     q_text.append("? ", style=f"bold {self.theme.ORANGE}")
