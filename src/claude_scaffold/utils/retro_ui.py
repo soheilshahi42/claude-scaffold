@@ -98,25 +98,19 @@ class RetroUI:
     
     def _wait_for_key(self) -> str:
         """Cross-platform method to wait for a single key press."""
-        import sys
+        key = getch()
         
-        if os.name == 'nt':  # Windows
-            import msvcrt
-            while True:
-                if msvcrt.kbhit():
-                    key = msvcrt.getch()
-                    if key in [b'\r', b'\n', b' ']:  # Enter or Space
-                        return '\n'
-                    return key.decode('utf-8', errors='ignore')
-        else:  # Unix/Linux/Mac
-            import tty, termios
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                key = sys.stdin.read(1)
-                return key
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        # Map special keys to expected format
+        if key == 'ENTER':
+            return '\n'
+        elif key == 'ESC':
+            raise KeyboardInterrupt()
+        elif key in ['UP', 'DOWN', 'LEFT', 'RIGHT']:
+            # Return None for arrow keys to be handled elsewhere
+            return '\x00'
+        
+        # Return the key as is for regular characters
+        return key
     
     def _get_key(self) -> str:
         """Get a single key press (blocking)."""
@@ -877,26 +871,18 @@ class RetroUI:
             self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
             # Get input
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                key = sys.stdin.read(1)
-                
-                if key == '\r' or key == '\n':  # Enter
-                    return str(selected)
-                elif key in ['1', '2', '3']:  # Direct number selection
-                    return key
-                elif key == '\x1b':  # Escape sequence
-                    next_keys = sys.stdin.read(2)
-                    if next_keys == '[A':  # Up arrow
-                        selected = max(1, selected - 1)
-                    elif next_keys == '[B':  # Down arrow
-                        selected = min(3, selected + 1)
-                elif key == '\x03':  # Ctrl+C
-                    raise KeyboardInterrupt()
-                    
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            key = getch()
+            
+            if key == 'ENTER':  # Enter
+                return str(selected)
+            elif key in ['1', '2', '3']:  # Direct number selection
+                return key
+            elif key == 'UP':  # Up arrow
+                selected = max(1, selected - 1)
+            elif key == 'DOWN':  # Down arrow
+                selected = min(3, selected + 1)
+            elif key == 'ESC':  # Escape
+                raise KeyboardInterrupt()
         
     def ask_confirm(
         self,
@@ -977,34 +963,26 @@ class RetroUI:
             self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
             # Get single keypress
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                key = sys.stdin.read(1)
-                
-                if key == '\r' or key == '\n':  # Enter
-                    # Clear screen before returning
-                    self._clear_screen()
-                    return selected
-                elif key.lower() == 'y':
-                    # Clear screen before returning
-                    self._clear_screen()
-                    return True
-                elif key.lower() == 'n':
-                    # Clear screen before returning
-                    self._clear_screen()
-                    return False
-                elif key == '\x1b':  # Escape sequence
-                    next_key = sys.stdin.read(2)
-                    if next_key == '[C':  # Right arrow
-                        selected = False
-                    elif next_key == '[D':  # Left arrow
-                        selected = True
-                elif key == '\x03':  # Ctrl+C
-                    raise KeyboardInterrupt()
-                    
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            key = getch()
+            
+            if key == 'ENTER':  # Enter
+                # Clear screen before returning
+                self._clear_screen()
+                return selected
+            elif key.lower() == 'y':
+                # Clear screen before returning
+                self._clear_screen()
+                return True
+            elif key.lower() == 'n':
+                # Clear screen before returning
+                self._clear_screen()
+                return False
+            elif key == 'RIGHT':  # Right arrow
+                selected = False
+            elif key == 'LEFT':  # Left arrow
+                selected = True
+            elif key == 'ESC':  # Escape
+                raise KeyboardInterrupt()
         
     def show_progress(
         self,
@@ -1461,24 +1439,16 @@ class RetroUI:
             self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
             # Get input
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                key = sys.stdin.read(1)
-                
-                if key == '\r' or key == '\n':  # Enter - continue
-                    break
-                elif key == '\x1b':  # Arrow keys
-                    next_keys = sys.stdin.read(2)
-                    if next_keys == '[D' and current_page > 0:  # Left arrow - previous page
-                        current_page -= 1
-                    elif next_keys == '[C' and current_page < total_pages - 1:  # Right arrow - next page
-                        current_page += 1
-                elif key == '\x03':  # Ctrl+C
-                    raise KeyboardInterrupt()
-                    
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            key = getch()
+            
+            if key == 'ENTER':  # Enter - continue
+                break
+            elif key == 'LEFT' and current_page > 0:  # Left arrow - previous page
+                current_page -= 1
+            elif key == 'RIGHT' and current_page < total_pages - 1:  # Right arrow - next page
+                current_page += 1
+            elif key == 'ESC':  # Escape
+                raise KeyboardInterrupt()
         
     def show_completion(
         self,
@@ -1693,9 +1663,9 @@ class RetroUI:
             # Center the box horizontally
             box_left_col = (self.width - box_width) // 2
             
-            # Get terminal settings
-            old_settings = termios.tcgetattr(sys.stdin)
-            tty.setraw(sys.stdin.fileno())
+            # Terminal is already in raw mode from getch
+            # Just ensure cursor is hidden
+            print('\033[?25l', end='', flush=True)
             
             # Initial render
             wrapped_lines = wrap_text(text)
@@ -1763,58 +1733,66 @@ class RetroUI:
             # Initial box render
             render_box()
             
+            # Track double ESC for skip
+            last_key_was_esc = False
+            
             while True:
-                # Read single character
-                char = sys.stdin.read(1)
+                # Read single character using getch
+                key = getch()
                 
-                if char == '\r' or char == '\n':  # Enter - submit
+                if key == 'ENTER':  # Enter - submit
                     return text, False
                 
-                elif char == '\x1b':  # Escape sequence
-                    next_chars = sys.stdin.read(2)
-                    if next_chars == '[D':  # Left arrow
-                        if cursor_pos > 0:
-                            cursor_pos -= 1
-                    elif next_chars == '[C':  # Right arrow
-                        if cursor_pos < len(text):
-                            cursor_pos += 1
-                    elif next_chars == '[A':  # Up arrow
-                        # Move up a line
-                        if cursor_line > 0:
-                            cursor_line -= 1
-                            # Adjust cursor position
-                            line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
-                            cursor_pos = min(line_start + cursor_col, len(text))
-                    elif next_chars == '[B':  # Down arrow
-                        # Move down a line
-                        if cursor_line < len(wrapped_lines) - 1:
-                            cursor_line += 1
-                            # Adjust cursor position
-                            line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
-                            cursor_pos = min(line_start + cursor_col, len(text))
-                    elif next_chars == '\x1b':  # ESC ESC - double escape to skip
-                        if question_number >= allow_skip_after:
-                            return "", True
+                elif key == 'LEFT':  # Left arrow
+                    if cursor_pos > 0:
+                        cursor_pos -= 1
+                elif key == 'RIGHT':  # Right arrow
+                    if cursor_pos < len(text):
+                        cursor_pos += 1
+                elif key == 'UP':  # Up arrow
+                    # Move up a line
+                    if cursor_line > 0:
+                        cursor_line -= 1
+                        # Adjust cursor position
+                        line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
+                        cursor_pos = min(line_start + cursor_col, len(text))
+                elif key == 'DOWN':  # Down arrow
+                    # Move down a line
+                    if cursor_line < len(wrapped_lines) - 1:
+                        cursor_line += 1
+                        # Adjust cursor position
+                        line_start = sum(len(wrapped_lines[i]) + 1 for i in range(cursor_line))
+                        cursor_pos = min(line_start + cursor_col, len(text))
+                elif key == 'ESC':  # ESC key
+                    if last_key_was_esc and question_number >= allow_skip_after:
+                        # Double ESC - skip
+                        return "", True
+                    last_key_was_esc = True
+                    continue  # Don't reset last_key_was_esc yet
                 
-                elif char == '\x7f' or char == '\x08':  # Backspace
+                elif key == '\x7f' or key == '\x08':  # Backspace
                     if cursor_pos > 0:
                         text = text[:cursor_pos-1] + text[cursor_pos:]
                         cursor_pos -= 1
                 
-                elif char == '\x04':  # Ctrl+D - alternative skip key
+                elif key == '\x04':  # Ctrl+D - alternative skip key
                     if question_number >= allow_skip_after:
                         return "", True
                 
-                elif char == '\x1c':  # Ctrl+\ 
+                elif key == '\x1c':  # Ctrl+\ 
                     if question_number >= allow_skip_after:
                         return "", True
                 
-                elif char == '\x03':  # Ctrl+C
+                elif key == '\x03':  # Ctrl+C
                     raise KeyboardInterrupt()
                 
-                elif 32 <= ord(char) <= 126:  # Printable characters
-                    text = text[:cursor_pos] + char + text[cursor_pos:]
+                elif len(key) == 1 and 32 <= ord(key) <= 126:  # Printable characters
+                    text = text[:cursor_pos] + key + text[cursor_pos:]
                     cursor_pos += 1
+                
+                # Reset ESC tracking if any other key was pressed
+                if key != 'ESC':
+                    last_key_was_esc = False
                 
                 # Re-wrap text and update cursor position
                 wrapped_lines = wrap_text(text)
@@ -1841,9 +1819,8 @@ class RetroUI:
             raise
             
         finally:
-            # Restore terminal settings
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-            print('\033[?25h', end='', flush=True)  # Show cursor
+            # Show cursor
+            print('\033[?25h', end='', flush=True)
     
     def show_specification_sections(self, title: str, sections: Dict[str, str], subtitle: str = "") -> None:
         """Show specification sections with scrolling support."""
@@ -1951,33 +1928,21 @@ class RetroUI:
             self.console.print(layout, style=f"on {self.theme.BACKGROUND}")
             
             # Handle input
-            old_settings = termios.tcgetattr(sys.stdin)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                key = sys.stdin.read(1)
-                
-                if key == '\r' or key == '\n':  # Enter - exit
-                    break
-                elif key == '\x1b':  # Escape sequence
-                    next_keys = sys.stdin.read(2)
-                    if next_keys == '[A' and current_line > 0:  # Up arrow
-                        current_line -= 1
-                    elif next_keys == '[B' and current_line + content_height < len(all_lines):  # Down arrow
-                        current_line += 1
-                    elif next_keys == '[5':  # Page Up
-                        sys.stdin.read(1)  # consume ~
-                        current_line = max(0, current_line - content_height)
-                    elif next_keys == '[6':  # Page Down
-                        sys.stdin.read(1)  # consume ~
-                        current_line = min(len(all_lines) - content_height, current_line + content_height)
-                elif key == ' ':  # Spacebar - page down
-                    if current_line + content_height < len(all_lines):
-                        current_line = min(len(all_lines) - content_height, current_line + content_height)
-                elif key == 'b' or key == 'B':  # B - page up
-                    current_line = max(0, current_line - content_height)
-                    
-            finally:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            key = getch()
+            
+            if key == 'ENTER':  # Enter - exit
+                break
+            elif key == 'UP' and current_line > 0:  # Up arrow
+                current_line -= 1
+            elif key == 'DOWN' and current_line + content_height < len(all_lines):  # Down arrow
+                current_line += 1
+            elif key == ' ':  # Spacebar - page down
+                if current_line + content_height < len(all_lines):
+                    current_line = min(len(all_lines) - content_height, current_line + content_height)
+            elif key == 'b' or key == 'B':  # B - page up
+                current_line = max(0, current_line - content_height)
+            elif key == 'ESC':  # ESC - exit
+                break
     
     def show_qa_progress(self, message: str = "Generating next question...", duration: float = 0):
         """Show a progress screen while generating Q&A questions.
