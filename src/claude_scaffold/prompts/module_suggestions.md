@@ -30,6 +30,122 @@ Design a comprehensive, hierarchical module structure following best practices f
    - Rich domain models in core business logic
    - Infrastructure concerns separated from domain
 
-**RECOMMENDED STRUCTURE PATTERNS:**
+**REQUIRED OUTPUT FORMAT:**
 
-**Full-Stack Application (Monorepo):**
+You MUST return a JSON object with this EXACT structure:
+
+```json
+{
+  "project_name": "suggested-project-name",
+  "modules": [
+    {
+      "name": "module-name",
+      "type": "directory",
+      "description": "What this module does",
+      "modules": [
+        {
+          "name": "submodule-name",
+          "type": "directory",
+          "description": "What this submodule does",
+          "modules": [
+            {
+              "name": "deep-module",
+              "type": "directory", 
+              "description": "Nested module description"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**IMPORTANT RULES:**
+1. Every module MUST have: name, type, and description fields
+2. Use "type": "directory" for all modules
+3. Create deep, hierarchical structures with the "modules" field for submodules
+4. NO LIMIT on module count - create as many as needed
+5. Use forward slashes in paths (e.g., backend/api/v1)
+6. Include ALL necessary modules for a production-ready system
+
+**EXAMPLE STRUCTURES BY PROJECT TYPE:**
+
+**Web Application:**
+- src/
+  - domain/ (core business logic)
+    - entities/
+    - value-objects/
+    - repositories/
+    - services/
+  - application/ (use cases)
+    - commands/
+    - queries/
+    - handlers/
+  - infrastructure/ (external dependencies)
+    - persistence/
+      - repositories/
+      - migrations/
+    - external-services/
+    - messaging/
+  - presentation/ (UI layer)
+    - web/
+      - controllers/
+      - middleware/
+      - views/
+    - api/
+      - v1/
+        - controllers/
+        - serializers/
+  - shared/ (cross-cutting concerns)
+    - kernel/
+    - utilities/
+    - types/
+
+**Microservice:**
+- src/
+  - core/ (business logic)
+    - domain/
+    - ports/
+    - use-cases/
+  - adapters/ (implementations)
+    - inbound/
+      - http/
+      - grpc/
+      - messaging/
+    - outbound/
+      - database/
+      - cache/
+      - external-apis/
+  - config/
+  - shared/
+
+**CLI Tool:**
+- src/
+  - commands/ (organized by feature)
+    - feature1/
+      - handlers/
+      - validators/
+    - feature2/
+  - core/
+    - domain/
+    - services/
+  - infrastructure/
+    - file-system/
+    - networking/
+  - ui/
+    - formatters/
+    - prompts/
+
+**ADDITIONAL MODULES TO ALWAYS CONSIDER:**
+- tests/ (mirroring src structure)
+- scripts/ (build, deploy, maintenance)
+- docs/ (documentation)
+- config/ (configuration files)
+- .github/ or .gitlab/ (CI/CD workflows)
+- docker/ (containerization)
+- k8s/ or kubernetes/ (orchestration)
+- migrations/ (database migrations)
+- seeds/ (test data)
+
+Create a COMPLETE, HIERARCHICAL module structure. Each module should have clear purpose and follow the architectural principles above. Return ONLY the JSON object, no additional text.
