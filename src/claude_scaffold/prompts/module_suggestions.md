@@ -35,30 +35,30 @@ Design a comprehensive, hierarchical module structure following best practices f
 You MUST return a JSON object with this EXACT structure:
 
 ```json
-{
+{{
   "project_name": "suggested-project-name",
   "modules": [
-    {
+    {{
       "name": "module-name",
       "type": "directory",
       "description": "What this module does",
       "modules": [
-        {
+        {{
           "name": "submodule-name",
           "type": "directory",
           "description": "What this submodule does",
           "modules": [
-            {
+            {{
               "name": "deep-module",
               "type": "directory", 
               "description": "Nested module description"
-            }
+            }}
           ]
-        }
+        }}
       ]
-    }
+    }}
   ]
-}
+}}
 ```
 
 **IMPORTANT RULES:**
