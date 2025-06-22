@@ -1434,11 +1434,18 @@ class RetroUI:
             question_group.append(Align.center(cat_text))
             question_group.append(Text())
             
-            q_text = Text()
-            q_text.append("? ", style=f"bold {self.theme.ORANGE}")
-            wrapped_q = textwrap.fill(question, width=min(100, self.width - 20))
-            q_text.append(wrapped_q, style=f"bold {self.theme.WHITE}")
-            question_group.append(Align.center(q_text))
+            # Split question into multiple lines if needed
+            question_lines = textwrap.wrap(question, width=min(120, self.width - 30))
+            
+            # Add question mark to first line
+            for i, line in enumerate(question_lines):
+                q_text = Text()
+                if i == 0:
+                    q_text.append("? ", style=f"bold {self.theme.ORANGE}")
+                else:
+                    q_text.append("  ", style=f"bold {self.theme.ORANGE}")  # Indent continuation
+                q_text.append(line, style=f"bold {self.theme.WHITE}")
+                question_group.append(Align.center(q_text))
             
             layout["question"].update(
                 Panel(
